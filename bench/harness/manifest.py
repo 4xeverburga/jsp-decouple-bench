@@ -50,4 +50,3 @@ if __name__ == "__main__":
         sys.exit(1)
     cmd, target = sys.argv[1], Path(sys.argv[2])
     sys.exit(generate(target) is None and 0 if cmd == "generate" else verify(target))
-x
