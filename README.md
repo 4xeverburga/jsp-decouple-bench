@@ -26,7 +26,7 @@ shared tags, interceptors, config, other pages. What is bounded is the
 | `build` | The sample's build still succeeds |
 | `parity` | Replaying the baseline HTTP/DOM fixtures reproduces the recorded behavior (normalized) |
 | `db_state` | DB deltas (before → after) match the frozen golden deltas |
-| `no_server_html` | No server-rendered HTML render path remains for the flow's routes |
+| `independent_frontend` | The flow's UI no longer depends on server-side rendering: the backend serves no HTML for the flow's routes — the property that makes independent frontend deployment possible. **Scoped to the task's flow only**; other pages may stay server-rendered. Gates 1–3 are satisfiable by a no-op agent; this gate is what requires actual decoupling. |
 
 Legacy unit tests are **explicitly out of scope** — decoupling
 legitimately breaks view-layer tests.

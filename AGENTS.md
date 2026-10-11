@@ -27,7 +27,7 @@ server-rendered JSP/tag rendering for that flow, keep behavior parity.
    verdict. This includes baselines, orchestrators, and the harness.
 2. **Legacy unit tests are out of scope.** Decoupling legitimately breaks
    view-layer tests. Do not spend effort resurrecting them; the four
-   gates (build, parity, db_state, no_server_html) are the criteria.
+   gates (build, parity, db_state, independent_frontend) are the criteria.
 3. **No network beyond the compose stack.** The environment is
    self-contained; external calls fail the run.
 4. **Determinism**: the eval runs with pinned locale (`en-US`) and
@@ -43,13 +43,16 @@ server-rendered JSP/tag rendering for that flow, keep behavior parity.
   "build": "pass",
   "parity": {"passed": 12, "total": 12},
   "db_state": "pass",
-  "no_server_html": "pass",
+  "independent_frontend": "pass",
   "tokens": 0,
   "files_touched": 0
 }
 ```
 
 Pass = all four gates green. Partial results are recorded per gate.
+Note: `independent_frontend` is scoped to the task's flow only — other
+pages may remain server-rendered. An optional stronger check (serving
+the flow's frontend from a different origin) may apply to Tier-4 tasks.
 
 ## Running the app locally
 
