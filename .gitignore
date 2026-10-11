@@ -4,5 +4,8 @@ bench/MANIFEST.sha256
 # credentials — reproducibility across researchers matters more than
 # secrecy here).  NEVER put real secrets (OAuth keys, API tokens) in a
 # tracked .env — those belong in gitignored files only.
+# openclinica still follows the old gitignored-.env convention (see its
+# AGENTS.md) — flip it deliberately before un-ignoring.
+environments/openclinica/.env
 __pycache__/
 *.pyc
