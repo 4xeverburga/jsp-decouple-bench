@@ -7,8 +7,9 @@
 #   - database: created ONLY if missing (never dropped)
 #   - Tomcat: started if not running (Liquibase seeds a fresh schema)
 #   - admin credential: bootstrap-admin.sh is idempotent — safe every run
-#   - .env: auto-generated (random password) if missing, so a fresh
-#     checkout converges with no manual step
+#   - .env: TRACKED (synthetic bench credential); auto-generated (random
+#     password) only if missing, so a fresh checkout converges with no
+#     manual step
 #
 # Usage: ./scripts/setup-e2e.sh
 set -euo pipefail
@@ -72,7 +73,7 @@ else
   echo "  started (Liquibase ready, $TABLES tables)"
 fi
 
-echo "== 4. admin credential (gitignored, idempotent)"
+echo "== 4. admin credential (tracked .env, idempotent)"
 if [[ ! -f "$ENV_DIR/.env" ]]; then
   PW=$(openssl rand -base64 12 | tr -d '/+=' | cut -c1-14)
   printf 'OPENCLINICA_ADMIN_USER=root\nOPENCLINICA_ADMIN_PASSWORD=%s\nOPENCLINICA_HTTP_PORT=%s\n' \

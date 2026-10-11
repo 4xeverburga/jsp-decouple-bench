@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Rotate the seeded OpenClinica 'root' admin password using the password
-# from this sample's GITIGNORED .env. Idempotent — run after every fresh
+# from this sample's TRACKED .env (synthetic bench credential — see
+# .gitignore). Idempotent — run after every fresh
 # database (a fresh DB re-seeds root/12345678 from upstream's tracked
 # Liquibase changelog; that seed is public upstream knowledge, so the
-# real credential is applied here, never committed).
+# bench credential is applied here).
 #
 # Usage: ./scripts/bootstrap-admin.sh
 set -euo pipefail
