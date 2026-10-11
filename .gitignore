@@ -1,7 +1,8 @@
 bench/MANIFEST.sha256
 
-# per-sample eval env (real credentials — never commit)
-.env
-environments/*/.env
+# Per-sample eval env: .env is TRACKED (synthetic, deterministic bench
+# credentials — reproducibility across researchers matters more than
+# secrecy here).  NEVER put real secrets (OAuth keys, API tokens) in a
+# tracked .env — those belong in gitignored files only.
 __pycache__/
 *.pyc
