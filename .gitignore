@@ -1,1 +1,5 @@
 bench/MANIFEST.sha256
+
+# per-sample eval env (real credentials — never commit)
+.env
+environments/*/.env
