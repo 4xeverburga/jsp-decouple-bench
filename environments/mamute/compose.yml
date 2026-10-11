@@ -1,0 +1,64 @@
+# Mamute sample — eval environment (docker compose; runner-agnostic OCI images).
+#
+# Project dir is this directory, so compose auto-loads `.env` (gitignored;
+# template: .env.example).  Variables are interpolated — never hardcoded here.
+name: mamute
+
+services:
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "true"
+    ports:
+      - "${MAMUTE_DB_PORT:-5434}:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  app:
+    build:
+      # Context = the mamute repo (bench repo lives next to it on a fresh
+      # clone: <root>/{mamute,jsp-decouple-bench,..}).  NOTE: dockerfile is
+      # resolved relative to the context, not to this compose file.
+      context: ../../../mamute
+      dockerfile: ../jsp-decouple-bench/environments/mamute/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${MAMUTE_HTTP_PORT:-8090}:8080"
+    volumes:
+      - ./entrypoint.sh:/workspace/entrypoint.sh:ro
+    environment:
+      # fail fast instead of booting with empty credentials
+      MAMUTE_ADMIN_USER: ${MAMUTE_ADMIN_USER:?set environments/mamute/.env (cp from .env.example)}
+      MAMUTE_ADMIN_PASSWORD: ${MAMUTE_ADMIN_PASSWORD:?set environments/mamute/.env (cp from .env.example)}
+      MAMUTE_PUBLIC_URL: ${MAMUTE_PUBLIC_URL:-http://localhost:${MAMUTE_HTTP_PORT}}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8080/"]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+      start_period: 240s
+
+  # One-shot: rotates the first-boot seeded moderator to the .env admin
+  # credentials (runs in the mysql:5.7 image, which has the mysql client).
+  # Exits 0; `compose up --wait` treats a successful exit as done.
+  bootstrap:
+    image: mysql:5.7
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./bootstrap.sh:/bootstrap.sh:ro
+    entrypoint: ["bash", "/bootstrap.sh"]
+    environment:
+      MAMUTE_ADMIN_USER: ${MAMUTE_ADMIN_USER:?set environments/mamute/.env (cp from .env.example)}
+      MAMUTE_ADMIN_PASSWORD: ${MAMUTE_ADMIN_PASSWORD:?set environments/mamute/.env (cp from .env.example)}
+
+volumes:
+  db-data:

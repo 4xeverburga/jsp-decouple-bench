@@ -1,0 +1,10 @@
+# BuildKit Dockerfile-specific ignore file (applies because this Dockerfile
+# lives outside the build context).  Keeps the context small and secrets out
+# of the image.
+.git
+target
+node_modules
+logs
+newrelic
+*.iml
+src/main/resources/development.properties

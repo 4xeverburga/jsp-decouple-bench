@@ -1,0 +1,26 @@
+{
+  "task": "mamute/vote-flow",
+  "behavior": "upvote-increments-count",
+  "routes": [
+    "/sign-up",
+    "/ask",
+    "/login",
+    "/logout",
+    "/{question.id}-{sluggedTitle}",
+    "/question/{question.id}/voto/positivo"
+  ],
+  "locale": "en-US",
+  "timezone_id": "UTC",
+  "viewport": { "width": 1280, "height": 800 },
+  "auth": "mixed",
+  "auth_notes": "The arrange actor signs up in-flow (deterministic fixed credentials, DB is reset between test dirs by the orchestrator). The vote actor is the seeded moderator, whose credentials come from the sample .env only.",
+  "credentials": "env:MAMUTE_ADMIN_USER,MAMUTE_ADMIN_PASSWORD",
+  "requires_db_reset": true,
+  "artifacts": [
+    "question_url",
+    "vote_count_before",
+    "vote_count_after",
+    "dom_before",
+    "dom_after"
+  ]
+}
