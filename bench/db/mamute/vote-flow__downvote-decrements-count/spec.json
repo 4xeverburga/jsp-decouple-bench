@@ -1,0 +1,18 @@
+{
+  "task": "mamute/vote-flow",
+  "behavior": "downvote-decrements-count",
+  "flow": "e2e/mamute/vote-flow__downvote-decrements-count/flow.py",
+  "tables": [
+    { "name": "Users", "key_columns": ["id"], "ignore_columns": ["lastUpvote"] },
+    { "name": "LoginMethod", "key_columns": ["id"], "ignore_columns": [] },
+    { "name": "Question", "key_columns": ["id"], "ignore_columns": [] },
+    { "name": "QuestionInformation", "key_columns": ["id"], "ignore_columns": [] },
+    { "name": "Tag", "key_columns": ["id"], "ignore_columns": [] },
+    { "name": "QuestionInformation_Tag", "key_columns": ["QuestionInformation_id", "Tag_id"], "ignore_columns": [] },
+    { "name": "Watcher", "key_columns": ["id"], "ignore_columns": [] },
+    { "name": "Question_Watchers", "key_columns": ["Question_id", "Watcher_id"], "ignore_columns": [] },
+    { "name": "Vote", "key_columns": ["id"], "ignore_columns": ["createdAt", "lastUpdatedAt"] },
+    { "name": "ReputationEvent", "key_columns": ["id"], "ignore_columns": ["date"] }
+  ],
+  "notes": "expected_delta.json is captured from the pristine app (never hand-written) — PENDING CAPTURE: this test is not runnable until the delta is frozen via the capture workflow (make setup SAMPLE=mamute, run flow, freeze delta). Table/column names follow Hibernate's default naming; the capture run diffs a full dump to confirm this list empirically before freezing. Downvote touches the same tables as the upvote test (Vote row with type DOWN, ReputationEvent rows for author and voter, Users karma changes on both sides)."
+}
