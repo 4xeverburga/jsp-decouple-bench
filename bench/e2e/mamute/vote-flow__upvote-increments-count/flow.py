@@ -1,4 +1,4 @@
-"""E2E flow: vote-flow__upvote-increments-count (task: mamute/vote-flow)
+"""E2E flow: mamute/vote-flow__upvote-increments-count
 
 Self-contained: signs up its own author, asks its own question, then logs
 in as the seeded moderator and upvotes the question through the vote

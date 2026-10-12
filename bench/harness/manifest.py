@@ -13,7 +13,7 @@ from pathlib import Path
 def _digests(bench_dir: Path) -> dict[str, str]:
     out = {}
     for p in sorted(bench_dir.rglob("*")):
-        if p.is_file() and p.name != "MANIFEST.sha256":
+        if p.is_file() and p.name != "MANIFEST.sha256" and "__pycache__" not in p.parts:
             out[str(p.relative_to(bench_dir))] = hashlib.sha256(p.read_bytes()).hexdigest()
     return out
 

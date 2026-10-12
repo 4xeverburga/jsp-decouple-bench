@@ -49,15 +49,20 @@ read-only eval infrastructure — modifying it voids the run (`TAMPERED`).
 bench/                     # eval infrastructure (immutable, checksummed)
 ├── MANIFEST.sha256        # tamper detection — verified by the harness
 ├── baselines/<sample>/<task>/{http,dom,db}/
-├── db/db_validation.py    # generic orchestrator: discovers db/<test>/, runs isolated
-├── db/<test>/             # one dir per test: spec.json + expected_delta.json
-├── e2e/e2e_validation.py  # generic orchestrator: discovers e2e/<test>/, runs isolated
-├── e2e/<test>/            # one dir per test: spec.json + flow.py (Playwright)
+├── db/db_validation.py    # generic orchestrator: discovers db/<sample>/<test>/, runs isolated
+├── db/<sample>/<test>/    # one dir per test: spec.json + expected_delta.json
+├── e2e/e2e_validation.py  # generic orchestrator: discovers e2e/<sample>/<test>/, runs isolated
+├── e2e/<sample>/<test>/   # one dir per test: spec.json + flow.py (Playwright)
 └── harness/               # shared libs: normalize.py, state.py, manifest.py
 environments/<sample>/     # Dockerfile + compose.yml per sample (deterministic)
 tasks/<sample>/            # task JSONs (prompt, tier, verification scope)
 samples/<name>.lock        # pinned commit of each sample repo
 ```
+
+Test dirs are named `<task>__<behavior>` and live under their sample
+(`bench/db/mamute/vote-flow__upvote-increments-count/`), mirroring
+`baselines/` and `tasks/` — so samples can never collide and
+`make eval SAMPLE=<s>` filters by directory, not by parsing specs.
 
 ## Samples
 

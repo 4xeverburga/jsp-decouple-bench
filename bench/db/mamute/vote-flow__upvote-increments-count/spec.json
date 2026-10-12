@@ -1,7 +1,7 @@
 {
   "task": "mamute/vote-flow",
   "behavior": "upvote-increments-count",
-  "flow": "e2e/vote-flow__upvote-increments-count/flow.py",
+  "flow": "e2e/mamute/vote-flow__upvote-increments-count/flow.py",
   "tables": [
     { "name": "Users", "key_columns": ["id"], "ignore_columns": ["lastUpvote"] },
     { "name": "LoginMethod", "key_columns": ["id"], "ignore_columns": [] },
