@@ -14,9 +14,9 @@ pristine app, and freezes the before/after DB delta. Screenshots are
 taken after every goto/click for review only.
 
 Outputs:
-  bench/db/mamute/<test>/expected_delta.json   frozen golden delta
-  $CAPTURE_OUT/<test>/*.png                    step screenshots (review only)
-  $CAPTURE_OUT/<test>/artifacts.json           flow artifacts (dom snapshots etc.)
+  bench/e2e/mamute/<test>/images/*.png          step screenshots (traceability)
+  bench/e2e/mamute/<test>/artifacts.json        flow artifacts (dom snapshots etc.)
+  bench/db/mamute/<test>/expected_delta.json    frozen golden delta
 """
 import importlib.util
 import json
@@ -28,9 +28,6 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 BENCH = Path(__file__).resolve().parent.parent
-CAPTURE_OUT = Path(os.environ.get(
-    "CAPTURE_OUT",
-    "/home/ever/.copilot/session-state/f795803e-47a0-42d2-a67b-b47614e310e9/files/mamute-capture"))
 BASE_URL = os.environ.get("MAMUTE_BASE_URL", "http://localhost:8090")
 COMPOSE = BENCH / "environments" / "mamute" / "compose.yml"
 
@@ -136,7 +133,7 @@ flow_spec = importlib.util.spec_from_file_location(f"flow_{test_name}", flow_pat
 flow = importlib.util.module_from_spec(flow_spec)
 flow_spec.loader.exec_module(flow)
 
-out_dir = CAPTURE_OUT / test_name
+out_dir = BENCH / f"bench/e2e/mamute/{test_name}/images"
 out_dir.mkdir(parents=True, exist_ok=True)
 step = 0
 
@@ -206,7 +203,8 @@ for t in tables:
 
 delta_path = BENCH / f"bench/db/mamute/{test_name}/expected_delta.json"
 delta_path.write_text(json.dumps(delta, indent=2) + "\n")
-(out_dir / "artifacts.json").write_text(json.dumps(artifacts, indent=2) + "\n")
+(BENCH / f"bench/e2e/mamute/{test_name}/artifacts.json").write_text(
+    json.dumps(artifacts, indent=2) + "\n")
 
 print(f"delta tables: {', '.join(sorted(delta['tables'])) or '(none)'}")
 if changed_elsewhere:
