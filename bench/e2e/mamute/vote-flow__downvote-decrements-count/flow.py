@@ -40,7 +40,8 @@ def _signup_author(page, base_url):
     page.fill("#email", ARRANGE_EMAIL)
     page.fill("#password", ARRANGE_PASSWORD)
     page.fill("#password-confirmation", ARRANGE_PASSWORD)
-    page.click("input[type=submit]")
+    with page.expect_navigation(wait_until="load"):
+        page.click("input[type=submit]")
     page.wait_for_load_state("networkidle")
 
 
@@ -49,10 +50,16 @@ def _ask_question(page, base_url):
     page.wait_for_load_state("networkidle")
     page.fill("input[name=title]", QUESTION_TITLE)
     page.fill("textarea[name=description]", QUESTION_BODY)
-    page.fill("input[name=tagNames]", QUESTION_TAGS)
+    # tagNames is a select2 v3 widget (the real input is hidden); drive the UI:
+    # focus -> type >= 3 chars (minimumInputLength) -> wait for the AJAX result -> pick it
+    page.click(".select2-container")
+    page.fill(".select2-input", QUESTION_TAGS)
+    page.wait_for_selector(".select2-result-selectable", timeout=5000)
+    page.click(".select2-result-selectable")
     # The 'watching' checkbox is checked by default; leave it as-is so the
     # arrange steps stay deterministic (Watcher rows are part of the DB delta).
-    page.click("input[type=submit]")
+    with page.expect_navigation(wait_until="load"):
+        page.click("input[type=submit]")
     page.wait_for_load_state("networkidle")
     return page.url  # redirected to /{question.id}-{sluggedTitle}
 
@@ -62,7 +69,8 @@ def _login(page, base_url, email, password):
     page.wait_for_load_state("networkidle")
     page.fill("input[name=email]", email)
     page.fill("input[name=password]", password)
-    page.click("input[type=submit]")
+    with page.expect_navigation(wait_until="load"):
+        page.click("input[type=submit]")
     page.wait_for_load_state("networkidle")
 
 

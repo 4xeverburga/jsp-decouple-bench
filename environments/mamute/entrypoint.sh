@@ -26,6 +26,13 @@ done
 HOST_URL="${MAMUTE_PUBLIC_URL:-http://localhost:8090}"
 sed -i "s#^host = .*#host = ${HOST_URL}#" \
   src/main/resources/development.properties
+# VRaptor loads properties from the classpath, where WEB-INF/classes (populated
+# at image build, before development.properties existed — it is gitignored in
+# the sample) shadows the source tree.  Without this copy VRaptor falls back to
+# mamute.properties' host=http://localhost:8080 and every absolute redirect
+# (signup/login success) points at a port the host browser cannot reach.
+cp src/main/resources/development.properties \
+  src/main/webapp/WEB-INF/classes/development.properties
 
 # 4. Start the app in the foreground (embedded Jetty 8; `not-grunt` = assets
 #    already built into the image).

@@ -3,16 +3,18 @@
   "behavior": "upvote-increments-count",
   "flow": "e2e/mamute/vote-flow__upvote-increments-count/flow.py",
   "tables": [
-    { "name": "Users", "key_columns": ["id"], "ignore_columns": ["lastUpvote"] },
+    { "name": "Users", "key_columns": ["id"], "ignore_columns": ["createdAt", "lastUpvote"] },
     { "name": "LoginMethod", "key_columns": ["id"], "ignore_columns": [] },
-    { "name": "Question", "key_columns": ["id"], "ignore_columns": [] },
-    { "name": "QuestionInformation", "key_columns": ["id"], "ignore_columns": [] },
-    { "name": "Tag", "key_columns": ["id"], "ignore_columns": [] },
-    { "name": "QuestionInformation_Tag", "key_columns": ["QuestionInformation_id", "Tag_id"], "ignore_columns": [] },
-    { "name": "Watcher", "key_columns": ["id"], "ignore_columns": [] },
-    { "name": "Question_Watchers", "key_columns": ["Question_id", "Watcher_id"], "ignore_columns": [] },
+    { "name": "Question", "key_columns": ["id"], "ignore_columns": ["createdAt", "lastUpdatedAt"] },
+    { "name": "QuestionInformation", "key_columns": ["id"], "ignore_columns": ["createdAt"] },
+    { "name": "Tag", "key_columns": ["id"], "ignore_columns": ["createdAt"] },
+    { "name": "QuestionInformation_Tag", "key_columns": ["QuestionInformation_id", "tags_id"], "ignore_columns": [] },
+    { "name": "Watcher", "key_columns": ["id"], "ignore_columns": ["createdAt"] },
+    { "name": "Question_Watchers", "key_columns": ["Question_id", "watchers_id"], "ignore_columns": [] },
     { "name": "Vote", "key_columns": ["id"], "ignore_columns": ["createdAt", "lastUpdatedAt"] },
+    { "name": "Question_Votes", "key_columns": ["Question_id", "votes_id"], "ignore_columns": [] },
+    { "name": "Question_Interactions", "key_columns": ["Question_id", "userInteractions_id"], "ignore_columns": [] },
     { "name": "ReputationEvent", "key_columns": ["id"], "ignore_columns": ["date"] }
   ],
-  "notes": "expected_delta.json is captured from the pristine app (never hand-written). Table/column names follow Hibernate's default naming; the capture run diffs a full dump to confirm this list empirically before freezing."
+  "notes": "expected_delta.json is captured from the pristine app (never hand-written). Table/column names confirmed empirically by diffing a full dump during capture (join tables use tags_id/watchers_id, not Tag_id/Watcher_id). UserSession is deliberately excluded: auth plumbing, volatile by nature — the independent_frontend gate allows re-implementing it. ignore_columns are stripped from inserted/deleted rows and update comparisons by the capture tooling."
 }
