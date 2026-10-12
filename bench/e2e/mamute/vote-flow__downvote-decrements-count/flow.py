@@ -101,7 +101,8 @@ def run(page, base_url):
     page.wait_for_function(
         "() => {"
         "  const el = document.querySelector('.vote-container .vote-count');"
-        "  return el && el.textContent.trim() !== '%s';" % count_before,
+        "  return el && el.textContent.trim() !== '%s';"
+        "}" % count_before,
         timeout=5000,
     )
 

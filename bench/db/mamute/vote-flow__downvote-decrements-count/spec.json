@@ -3,7 +3,7 @@
   "behavior": "downvote-decrements-count",
   "flow": "e2e/mamute/vote-flow__downvote-decrements-count/flow.py",
   "tables": [
-    { "name": "Users", "key_columns": ["id"], "ignore_columns": ["createdAt", "lastUpvote"] },
+    { "name": "Users", "key_columns": ["id"], "ignore_columns": ["createdAt", "lastUpvote", "nameLastTouchedAt"] },
     { "name": "LoginMethod", "key_columns": ["id"], "ignore_columns": [] },
     { "name": "Question", "key_columns": ["id"], "ignore_columns": ["createdAt", "lastUpdatedAt"] },
     { "name": "QuestionInformation", "key_columns": ["id"], "ignore_columns": ["createdAt"] },
