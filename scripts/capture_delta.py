@@ -2,21 +2,24 @@
 """Capture golden DB deltas by running the test's own flow.py.
 
 Usage:
-  .venv/bin/python scripts/capture_delta.py <test-name>
-      e.g. vote-flow__upvote-increments-count
+  .venv/bin/python scripts/capture_delta.py <sample> <test-name>
+      e.g. capture_delta.py mamute vote-flow__upvote-increments-count
+           capture_delta.py openclinica study-flow__study-creation
 
-Requires: the mamute compose stack freshly reset (down -v && up -d --wait),
-docker reachable via `sg docker`, python playwright installed (.venv).
+Requires: the sample's stack freshly reset (pristine state is mandatory:
+ids must match across runs), the sample's DB reachable, python playwright
+installed (.venv). Sample-specific knobs (base URL, DB access command,
+table-list query) live in environments/<sample>/capture.env.
 
-The flow under bench/e2e/mamute/<test>/flow.py is the single source of
+The flow under bench/e2e/<sample>/<test>/flow.py is the single source of
 truth: this script imports it, runs run(page, base_url) against the
-pristine app, and freezes the before/after DB delta. Screenshots are
-taken after every goto/click for review only.
+pristine app, and freezes the before/after DB delta. Screenshots are taken
+after every goto/click for review only.
 
 Outputs:
-  bench/e2e/mamute/<test>/images/*.png          step screenshots (traceability)
-  bench/e2e/mamute/<test>/artifacts.json        flow artifacts (dom snapshots etc.)
-  bench/db/mamute/<test>/expected_delta.json    frozen golden delta
+  bench/e2e/<sample>/<test>/images/*.png          step screenshots (traceability)
+  bench/e2e/<sample>/<test>/artifacts.json        flow artifacts (dom snapshots etc.)
+  bench/db/<sample>/<test>/expected_delta.json    frozen golden delta
 """
 import importlib.util
 import json
@@ -28,38 +31,43 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 BENCH = Path(__file__).resolve().parent.parent
-BASE_URL = os.environ.get("MAMUTE_BASE_URL", "http://localhost:8090")
-COMPOSE = BENCH / "environments" / "mamute" / "compose.yml"
 
-if len(sys.argv) != 2:
+if len(sys.argv) != 3:
     sys.exit(__doc__)
-test_name = sys.argv[1]
+sample, test_name = sys.argv[1], sys.argv[2]
 
 
-def load_env():
+def load_kv(path):
     env = {}
-    for line in (BENCH / "environments/mamute/.env").read_text().splitlines():
-        if "=" in line and not line.startswith("#"):
-            k, _, v = line.partition("=")
-            env[k.strip()] = v.strip()
+    if Path(path).exists():
+        for line in Path(path).read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                env[k.strip()] = v.strip()
     return env
 
 
-ENV = load_env()
-ADMIN_USER, ADMIN_PASSWORD = ENV.get("MAMUTE_ADMIN_USER"), ENV.get("MAMUTE_ADMIN_PASSWORD")
-if not ADMIN_USER or not ADMIN_PASSWORD:
-    sys.exit("missing admin credentials in environments/mamute/.env")
+COV = load_kv(BENCH / "environments" / sample / "capture.env")
+BASE_URL = os.environ.get(f"{sample.upper()}_BASE_URL", COV.get("CAPTURE_BASE_URL"))
+if not BASE_URL:
+    sys.exit(f"missing CAPTURE_BASE_URL in environments/{sample}/capture.env")
+
 # flows read credentials from the harness-injected environment only
-os.environ.setdefault("MAMUTE_ADMIN_USER", ADMIN_USER)
-os.environ.setdefault("MAMUTE_ADMIN_PASSWORD", ADMIN_PASSWORD)
+for k, v in load_kv(BENCH / COV.get("CAPTURE_ENV_FILE", "")).items():
+    os.environ.setdefault(k, v)
+
+DB_CMD = COV["CAPTURE_DB_CMD"]
+LIST_TABLES_SQL = COV["CAPTURE_LIST_TABLES_SQL"]
 
 
 # --- db dump helpers ----------------------------------------------------------
-def mysql(sql):
-    return subprocess.run(
-        ["sg", "docker", "-c",
-         f"docker compose -f {COMPOSE} exec -T db mysql -uroot mamute_development --batch -e \"{sql}\""],
-        capture_output=True, text=True, check=True).stdout
+def db(sql):
+    # the command template reads the SQL from stdin — no quoting pitfalls
+    env = dict(os.environ, BENCH=str(BENCH))
+    return subprocess.run(["bash", "-c", DB_CMD],
+                          input=sql, capture_output=True, text=True,
+                          check=True, env=env).stdout
 
 
 def parse_batch(out):
@@ -79,7 +87,7 @@ def parse_batch(out):
 
 
 def table_names():
-    return [list(r.values())[0] for r in parse_batch(mysql("SHOW TABLES"))]
+    return [list(r.values())[0] for r in parse_batch(db(LIST_TABLES_SQL))]
 
 
 # --- delta --------------------------------------------------------------------
@@ -126,14 +134,14 @@ def delta_multiset(before, after):
 
 
 # --- flow import + screenshot wrapper ------------------------------------------
-spec_path = BENCH / f"bench/e2e/mamute/{test_name}/spec.json"
-flow_path = BENCH / f"bench/e2e/mamute/{test_name}/flow.py"
+spec_path = BENCH / f"bench/e2e/{sample}/{test_name}/spec.json"
+flow_path = BENCH / f"bench/e2e/{sample}/{test_name}/flow.py"
 spec = json.loads(spec_path.read_text())
 flow_spec = importlib.util.spec_from_file_location(f"flow_{test_name}", flow_path)
 flow = importlib.util.module_from_spec(flow_spec)
 flow_spec.loader.exec_module(flow)
 
-out_dir = BENCH / f"bench/e2e/mamute/{test_name}/images"
+out_dir = BENCH / f"bench/e2e/{sample}/{test_name}/images"
 out_dir.mkdir(parents=True, exist_ok=True)
 step = 0
 
@@ -172,8 +180,8 @@ class ShotPage:
 from playwright.sync_api import sync_playwright  # noqa: E402
 
 tables = table_names()
-print(f"capturing {test_name} against {BASE_URL} ({len(tables)} tables)")
-before = {t: parse_batch(mysql(f"SELECT * FROM {t}")) for t in tables}
+print(f"capturing {sample}/{test_name} against {BASE_URL} ({len(tables)} tables)")
+before = {t: parse_batch(db(f"SELECT * FROM {t}")) for t in tables}
 
 with sync_playwright() as p:
     browser = p.chromium.launch()
@@ -183,9 +191,9 @@ with sync_playwright() as p:
     artifacts = flow.run(page, BASE_URL)
     browser.close()
 
-after = {t: parse_batch(mysql(f"SELECT * FROM {t}")) for t in tables}
+after = {t: parse_batch(db(f"SELECT * FROM {t}")) for t in tables}
 
-db_spec = json.loads((BENCH / f"bench/db/mamute/{test_name}/spec.json").read_text())
+db_spec = json.loads((BENCH / f"bench/db/{sample}/{test_name}/spec.json").read_text())
 spec_tables = {t["name"]: t for t in db_spec["tables"]}
 delta = {"tables": {}}
 changed_elsewhere = []
@@ -201,9 +209,9 @@ for t in tables:
         if net:
             changed_elsewhere.append(f"{t} ({len(net)} rows net)")
 
-delta_path = BENCH / f"bench/db/mamute/{test_name}/expected_delta.json"
+delta_path = BENCH / f"bench/db/{sample}/{test_name}/expected_delta.json"
 delta_path.write_text(json.dumps(delta, indent=2) + "\n")
-(BENCH / f"bench/e2e/mamute/{test_name}/artifacts.json").write_text(
+(BENCH / f"bench/e2e/{sample}/{test_name}/artifacts.json").write_text(
     json.dumps(artifacts, indent=2) + "\n")
 
 print(f"delta tables: {', '.join(sorted(delta['tables'])) or '(none)'}")
