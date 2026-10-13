@@ -1,0 +1,291 @@
+{
+  "tables": {
+    "Answer": {
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": [
+        "createdAt",
+        "lastUpdatedAt"
+      ],
+      "inserted": [
+        {
+          "id": "8",
+          "invisible": "0",
+          "voteCount": "0",
+          "author_id": "1001",
+          "information_id": "9",
+          "lastTouchedBy_id": "1001",
+          "question_id": "206",
+          "deleted": "0"
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "AnswerInformation": {
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": [
+        "createdAt"
+      ],
+      "inserted": [
+        {
+          "id": "9",
+          "comment": "new answer",
+          "description": "Expose the question list through a REST endpoint that returns JSON, then render it client side. Keep the JSP only as a fallback while you migrate each flow.",
+          "ip": "172.19.0.1",
+          "markedDescription": "<p>Expose the question list through a REST endpoint that returns JSON, then render it client side. Keep the JSP only as a fallback while you migrate each flow.</p>\n",
+          "moderatedAt": null,
+          "status": "NO_NEED_TO_APPROVE",
+          "answer_id": "8",
+          "author_id": "1001",
+          "moderatedBy_id": null
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "LoginMethod": {
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": [],
+      "inserted": [
+        {
+          "id": "18",
+          "serviceEmail": "author@bench.test",
+          "token": "08b54f50f86710ba08496b5d73738ef3d789b4ddeb67c14b89f58664869410dc",
+          "type": "BRUTAL",
+          "user_id": "1002"
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "Question": {
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": [
+        "createdAt",
+        "lastUpdatedAt"
+      ],
+      "inserted": [
+        {
+          "id": "206",
+          "answerCount": "1",
+          "invisible": "0",
+          "views": "1",
+          "voteCount": "0",
+          "author_id": "1002",
+          "information_id": "207",
+          "lastTouchedBy_id": "1001",
+          "solution_id": null,
+          "deleted": "0"
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "QuestionInformation": {
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": [
+        "createdAt"
+      ],
+      "inserted": [
+        {
+          "id": "207",
+          "comment": "new question",
+          "description": "We are decoupling our frontend from the legacy JSP rendering. What is the recommended way to serve the question list data so the frontend can render it independently?",
+          "ip": "172.19.0.1",
+          "markedDescription": "<p>We are decoupling our frontend from the legacy JSP rendering. What is the recommended way to serve the question list data so the frontend can render it independently?</p>\n",
+          "moderatedAt": null,
+          "sluggedTitle": "how-do-i-render-a-question-list-without-jsp-on-the-server",
+          "status": "NO_NEED_TO_APPROVE",
+          "title": "How do I render a question list without JSP on the server?",
+          "author_id": "1002",
+          "moderatedBy_id": null,
+          "question_id": "206"
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "QuestionInformation_Tag": {
+      "key_columns": [
+        "QuestionInformation_id",
+        "tags_id"
+      ],
+      "ignore_columns": [],
+      "inserted": [
+        {
+          "QuestionInformation_id": "207",
+          "tags_id": "15",
+          "tag_order": "0"
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "Question_Interactions": {
+      "key_columns": [
+        "Question_id",
+        "userInteractions_id"
+      ],
+      "ignore_columns": [],
+      "inserted": [
+        {
+          "Question_id": "206",
+          "userInteractions_id": "1001"
+        },
+        {
+          "Question_id": "206",
+          "userInteractions_id": "1002"
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "Question_Watchers": {
+      "key_columns": [
+        "Question_id",
+        "watchers_id"
+      ],
+      "ignore_columns": [],
+      "inserted": [
+        {
+          "Question_id": "206",
+          "watchers_id": "4"
+        },
+        {
+          "Question_id": "206",
+          "watchers_id": "5"
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "ReputationEvent": {
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": [
+        "date"
+      ],
+      "inserted": [
+        {
+          "id": "6",
+          "context_type": "QUESTION",
+          "context_id": "206",
+          "karmaReward": "2",
+          "type": "CREATED_QUESTION",
+          "user_id": "1002",
+          "deleted": "0"
+        },
+        {
+          "id": "7",
+          "context_type": "QUESTION",
+          "context_id": "206",
+          "karmaReward": "2",
+          "type": "CREATED_ANSWER",
+          "user_id": "1001",
+          "deleted": "0"
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "Tag": {
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": [
+        "createdAt"
+      ],
+      "inserted": [
+        {
+          "id": "15",
+          "description": "",
+          "name": "jsp",
+          "usageCount": "1",
+          "author_id": "1002"
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "Users": {
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": [
+        "createdAt",
+        "lastUpvote",
+        "nameLastTouchedAt"
+      ],
+      "inserted": [
+        {
+          "id": "1002",
+          "about": null,
+          "birthDate": null,
+          "confirmedEmail": "0",
+          "email": "author@bench.test",
+          "forgotPasswordToken": "",
+          "isBanned": "0",
+          "isSubscribed": "1",
+          "karma": "2",
+          "location": null,
+          "markedAbout": null,
+          "moderator": "0",
+          "name": "Bench Author",
+          "photoUri": null,
+          "sluggedName": "bench-author",
+          "website": null,
+          "avatarImage_id": null,
+          "receiveAllUpdates": "0",
+          "deleted": "0"
+        }
+      ],
+      "updated": [
+        {
+          "key": {
+            "id": "1001"
+          },
+          "changes": {
+            "karma": [
+              "0",
+              "2"
+            ]
+          }
+        }
+      ],
+      "deleted": []
+    },
+    "Watcher": {
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": [
+        "createdAt"
+      ],
+      "inserted": [
+        {
+          "id": "4",
+          "active": "0",
+          "watcher_id": "1002"
+        },
+        {
+          "id": "5",
+          "active": "1",
+          "watcher_id": "1001"
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    }
+  }
+}

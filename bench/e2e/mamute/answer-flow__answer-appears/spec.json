@@ -1,0 +1,27 @@
+{
+  "task": "mamute/answer-flow",
+  "behavior": "answer-appears",
+  "routes": [
+    "/sign-up",
+    "/ask",
+    "/logout",
+    "/login",
+    "/{question.id}-{sluggedTitle}",
+    "/answer/{question.id}"
+  ],
+  "locale": "en-US",
+  "timezone_id": "UTC",
+  "viewport": { "width": 1280, "height": 800 },
+  "auth": "mixed",
+  "auth_notes": "The arrange actor signs up in-flow (deterministic fixed credentials, DB is reset between test dirs by the orchestrator) and asks the question. The answering actor is the seeded moderator: the author cannot answer its own fresh question (karma gate), while the moderator has enough karma. Moderator credentials come from the sample .env only.",
+  "credentials": "env:MAMUTE_ADMIN_USER,MAMUTE_ADMIN_PASSWORD",
+  "requires_db_reset": true,
+  "artifacts": [
+    "question_url",
+    "dom_before",
+    "dom_after",
+    "answers_count_before",
+    "answers_count_after",
+    "answer_visible_after"
+  ]
+}
