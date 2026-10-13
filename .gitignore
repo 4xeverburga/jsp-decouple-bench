@@ -6,3 +6,7 @@ bench/MANIFEST.sha256
 # tracked .env — those belong in gitignored files only.
 __pycache__/
 *.pyc
+
+# coverage measurement outputs (generated, not eval infra)
+coverage/
+environments/*/jacoco-exec/

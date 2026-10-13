@@ -1,0 +1,15 @@
+# Coverage override — used only by scripts/measure-coverage.sh:
+#   docker compose -f compose.yml -f compose.coverage.yml ...
+# Injects the JaCoCo agent into the app service's JVM (mvn exec:java runs in
+# the Maven JVM, so MAVEN_OPTS is the injection point) and mounts the vendored
+# agent. The agent listens in tcpserver mode: scripts/measure-coverage.sh
+# dumps coverage with jacococli without restarting the JVM (output=file is
+# unusable here — the post-restart JVM truncates the file the dying one wrote).
+services:
+  app:
+    environment:
+      MAVEN_OPTS: "-javaagent:/jacoco/jacocoagent.jar=output=tcpserver,address=*,port=${COVERAGE_AGENT_PORT:-6300}"
+    ports:
+      - "${COVERAGE_AGENT_PORT:-6300}:${COVERAGE_AGENT_PORT:-6300}"
+    volumes:
+      - ../../tools/jacoco/jacocoagent.jar:/jacoco/jacocoagent.jar:ro
