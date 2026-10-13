@@ -1,0 +1,24 @@
+{
+  "task": "openclinica/subject-flow",
+  "behavior": "subject-creation",
+  "routes": [
+    "/",
+    "/j_spring_security_check",
+    "/AddNewSubject",
+    "/ListStudySubjects"
+  ],
+  "locale": "en-US",
+  "timezone_id": "UTC",
+  "viewport": { "width": 1280, "height": 800 },
+  "auth": "seeded-admin",
+  "auth_notes": "Single actor: the seeded admin, whose credentials come from the sample .env only (openclinica has no in-flow signup). Pristine state is the fresh Liquibase seed after environments/openclinica/scripts/reset-pristine.sh — the sample's 'never drop the DB' contract applies to agent e2e tests, not to harness capture runs.",
+  "credentials": "env:OPENCLINICA_ADMIN_USER,OPENCLINICA_ADMIN_PASSWORD",
+  "requires_db_reset": true,
+  "artifacts": [
+    "subject_url",
+    "dom_before",
+    "dom_after",
+    "subject_label",
+    "subject_visible_after"
+  ]
+}

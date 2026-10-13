@@ -1,0 +1,132 @@
+{
+  "tables": {
+    "audit_log_event": {
+      "key_columns": [
+        "audit_id"
+      ],
+      "ignore_columns": [
+        "audit_date"
+      ],
+      "inserted": [
+        {
+          "audit_id": "2",
+          "audit_table": "subject",
+          "user_id": "1",
+          "entity_id": "1",
+          "entity_name": null,
+          "reason_for_change": null,
+          "audit_log_event_type_id": "5",
+          "old_value": null,
+          "new_value": null,
+          "event_crf_id": null,
+          "study_event_id": null,
+          "event_crf_version_id": null,
+          "item_data_repeat_key": null
+        },
+        {
+          "audit_id": "3",
+          "audit_table": "study_subject",
+          "user_id": "1",
+          "entity_id": "1",
+          "entity_name": null,
+          "reason_for_change": null,
+          "audit_log_event_type_id": "2",
+          "old_value": null,
+          "new_value": null,
+          "event_crf_id": null,
+          "study_event_id": null,
+          "event_crf_version_id": null,
+          "item_data_repeat_key": null
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "study_subject": {
+      "key_columns": [
+        "study_subject_id"
+      ],
+      "ignore_columns": [
+        "date_created",
+        "date_updated",
+        "enrollment_date"
+      ],
+      "inserted": [
+        {
+          "study_subject_id": "1",
+          "label": "SUBJ-BENCH-001",
+          "secondary_label": "",
+          "subject_id": "1",
+          "study_id": "1",
+          "status_id": "1",
+          "owner_id": "1",
+          "update_id": null,
+          "oc_oid": "SS_SUBJBENC",
+          "time_zone": ""
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "subject": {
+      "key_columns": [
+        "subject_id"
+      ],
+      "ignore_columns": [
+        "date_created",
+        "date_of_birth_change",
+        "date_updated",
+        "unique_identifier_md5"
+      ],
+      "inserted": [
+        {
+          "subject_id": "1",
+          "father_id": null,
+          "mother_id": null,
+          "status_id": "1",
+          "date_of_birth": "1990-03-15",
+          "gender": "m",
+          "unique_identifier": "PERSON-BENCH-001",
+          "owner_id": "1",
+          "update_id": null,
+          "dob_collected": "t"
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "user_account": {
+      "key_columns": [
+        "user_id"
+      ],
+      "ignore_columns": [
+        "date_created",
+        "date_lastvisit",
+        "date_updated"
+      ],
+      "inserted": [],
+      "updated": [
+        {
+          "key": {
+            "user_id": "1"
+          },
+          "changes": {
+            "passwd_challenge_question": [
+              null,
+              ""
+            ],
+            "passwd_challenge_answer": [
+              null,
+              ""
+            ],
+            "time_zone": [
+              "",
+              null
+            ]
+          }
+        }
+      ],
+      "deleted": []
+    }
+  }
+}
