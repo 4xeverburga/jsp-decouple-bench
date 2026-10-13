@@ -79,15 +79,17 @@ Exclude auth plumbing (e.g. `UserSession`) deliberately and say why in
 # pristine state is mandatory: ids must match across runs
 docker compose -f environments/<sample>/compose.yml down -v
 docker compose -f environments/<sample>/compose.yml up -d --wait
-.venv/bin/python scripts/capture_delta.py <task>__<behavior>
+.venv/bin/python scripts/capture_delta.py <sample> <task>__<behavior>
 ```
 
-`capture_delta.py` imports the test's own `flow.py` (single source of
-truth), runs it against the pristine app, screenshots every step into
-the test dir's `images/`, writes `artifacts.json`, and freezes the
-before/after dump diff as `bench/db/<sample>/<test>/expected_delta.json`.
-Docker may need `sg docker -c "..."` if the shell predates group
-membership.
+`capture_delta.py` is sample-generic: base URL, DB access command and
+table-list query live in `environments/<sample>/capture.env` (SQL travels
+over stdin — no quoting pitfalls between mysql and psql). It imports the
+test's own `flow.py` (single source of truth), runs it against the
+pristine app, screenshots every step into the test dir's `images/`,
+writes `artifacts.json`, and freezes the before/after dump diff as
+`bench/db/<sample>/<test>/expected_delta.json`. Docker may need
+`sg docker -c "..."` if the shell predates group membership.
 
 If it prints `WARNING — changes outside the spec's table list`, fix the
 db spec (add tables / ignore_columns) and re-capture. Never hand-edit
@@ -110,3 +112,57 @@ python3 bench/harness/manifest.py verify bench/MANIFEST.sha256
 Commit test dirs + manifest together. `bench/` is eval infrastructure:
 anything under it is checksummed, and researchers trace every frozen
 expectation through the test dir's `images/` and `artifacts.json`.
+
+## Pitfalls that cost a debug cycle (learned on mamute + openclinica)
+
+- **Pick the behavior direction that leaves a DB fingerprint.** mamute's
+  unwatch only deletes a join-table row (the `Watcher` row persists —
+  `Question.remove(Watcher)` mutates an in-memory list), so the before/
+  after dump nets to zero and `db_state` carries no signal. Capture the
+  *insert* direction instead, and document the quirk in the db spec's
+  `notes`.
+- **Forms that prefill volatile values break determinism.** openclinica's
+  AddNewSubject prefills `enrollmentDate` with *today* — fill every date
+  explicitly with a fixed value before submitting.
+- **Legacy apps stall on keep-alive reuse** (openclinica intermittently
+  hangs `goto`). Wrap navigation in a goto-with-one-retry helper instead
+  of sleeping.
+- **Never run a capture smoke test against a dirty stack "just to check
+  the DB wiring"** — it overwrites the frozen `images/` of an existing
+  test dir. If it happens: `git checkout -- <test dir>/images/`, delete
+  untracked new shots, regenerate the manifest, and re-verify.
+- **A partial flow still writes rows.** A killed capture leaves the DB
+  dirty; always reset before the next capture, not just before the first.
+
+## Measuring dynamic code coverage of the flows
+
+`scripts/measure-coverage.sh <sample> <test>...` runs each flow against a
+pristine stack with the JaCoCo agent injected and produces per-test plus
+aggregate CSV/HTML reports under `coverage/<sample>/` (gitignored — never
+under `bench/`). Knobs per sample live in `environments/<sample>/
+coverage.env` (stack mode `compose` or `tomcat-local`, app URL, class and
+source paths, agent port). JaCoCo jars are vendored in `tools/jacoco/`.
+
+Hard-won rules baked into the tooling — do not simplify them away:
+
+- **Use tcpserver mode + `jacococli dump`, never `output=file`.** The
+  file is written on JVM shutdown, and the *next* JVM (post-restart)
+  truncates it on boot with `append=false` — a race the harness loses.
+- **One tcpserver port per sample** (`COVERAGE_AGENT_PORT`): two sample
+  stacks up at once will fight over 6300 and the agent's premain failure
+  kills the whole JVM (`FATAL ERROR ... processing of -javaagent failed`).
+- **Never inherit the shell `JAVA_HOME`** (machine default is JDK 21;
+  these apps are Java 7 on JDK 8). Pin it in every start command.
+- **Write the agent config before the sample's reset script runs** and do
+  not stop/start Tomcat again afterwards — a second restart races the
+  dying JVM's agent socket (`Address already in use` on the agent port).
+- **compose v5 `up --wait` exits 1 when a one-shot service exits (0)** —
+  poll readiness yourself (HTTP 200 + every container healthy or
+  `Exited (0)`) instead of trusting the exit code.
+
+How to read the reports: the metric that matters is **which controllers/
+DAOs each slice covers** (per-test CSV) and which stay at 0% in the
+aggregate — 0% controllers are the prioritized backlog of next slices,
+not a failure. Whole-app percentages are meaningless (JSPs/JS are not
+Java; OAuth/Solr-style controllers are unreachable in the deterministic
+environment).
