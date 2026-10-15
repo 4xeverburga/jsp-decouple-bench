@@ -1,0 +1,20 @@
+{
+  "sample": "online-study-system",
+  "task": "out-course-flow",
+  "title": "Student drops a course",
+  "tier": 2,
+  "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+  "routes": [
+    "/login",
+    "/student/selectedCourse",
+    "/student/outCourse"
+  ],
+  "verification_scope": {
+    "e2e": [
+      "out-course-flow__out-course-deletes-enrollment"
+    ],
+    "db": [
+      "out-course-flow__out-course-deletes-enrollment"
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "task": "teacher-mark-flow",
+  "behavior": "save-mark-sets-grade",
+  "routes": [
+    "/login",
+    "/teacher/showCourse",
+    "/teacher/gradeCourse",
+    "/teacher/mark",
+    "/teacher/saveMark"
+  ],
+  "locale": "en-US",
+  "timezone_id": "UTC",
+  "viewport": { "width": 1280, "height": 800 },
+  "auth": "seeded",
+  "auth_notes": "The arrange actor is the seeded student 小明 (course 1 enrolled at progress 0, period 20) who completes the course in-flow; the grading actor is the seeded teacher 李老师 (owner of course 1). Credentials come from the sample .env only.",
+  "credentials": "env:OSS_STUDENT_USER,OSS_STUDENT_PASSWORD,OSS_TEACHER_USER,OSS_TEACHER_PASSWORD",
+  "requires_db_reset": true,
+  "artifacts": [
+    "mark_before",
+    "mark_after",
+    "dom_before",
+    "dom_after"
+  ]
+}

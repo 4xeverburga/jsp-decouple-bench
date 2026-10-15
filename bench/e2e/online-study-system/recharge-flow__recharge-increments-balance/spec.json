@@ -1,0 +1,22 @@
+{
+  "task": "recharge-flow",
+  "behavior": "recharge-increments-balance",
+  "routes": [
+    "/login",
+    "/student/recharge",
+    "/student/updateBalance"
+  ],
+  "locale": "en-US",
+  "timezone_id": "UTC",
+  "viewport": { "width": 1280, "height": 800 },
+  "auth": "seeded",
+  "auth_notes": "The actor is the seeded student 小明 (balance 80), whose credentials come from the sample .env only.",
+  "credentials": "env:OSS_STUDENT_USER,OSS_STUDENT_PASSWORD",
+  "requires_db_reset": true,
+  "artifacts": [
+    "balance_before",
+    "balance_after",
+    "dom_before",
+    "dom_after"
+  ]
+}

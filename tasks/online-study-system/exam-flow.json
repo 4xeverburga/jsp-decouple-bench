@@ -1,0 +1,23 @@
+{
+  "sample": "online-study-system",
+  "task": "exam-flow",
+  "title": "Student takes the course exam after completing all periods",
+  "tier": 3,
+  "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+  "routes": [
+    "/login",
+    "/student/selectedCourse",
+    "/student/startStudy",
+    "/student/backPeriod",
+    "/student/startExam",
+    "/student/saveExam"
+  ],
+  "verification_scope": {
+    "e2e": [
+      "exam-flow__save-exam-marks-has-exam"
+    ],
+    "db": [
+      "exam-flow__save-exam-marks-has-exam"
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "task": "exam-flow",
+  "behavior": "save-exam-marks-has-exam",
+  "flow": "e2e/online-study-system/exam-flow__save-exam-marks-has-exam/flow.py",
+  "tables": [
+    {
+      "name": "userlogin",
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": []
+    },
+    {
+      "name": "student",
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": []
+    },
+    {
+      "name": "teacher",
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": []
+    },
+    {
+      "name": "course",
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": []
+    },
+    {
+      "name": "student_course",
+      "key_columns": [
+        "course_id",
+        "student_id"
+      ],
+      "ignore_columns": []
+    },
+    {
+      "name": "role",
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": []
+    }
+  ],
+  "notes": "After driving course 1's progress to the full 20 periods and submitting the exam, student_course (1,24) is updated: progress 0 -> 20 and has_exam 0 -> 1. expected_delta.json is captured from the pristine app (never hand-written). The schema has no volatile columns (no timestamps/counters): every seeded date is fixed in the dump and the flows fill any date input explicitly, so ignore_columns is empty. All six tables are listed so the capture tooling can warn about any change outside the spec. Shiro sessions live in memory, not in the DB — there is no session table to exclude."
+}

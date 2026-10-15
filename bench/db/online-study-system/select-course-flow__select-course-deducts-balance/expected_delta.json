@@ -1,0 +1,43 @@
+{
+  "tables": {
+    "student": {
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": [],
+      "inserted": [],
+      "updated": [
+        {
+          "key": {
+            "id": "24"
+          },
+          "changes": {
+            "balance": [
+              "80",
+              "70"
+            ]
+          }
+        }
+      ],
+      "deleted": []
+    },
+    "student_course": {
+      "key_columns": [
+        "course_id",
+        "student_id"
+      ],
+      "ignore_columns": [],
+      "inserted": [
+        {
+          "course_id": "7",
+          "student_id": "24",
+          "progress": "0",
+          "mark": null,
+          "has_exam": "0"
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    }
+  }
+}

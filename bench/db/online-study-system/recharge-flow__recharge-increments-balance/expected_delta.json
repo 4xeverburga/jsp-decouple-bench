@@ -1,0 +1,25 @@
+{
+  "tables": {
+    "student": {
+      "key_columns": [
+        "id"
+      ],
+      "ignore_columns": [],
+      "inserted": [],
+      "updated": [
+        {
+          "key": {
+            "id": "24"
+          },
+          "changes": {
+            "balance": [
+              "80",
+              "180"
+            ]
+          }
+        }
+      ],
+      "deleted": []
+    }
+  }
+}

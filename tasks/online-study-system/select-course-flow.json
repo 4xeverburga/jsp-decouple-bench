@@ -1,0 +1,23 @@
+{
+  "sample": "online-study-system",
+  "task": "select-course-flow",
+  "title": "Student selects a course (balance deduction + enrollment)",
+  "tier": 2,
+  "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+  "routes": [
+    "/login",
+    "/student/showCourse",
+    "/student/stuSelectedCourse",
+    "/student/selectedCourse"
+  ],
+  "verification_scope": {
+    "e2e": [
+      "select-course-flow__select-course-deducts-balance",
+      "select-course-flow__insufficient-balance-blocks-selection"
+    ],
+    "db": [
+      "select-course-flow__select-course-deducts-balance",
+      "select-course-flow__insufficient-balance-blocks-selection"
+    ]
+  }
+}

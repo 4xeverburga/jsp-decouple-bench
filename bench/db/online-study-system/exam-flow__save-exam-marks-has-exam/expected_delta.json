@@ -1,0 +1,31 @@
+{
+  "tables": {
+    "student_course": {
+      "key_columns": [
+        "course_id",
+        "student_id"
+      ],
+      "ignore_columns": [],
+      "inserted": [],
+      "updated": [
+        {
+          "key": {
+            "course_id": "1",
+            "student_id": "24"
+          },
+          "changes": {
+            "progress": [
+              "0",
+              "20"
+            ],
+            "has_exam": [
+              "0",
+              "1"
+            ]
+          }
+        }
+      ],
+      "deleted": []
+    }
+  }
+}

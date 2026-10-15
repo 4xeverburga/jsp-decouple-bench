@@ -1,0 +1,21 @@
+{
+  "task": "admin-student-flow",
+  "behavior": "remove-student-cascades",
+  "routes": [
+    "/login",
+    "/admin/showStudent",
+    "/admin/removeStudent"
+  ],
+  "locale": "en-US",
+  "timezone_id": "UTC",
+  "viewport": { "width": 1280, "height": 800 },
+  "auth": "seeded",
+  "auth_notes": "The actor is the seeded admin, whose credentials come from the sample .env only. The removed student is the seeded 小明 (id 24, enrolled in courses 1 and 4) so the cascade covers enrollments too.",
+  "credentials": "env:OSS_ADMIN_USER,OSS_ADMIN_PASSWORD",
+  "requires_db_reset": true,
+  "artifacts": [
+    "dom_before",
+    "dom_after",
+    "removed_student_present_after"
+  ]
+}

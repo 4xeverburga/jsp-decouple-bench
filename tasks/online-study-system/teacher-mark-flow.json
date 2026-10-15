@@ -1,0 +1,22 @@
+{
+  "sample": "online-study-system",
+  "task": "teacher-mark-flow",
+  "title": "Teacher grades a student who finished the exam",
+  "tier": 3,
+  "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+  "routes": [
+    "/login",
+    "/teacher/showCourse",
+    "/teacher/gradeCourse",
+    "/teacher/mark",
+    "/teacher/saveMark"
+  ],
+  "verification_scope": {
+    "e2e": [
+      "teacher-mark-flow__save-mark-sets-grade"
+    ],
+    "db": [
+      "teacher-mark-flow__save-mark-sets-grade"
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "sample": "online-study-system",
+  "task": "recharge-flow",
+  "title": "Student recharges account balance",
+  "tier": 2,
+  "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+  "routes": [
+    "/login",
+    "/student/recharge",
+    "/student/updateBalance"
+  ],
+  "verification_scope": {
+    "e2e": [
+      "recharge-flow__recharge-increments-balance"
+    ],
+    "db": [
+      "recharge-flow__recharge-increments-balance"
+    ]
+  }
+}

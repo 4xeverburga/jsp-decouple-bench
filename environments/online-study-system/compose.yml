@@ -1,0 +1,59 @@
+# Online Study System sample — eval environment (docker compose).
+#
+# Project dir is this directory, so compose auto-loads `.env` (tracked —
+# the values are the upstream public seed credentials, see .env).
+# Variables are interpolated — never hardcoded here.
+name: online-study-system
+
+services:
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "${OSS_DB_PORT:-5435}:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # One-shot: creates the schema + seed from the sample's tracked dump.
+  # Must complete before the app starts (the app's connection pool expects
+  # the tables to exist).  Exits 0.
+  schema:
+    image: mysql:5.7
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./load-schema.sh:/load-schema.sh:ro
+      - ../../../Online_Study_System/sql:/sql:ro
+    entrypoint: ["bash", "/load-schema.sh"]
+
+  app:
+    build:
+      # Context = the sample repo (bench repo lives next to it:
+      # <root>/{Online_Study_System,jsp-decouple-bench,..}).  NOTE: dockerfile
+      # is resolved relative to the context, not to this compose file.
+      context: ../../../Online_Study_System
+      dockerfile: ../jsp-decouple-bench/environments/online-study-system/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      schema:
+        condition: service_completed_successfully
+    ports:
+      - "${OSS_HTTP_PORT:-8091}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null",
+             "http://localhost:8080/Examination_System/login.jsp"]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+      start_period: 60s
+
+volumes:
+  db-data:

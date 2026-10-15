@@ -1,0 +1,21 @@
+{
+  "task": "out-course-flow",
+  "behavior": "out-course-deletes-enrollment",
+  "routes": [
+    "/login",
+    "/student/selectedCourse",
+    "/student/outCourse"
+  ],
+  "locale": "en-US",
+  "timezone_id": "UTC",
+  "viewport": { "width": 1280, "height": 800 },
+  "auth": "seeded",
+  "auth_notes": "The actor is the seeded student 小明 (course 1 enrolled, has_exam 0 — the only enrollment listed on the selected-courses page), whose credentials come from the sample .env only.",
+  "credentials": "env:OSS_STUDENT_USER,OSS_STUDENT_PASSWORD",
+  "requires_db_reset": true,
+  "artifacts": [
+    "dom_before",
+    "dom_after",
+    "dropped_course_present_after"
+  ]
+}
