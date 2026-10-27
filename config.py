@@ -40,6 +40,13 @@ VIEWPORT = {"width": 1280, "height": 800}
 BROWSER_ENGINE = os.environ.get("BENCH_BROWSER", "chromium")
 HEADLESS = os.environ.get("BENCH_HEADLESS", "1") not in ("0", "false", "False")
 
+# --- agent harness -----------------------------------------------------------
+# Chosen per run (`make task HARNESS=claude-code`), not per sample: comparing
+# agents is the point. The name is recorded in TASK_RUN.harness.
+DEFAULT_HARNESS = os.environ.get("BENCH_HARNESS", "pristine")
+HARNESS_CMD = os.environ.get("BENCH_HARNESS_CMD", "")
+HARNESS_TIMEOUT_S = int(os.environ.get("BENCH_HARNESS_TIMEOUT_S", "3600"))
+
 # --- trace_similarity oracle -------------------------------------------------
 # "none" keeps the gate at verdict="pending". A future oracle is a command
 # that reads the trace document on stdin and prints {"value":0..1,...} on stdout.

@@ -3,7 +3,7 @@
     "sample": "mamute",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple the answer flow of this sample: RESTify the controllers that serve it, remove the server-rendered views for the flow's routes, and keep behaviour parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Users need to post an answer to a question. The answer form posts to a server-rendered page today; make it post to a JSON endpoint and update the page from the response. Everything users can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -40,7 +40,7 @@
     "sample": "mamute",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple the ask flow of this sample: RESTify the controllers that serve it, remove the server-rendered views for the flow's routes, and keep behaviour parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Users need to ask a new question. The form posts to a server-rendered page today; make it post to a JSON endpoint and update the page from the response. Everything users can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -74,7 +74,7 @@
     "sample": "mamute",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple the vote flow of this sample: RESTify the controllers that serve it, remove the server-rendered views for the flow's routes, and keep behaviour parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Users need to upvote and downvote questions. The vote controls hit server-rendered endpoints today; make them use JSON endpoints and update the count in place. Everything users can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -113,7 +113,7 @@
     "sample": "mamute",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple the watch flow of this sample: RESTify the controllers that serve it, remove the server-rendered views for the flow's routes, and keep behaviour parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Users need to watch and unwatch a question. The action hits a server-rendered endpoint today; make it use a JSON endpoint and update the page from the response. Everything users can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -148,7 +148,7 @@
     "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Administrators need to add a course. The form posts to a server-rendered page today; make it post to a JSON endpoint and refresh the course list from the response. Everything admins can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -182,7 +182,7 @@
     "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Administrators need to add and remove students. Those actions post to server-rendered pages today; make them use JSON endpoints and update the student list in place. Everything admins can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -218,7 +218,7 @@
     "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Students need to take an exam and save their answers. Saving posts to a server-rendered page today; make it use a JSON endpoint and update the page from the response. Everything students can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -255,7 +255,7 @@
     "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Students need to drop a course. The action posts to a server-rendered page today; make it use a JSON endpoint and refresh the enrolled courses. Everything students can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -289,7 +289,7 @@
     "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Students need to top up their balance. The form posts to a server-rendered page today; make it use a JSON endpoint and show the updated balance from the response. Everything students can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -323,7 +323,7 @@
     "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Students need to select a course, and the system must refuse the selection when their balance is too low. Both outcomes are rendered server-side today; make them JSON endpoints and update the page from the response. Everything students can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -359,7 +359,7 @@
     "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Students need to move between study periods while a course is in progress. Those actions post to server-rendered pages today; make them use JSON endpoints and update the progress on the page. Everything students can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -396,7 +396,7 @@
     "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Teachers need to grade a student's course. The form posts to a server-rendered page today; make it use a JSON endpoint and refresh the marks from the response. Everything teachers can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -432,7 +432,7 @@
     "sample": "openclinica",
     "task_type": "decouple_slice",
     "version": 1,
-    "prompt": "Decouple the subject flow of this sample: RESTify the controllers that serve it, remove the server-rendered views for the flow's routes, and keep behaviour parity with the golden baselines. Other pages may stay server-rendered.",
+    "prompt": "Study staff need to add a subject to a study and see it in the subject list. The form posts to a server-rendered page today; make it post to a JSON endpoint and refresh the list from the response. Everything staff can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"

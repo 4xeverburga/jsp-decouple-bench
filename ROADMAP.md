@@ -24,6 +24,8 @@ data and the behaviour cases. Everything else was rebuilt.
 | D12 | Edge-case samples stay in scope (Solr, LDAP, …) — local run is the bar. | accepted |
 | D13 | Only the three specified gates exist. No ordering, no composite score. | done |
 | D14 | The case corpus lives **inside** `functional_parity` (a case is that gate's test); other gates read a case's **logged result**, never the corpus. | done |
+| D15 | `src/harness` means **agent harnesses** (opencode, claude-code, pi, any CLI) — the thing that takes the prompt and does the work. The sample's runtime (stack, browser, db) lives in `src/env`. | done |
+| D16 | **The agent never learns it is being evaluated.** It gets a checkout and the manifest prompt verbatim; no routes, case names, goldens or `BENCH_*` env vars. Enforced structurally: `HarnessTask` holds only `prompt` + `cwd`. | done |
 
 ## 2. What was built
 
@@ -42,8 +44,10 @@ src/run/                   run_id, paths, atomic writes, port allocation,
                            pinned-checkout precondition, adapters context
 src/tasks/                 one implementation; scope comes from the manifest
 src/gates/                 functional_parity, network_isolation, trace_similarity
-src/harness/               ports + adapters: compose@1, playwright@1,
-                           mysql@1, postgres@1, h2@1, shell@1
+src/env/                   environment adapters (compose, playwright, mysql,
+                           postgres, h2, shell) — ports + registry + adapters
+src/harness/               agent harnesses: pristine, command, claude-code,
+                           opencode, pi — `run(HarnessTask, log_dir)`
 specs/                     er.md, modules.md, behavior.md
 ```
 
@@ -83,6 +87,12 @@ Verified end to end:
 6. **One task implementation.** `decouple_slice` and `oneshot_decoupling`
    differed only in scope widening, which is manifest data; the registry
    maps both names to `Task`. Net effect of 5–6: −97 lines of Python.
+7. **The prompt was rewritten to be evaluator-blind.** The first draft
+   appended routes, case names and "recorded behaviour" to the prompt — that
+   tells an agent it is being graded and hands it the answer key's index.
+   `render()` now returns the manifest prompt verbatim, `HarnessTask` holds
+   only `prompt` + `cwd`, and the 13 seeded prompts were rewritten as plain
+   work orders (no `golden`, `parity`, `case`, `benchmark`).
 
 ## 4. Known gaps (deliberate)
 

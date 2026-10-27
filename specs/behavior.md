@@ -32,16 +32,19 @@ Steps:
    - `SAMPLE.entrypoint` must exist in the checkout, else abort.
 3. Allocate `run_id = uuid4().hex`, create `out/runs/<run_id>/`.
 4. Insert `TASK_RUN` (`started_at`, `harness`, `environment`).
-5. Write `out/runs/<run_id>/task.json`:
-   `{run_id, manifest, prompt, sample{slug,commit_sha,location},
-     bindings, scope, preconditions{branch, commit, clean, entrypoint},
-     started_at}`.
+5. Resolve the harness (`--harness`, default `pristine`) and run it with
+   the **filled prompt**: the manifest prompt verbatim, in the sample
+   checkout. The agent is told nothing else — see §5.
 6. Capture `diff.patch` = `git diff` of the worktree against the pin
-   (empty for `pristine`, meaningful when an agent already worked).
-7. Print the `run_id` on stdout and nothing else. Exit 0.
+   (empty for `pristine`, meaningful for an agent that worked).
+7. Write `out/runs/<run_id>/task.json` and `harness.json`
+   (`{harness, exit_code, duration_s, cost_usd, tokens, log,
+   diff_bytes, diff_empty}` plus the manifest snapshot and preconditions).
+8. Print the `run_id` on stdout and nothing else. Exit 0.
 
-The runner does **not** start the stack and does **not** apply an agent's
-edits. Whether the run is "done" is decided by the gates.
+The runner does **not** start the stack. Whether the run is "done" is
+decided by the gates. A non-zero harness exit is recorded, not raised:
+the gates judge the tree that came back.
 
 ## 2. `gate` — evaluate a run
 
@@ -159,7 +162,25 @@ Two runs on the **same checkout** are still serialised by the sample
 itself (both would mutate the same worktree). Run them on separate
 clones; the bench never locks the sample.
 
-## 5. Determinism
+## 5. Isolation — the agent must not know
+
+An evaluated agent must not be able to tell it is being evaluated:
+
+| never given to the agent | why |
+|---|---|
+| this repo (`bench.db`, `seeds/`, `specs/`, `src/`) | it contains the prompts, gates and corpus |
+| `scope_json` (routes, case names) | it is the answer key's index |
+| `expect.json`, `images/` | the answer key itself |
+| env vars branded `BENCH_*` | the agent may print its environment |
+
+`HarnessTask` holds only `prompt` and `cwd`, so this is structural, not a
+convention. The prompt is the manifest prompt verbatim, phrased as a work
+request in the product — no "benchmark", "golden", "parity", "case" or
+"evaluation" vocabulary. Enforcing OS-level isolation of the spawned
+environment is the **supervisor's** job: it owns this repo and hands the
+agent nothing but a checkout and a prompt.
+
+## 6. Determinism
 
 - locale `en-US`, timezone `UTC`, viewport `1280x800` — from
   `config.py`, copied into every browser context.

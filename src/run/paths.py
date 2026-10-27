@@ -32,6 +32,10 @@ class RunPaths:
         return self.root / "diff.patch"
 
     @property
+    def harness(self) -> Path:
+        return self.root / "harness.json"
+
+    @property
     def images(self) -> Path:
         return self.root / "images"
 

@@ -13,7 +13,7 @@ bench. Keeping the technology name in the binding makes the manifest say
 """
 from __future__ import annotations
 
-from src.harness.adapters.shell.db import ShellDatabase
+from src.env.adapters.shell.db import ShellDatabase
 
 
 class H2Database(ShellDatabase):

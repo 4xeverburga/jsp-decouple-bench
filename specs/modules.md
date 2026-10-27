@@ -28,22 +28,27 @@ jsp-decouple-bench/
     ├── run/                  # run_id, paths, net, sample checkout, compose stack
     ├── tasks/                # the task implementation (scope is data)
     ├── gates/                # gate implementations (+ functional_parity/cases/)
-    └── harness/              # capability ports + technology adapters
+    ├── env/                  # environment adapters: start, drive, inspect a sample
+    └── harness/              # agent harnesses: hand the prompt to an agent
 ```
 
 ## Dependency rule
 
 ```
-main.py → tasks | gates → harness.ports → harness.adapters → (subprocess)
+main.py → tasks ─→ env.ports → env.adapters → (subprocess)
+        → gates ─→ env.ports → env.adapters → (subprocess)
+        → tasks ─→ harness.ports → harness.adapters → (the agent)
              ↓
            src.run, src.store, config
 ```
 
 - **Nothing imports upward.** An adapter never imports a gate; a gate
-  never imports another gate.
-- `src/tasks` and `src/gates` talk to the outside world **only** through
-  the protocols in `src/harness/ports.py`. A gate that needs a browser
-  asks for `BrowserPort`; it does not import Playwright.
+  never imports another gate; **a gate never imports `src.harness`** — a
+  gate judges a tree, it does not run an agent.
+- `src/tasks` and `src/gates` talk to a sample's runtime **only** through
+  the protocols in `src/env/ports.py`. A gate that needs a browser asks
+  for `BrowserPort`; it does not import Playwright.
+- `src/tasks` is the only module that talks to `src/harness`.
 - `config.py` is a leaf: every other module may import it, it imports
   nothing local.
 
@@ -55,13 +60,12 @@ names to `Task`:
 
 ```python
 class Task:
-    def prepare(self, ctx: RunContext) -> None: ...
+    def prepare(self, ctx: RunContext, harness: HarnessPort) -> HarnessResult: ...
 ```
 
-`prepare` asserts the sample checkout, snapshots the tree and records the
-manifest/prompt into `out/runs/<run_id>/task.json`. It does **not** start
-the stack and does **not** apply the agent's changes — the harness named
-in `TASK_RUN.harness` owns those, and the gates judge the result.
+`prepare` asserts the sample checkout, hands the prompt to the **harness**,
+reads the resulting diff back from git, and records the run. It does not
+start the stack, and it never edits the sample itself.
 
 ## `src/gates` — gates
 
@@ -84,26 +88,28 @@ A gate receives the run context (sample, manifest, bindings, paths) and
 returns a `GateResult`; `src/run/artifacts.py` serialises it. Gates never
 write to the DB.
 
-## `src/harness` — ports and adapters
+## `src/env` — environment adapters
 
-`ports.py` declares capabilities (**what** is needed):
+`env/ports.py` declares what the bench needs from a sample's **runtime**:
 
 | port | methods |
 |---|---|
-| `StackPort` | `up()`, `down()`, `ps()`, `base_url()`, `inspect()` |
-| `BrowserPort` | `run_case(case, base_url, env)`, `capture_case(...)` |
-| `DatabasePort` | `list_tables()`, `dump(tables)` |
+| `StackPort` | `up()`, `down()`, `reset()`, `ps()`, `inspect()`, `declared()`, `exec_()` |
+| `BrowserPort` | `run_case(flow_path, base_url, e2e)`, `capture_case(...)` |
+| `DatabasePort` | `list_tables()`, `dump()`, `dump_many()` |
 
-`adapters/` holds implementations (**who** provides it), one directory
-per **technology**, never per sample:
+`env/adapters/` holds implementations, one directory per **technology**,
+never per sample:
 
 ```
-adapters/
+env/adapters/
 ├── compose/stack.py        # any sample with a compose.yaml      → StackPort
 ├── playwright/browser.py   # chromium, pinned locale/tz/viewport  → BrowserPort
 ├── mysql/db.py             # mysql client inside the db service   → DatabasePort
 ├── postgres/db.py          # psql inside the db service           → DatabasePort
-└── h2/db.py                # file/stdio H2 (single-container apps) → DatabasePort
+├── h2/db.py                # H2 via an explicit command           → DatabasePort
+├── shell/db.py             # any SQL-over-stdin command           → DatabasePort
+└── tabular.py              # shared TSV parsing
 ```
 
 Adapters are **reused across samples**; the per-run map from capability
@@ -111,9 +117,51 @@ to concrete adapter is `TASK_MANIFEST.bindings_json` (see `er.md`). That
 is the whole point: `mysql@1` serves `mamute` and `online-study-system`
 without either sample being mentioned in `src/`.
 
-`src/harness/registry.py` resolves `"mysql@1"` → the adapter class,
-raises `UnknownAdapter` otherwise, and checks the adapter declares the
-capability the binding claims.
+`src/env/registry.py` resolves `"mysql@1"` → the adapter class, raises
+`UnknownAdapter` otherwise, and checks the adapter declares the capability
+the binding claims.
+
+## `src/harness` — agent harnesses
+
+The **other** meaning of "harness": the thing that runs the **agent**. It
+receives the prompt and does the work.
+
+```python
+@dataclass(frozen=True)
+class HarnessTask:
+    prompt: str      # TASK_MANIFEST.prompt — the whole of it
+    cwd: Path        # the sample checkout, already pinned
+    def render(self) -> str: ...   # exactly what the agent reads
+
+class HarnessPort(Protocol):
+    name: str
+    def run(self, task: HarnessTask, log_dir: Path) -> HarnessResult: ...
+```
+
+| adapter | meaning |
+|---|---|
+| `pristine` | no agent; the self-check (empty diff, goldens must still pass) |
+| `command` | any agent CLI: the prompt arrives on stdin |
+| `claude-code`, `opencode`, `pi` | presets over `command` |
+
+Rules:
+
+1. **The agent must not know it is being evaluated.** `render()` returns
+   the manifest prompt verbatim — no routes, no case names, no goldens,
+   no "benchmark" vocabulary. `HarnessTask` holds only `prompt` and `cwd`,
+   so verification metadata (`scope_json`) cannot leak, structurally.
+2. **The agent's environment is not branded.** `command` adds nothing to
+   the environment it spawns. The prompt copy it keeps lives in the run
+   directory for the supervisor, and no such path is handed to the agent.
+3. **The supervisor is the only party that knows about grading.** It owns
+   this repo and spawns environments for agents; an agent may never have
+   access to `bench.db`, `seeds/` or the case corpus.
+4. The harness is chosen **per run** (`--harness`), not per sample:
+   comparing agents is the point. Its name is recorded in `TASK_RUN.harness`.
+5. The harness's own claims are never trusted: the diff is read back from
+   git and written to `out/runs/<run_id>/diff.patch`.
+6. `HarnessResult` carries `exit_code`, `duration_s`, `cost_usd`, `tokens`,
+   `log_path`; cost flows into `TASK_RUN.estimated_cost_usd`.
 
 ## `src/gates/functional_parity/cases/`
 

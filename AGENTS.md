@@ -1,85 +1,89 @@
-# AGENTS — contract for an agent evaluated on this benchmark
+# AGENTS — contract for a **supervisor** running this benchmark
 
-## What you receive
+This repository is the **supervisor's** side of the bench. The agent under
+evaluation never sees it, and never learns that it is being evaluated.
+If you are an agent that was handed a checkout and a prompt, this file is
+not for you — you have no reason to be reading it.
 
-- A sample checkout, **already at the pinned commit** (`SAMPLE.commit_sha`),
-  and the filesystem path to it.
-- A manifest prompt (`TASK_MANIFEST.prompt`) naming the feature boundary.
-- The case scope: the case names your work is graded against.
+## What the supervisor owns
 
-You work **inside the sample checkout**. The bench repo (this one) is not
-your worktree: `bench.db`, `src/gates/functional_parity/cases/`, `seeds/`
-and `specs/` are the grader.
+| thing | where |
+|---|---|
+| registry of samples, manifests, runs, gates | `bench.db` (`schema.sql`, `seeds/`) |
+| the prompts agents receive | `TASK_MANIFEST.prompt` (seeds) |
+| the graded behaviour (the answer key) | `src/gates/functional_parity/cases/` |
+| how to start / drive / inspect a sample | `src/env/` |
+| how to run an agent | `src/harness/` |
 
-## What you must do
+## Running an agent
 
-Decouple the named boundary: RESTify the controllers that serve its routes,
-remove the server-rendered JSP/tag rendering for that flow, keep behaviour
-parity.
+```bash
+make task SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute \
+          HARNESS=claude-code                       # -> run_id
+make gate GATE_ID=functional_parity RUN_ID=<run_id>
+```
 
-**There is no edit whitelist.** Shared tags, interceptors, config, other
-pages — change whatever the decoupling needs. The boundary is a
-*verification scope*, not an edit scope.
+`HARNESS` selects the adapter (`pristine`, `command`, `claude-code`,
+`opencode`, `pi`); `--harness-cmd` overrides the command line.
 
 ## Hard rules
 
-1. **Work at the pinned commit.** The runner checks the worktree out to
-   `SAMPLE.commit_sha` and aborts if it is dirty. Do not move the commit,
-   do not rewrite history, do not `git reset --hard` over the sample's own
-   work.
-2. **Legacy unit tests are out of scope.** Decoupling legitimately breaks
-   view-layer tests. Do not spend effort resurrecting them; the gates are
-   the criteria.
-3. **No network beyond the compose stack.** The environment is
-   self-contained; external calls fail the run.
-4. **Determinism.** The run uses `en-US`, `UTC`, `1280x800`. Do not
-   introduce time-, locale- or host-dependent behaviour. Credentials come
-   from the sample's `.env` — never hardcode them.
-5. **Do not weaken the stack's declared shape.** `network_isolation` fails
+1. **Never expose this repository to the agent.** Not `bench.db`, not
+   `seeds/`, not `specs/`, not `src/`, not `out/`. Provision a bare
+   checkout of the sample and nothing else.
+2. **A prompt is a work order, not an exam.** It must read as something a
+   colleague or a ticket would say. No "benchmark", "golden", "parity",
+   "case", "evaluation", no list of graded routes.
+3. **Never leak scope.** Routes, case names, expected DB deltas and the
+   golden artifacts are what the agent is judged on; they are not inputs.
+   `harness.ports.HarnessTask` holds only `prompt` and `cwd` so this is
+   enforced by construction — do not widen it.
+4. **Do not brand the environment.** The `command` harness adds no
+   environment variables; keep it that way. An agent that runs `env` or
+   `pwd` must learn nothing about the bench.
+5. **Pinned checkout.** The harness starts from a clean tree at
+   `SAMPLE.commit_sha`; a dirty tree aborts the run. The agent may dirty
+   the tree afterwards — that is the point.
+6. **Credentials come from the sample's `.env`.** Never hardcode them in a
+   prompt, a case or a flow.
+7. **Determinism.** `en-US`, `UTC`, `1280x800`, fresh DB per case. Do not
+   introduce time-, locale- or host-dependent behaviour anywhere.
+8. **Do not weaken the stack's declared shape.** `network_isolation` fails
    if the app joins `host` networking, adds networks, or publishes ports
    the sample's `compose.yaml` does not declare.
 
-## How you are scored
+## Trust nothing until the self-check is green
+
+```bash
+make task SAMPLE=<s> TASK=<t> SAMPLE_LOCATION=../<s> HARNESS=pristine
+make gate GATE_ID=functional_parity RUN_ID=<run_id>     # must pass
+```
+
+`pristine` runs no agent and leaves the tree untouched, so `functional_parity`
+must reproduce every golden exactly. If that fails, the sample or the
+environment is wrong and **no agent score on it means anything**.
+
+## How a run is scored
+
+Gates are independent and unordered; there is no composite score.
 
 ```bash
 make gate GATE_ID=functional_parity RUN_ID=<run_id>
 make gate GATE_ID=network_isolation RUN_ID=<run_id>
 ```
 
-Each gate writes `out/runs/<run_id>/gates/<gate_id>.json`:
+Each writes `out/runs/<run_id>/gates/<gate_id>.json`:
 
 ```json
-{
-  "gate_id": "functional_parity",
-  "gate_version": 1,
-  "run_id": "3f2c…",
-  "value": 1.0,
-  "verdict": "pass",
-  "threshold": 1.0,
-  "direction": "maximize",
-  "duration_s": 812.4,
-  "details": [{"case": "vote-flow__upvote-increments-count", "verdict": "pass"}],
-  "notes": []
-}
+{"gate_id": "functional_parity", "gate_version": 1, "run_id": "3f2c…",
+ "value": 1.0, "verdict": "pass", "threshold": 1.0, "direction": "maximize",
+ "duration_s": 812.4, "details": [{"case": "vote-flow__upvote-…", "verdict": "pass"}]}
 ```
 
 - `verdict`: `pass | fail | error | pending` (exit codes 0 / 1 / 2 / 3).
 - `value`: normalised to `[0,1]`, or `null` when the gate could not measure.
-- **A gate never averages.** `pass` requires every sub-check to pass.
+- A gate never averages: `pass` requires every sub-check to pass.
 
-Passing a run means `functional_parity` **and** `network_isolation` are
-`pass`. `trace_similarity` reports `pending` until its oracle is
-implemented — it is not a pass criterion yet, and it will never be
-hand-scored.
-
-## Running the app yourself
-
-```bash
-cd <sample-location>
-docker compose -p bench-debug -f compose.yaml up -d --wait
-# app is on http://localhost:${BENCH_HTTP_PORT:-default}
-docker compose -p bench-debug down -v
-```
-
-Always tear the stack down (`-v`): case expectations assume a freshly
-reset database so ids are deterministic.
+A run passes when `functional_parity` **and** `network_isolation` pass.
+`trace_similarity` reports `pending` until its oracle exists; it is not a
+pass criterion and is never hand-scored.

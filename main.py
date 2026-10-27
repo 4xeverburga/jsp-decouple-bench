@@ -17,9 +17,11 @@ import sys
 import time
 from pathlib import Path
 
+import config
 from src.errors import BenchError, NotFound
 from src.gates import registry as gate_registry
 from src.gates.functional_parity.capture import capture
+from src.harness import registry as harness_registry
 from src.run import RunContext, RunPaths, new_run_id, utcnow
 from src.run.atomic import write_json
 from src.store import db as store_db
@@ -106,6 +108,8 @@ def cmd_task_run(args) -> int:
     conn = store_db.connect()
     try:
         manifest = _manifest_for(conn, args)
+        harness = harness_registry.resolve(
+            args.harness, {"cmd": args.harness_cmd} if args.harness_cmd else {})
         run_id = new_run_id()
         paths = RunPaths.create(run_id)
         ctx = RunContext(
@@ -115,14 +119,15 @@ def cmd_task_run(args) -> int:
             sample_location=Path(args.sample_location).expanduser(),
         )
         repo.insert_run(conn, run_id, manifest["manifest_id"], utcnow(),
-                        args.harness, args.environment)
+                        harness.name, args.environment)
 
         started = time.monotonic()
+        result = None
         try:
-            task_registry.resolve(manifest["task_type"]).prepare(ctx)
+            result = task_registry.resolve(manifest["task_type"]).prepare(ctx, harness)
         finally:
-            repo.finish_run(conn, run_id, utcnow(), time.monotonic() - started,
-                            args.estimated_cost)
+            cost = args.estimated_cost or (result.cost_usd if result else None)
+            repo.finish_run(conn, run_id, utcnow(), time.monotonic() - started, cost)
     finally:
         conn.close()
 
@@ -213,8 +218,10 @@ def build_parser() -> argparse.ArgumentParser:
     task_run.add_argument("--task", help="feature boundary, e.g. vote-flow (with --sample)")
     task_run.add_argument("--sample-location", required=True,
                           help="where the sample checkout lives on this filesystem")
-    task_run.add_argument("--harness", default="pristine",
-                          help="who produced the diff (pristine, claude-code, ...)")
+    task_run.add_argument("--harness", default=config.DEFAULT_HARNESS,
+                          help="agent harness: " + ", ".join(harness_registry.names()))
+    task_run.add_argument("--harness-cmd", default=None,
+                          help="override the harness command line")
     task_run.add_argument("--environment", default=None,
                           help="free-text description of the machine/image")
     task_run.add_argument("--estimated-cost", type=float, default=None,

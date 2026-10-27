@@ -1,60 +1,63 @@
-"""src/harness/ports.py — the capabilities a task or a gate may ask for.
+"""src/harness/ports.py — the agent harness boundary.
 
-Gates and tasks depend on these protocols only; the concrete adapter is
-selected per run from TASK_MANIFEST.bindings_json (by technology).
+A harness receives **the prompt** and does the work: it is the agent, or
+the thing that drives one.
+
+The agent must not know it is being evaluated. This module is where that
+rule is enforced, structurally:
+
+- the prompt is the manifest prompt **verbatim** — no routes, no case
+  names, no goldens, no "benchmark"/"evaluation" vocabulary;
+- everything else in `HarnessTask` is plumbing for the harness *process*
+  and is never rendered into the text the agent reads;
+- verification metadata (`TASK_MANIFEST.scope_json`) never enters this
+  dataclass at all, so it cannot leak by accident.
+
+The supervisor — a consumer of this bench — is the party that knows about
+grading. The agent just gets a work order in a repository.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
+
+
+@dataclass(frozen=True)
+class HarnessTask:
+    prompt: str
+    cwd: Path
+
+    def render(self) -> str:
+        """Exactly what the agent reads, and nothing more."""
+        return self.prompt.rstrip("\n") + "\n"
+
+
+@dataclass
+class HarnessResult:
+    exit_code: int
+    duration_s: float
+    cost_usd: float | None = None
+    tokens: int | None = None
+    log_path: Path | None = None
+
+    @property
+    def ok(self) -> bool:
+        return self.exit_code == 0
+
+    def to_dict(self) -> dict:
+        return {
+            "exit_code": self.exit_code,
+            "duration_s": round(self.duration_s, 3),
+            "cost_usd": self.cost_usd,
+            "tokens": self.tokens,
+            "log": str(self.log_path) if self.log_path else None,
+        }
 
 
 @runtime_checkable
-class StackPort(Protocol):
-    """A startable application stack (one compose file, one project name)."""
+class HarnessPort(Protocol):
+    name: str
 
-    def up(self) -> str:
-        """Start and wait for health; return the base URL."""
-
-    def down(self, volumes: bool = True) -> None: ...
-
-    def reset(self) -> str:
-        """down -v && up; used between cases so ids are deterministic."""
-
-    def base_url(self) -> str: ...
-
-    def ps(self) -> list[dict[str, Any]]: ...
-
-    def inspect(self) -> list[dict[str, Any]]:
-        """Raw `docker inspect` JSON for every container of the project."""
-
-    def declared(self) -> dict[str, Any]:
-        """`docker compose config` normalised: services, networks, ports."""
-
-    def exec_(self, service: str, argv: list[str], stdin: str | None = None) -> str: ...
-
-
-@runtime_checkable
-class BrowserPort(Protocol):
-    """Executes a flow file (a case's Playwright script).
-
-    Takes the path, not a case name: adapters know nothing about where the
-    corpus lives.
-    """
-
-    def run_case(self, flow_path: Path, base_url: str,
-                 e2e: dict[str, Any]) -> dict[str, Any]: ...
-
-    def capture_case(self, flow_path: Path, base_url: str, e2e: dict[str, Any],
-                     images_dir: Path) -> dict[str, Any]: ...
-
-
-@runtime_checkable
-class DatabasePort(Protocol):
-    """Reads the sample DB in a comparable, order-free form."""
-
-    def list_tables(self) -> list[str]: ...
-
-    def dump(self, table: str) -> list[dict[str, Any]]: ...
-
-    def dump_many(self, tables: list[str]) -> dict[str, list[dict[str, Any]]]: ...
+    def run(self, task: HarnessTask, log_dir: Path) -> HarnessResult:
+        """Execute the prompt in `task.cwd`; leave the tree as it stands."""

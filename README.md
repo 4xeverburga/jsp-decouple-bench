@@ -24,9 +24,20 @@ bounded is the **verification scope**: the cases the run is graded against.
 ```bash
 make db-init                                                  # build bench.db from schema + seeds
 
-make task MANIFEST_ID=3 SAMPLE_LOCATION=../mamute             # -> run_id
-make gate GATE_ID=functional_parity RUN_ID=<run_id>           # -> value
+make task MANIFEST_ID=3 SAMPLE_LOCATION=../mamute HARNESS=claude-code   # -> run_id
+make gate GATE_ID=functional_parity RUN_ID=<run_id>                     # -> value
 ```
+
+`HARNESS` picks the agent adapter: `pristine` (no agent — the self-check),
+`command` (any CLI, prompt on stdin), or the `claude-code` / `opencode` /
+`pi` presets. `HARNESS_CMD='...'` overrides the command line.
+
+**The agent never sees this repository, and never learns it is being
+evaluated.** It gets a checkout and a one-paragraph work order — the
+manifest prompt verbatim, with no routes, case names, goldens or
+benchmark vocabulary. `harness.ports.HarnessTask` holds only `prompt` and
+`cwd`, so that is structural rather than a convention. See `AGENTS.md`
+for the supervisor's obligations.
 
 `SAMPLE_LOCATION` is only *where the sample checkout lives on this
 filesystem*. Provenance comes from `SAMPLE.commit_sha`: the runner checks
@@ -84,7 +95,8 @@ specs/                    # er.md, modules.md, behavior.md — the contract
 seeds/                    # rows loaded by `make db-init`
 src/tasks/                # one task implementation (scope comes from the manifest)
 src/gates/                # functional_parity (+ its case corpus), network_isolation, trace_similarity
-src/harness/              # capability ports + adapters, selected by technology
+src/env/                  # environment adapters: start, drive, inspect a sample
+src/harness/              # agent harnesses: pristine, command, claude-code, opencode, pi
 out/runs/<run_id>/        # task.json, diff.patch, cases/*.json, gates/*.json (gitignored)
 ```
 

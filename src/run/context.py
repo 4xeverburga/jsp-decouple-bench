@@ -49,7 +49,7 @@ class RunContext:
     # --- adapters ------------------------------------------------------------
     def adapter(self, capability: str) -> Any:
         if capability not in self._adapters:
-            from src.harness.registry import resolve
+            from src.env.registry import resolve
 
             self._adapters[capability] = resolve(self, capability)
         return self._adapters[capability]

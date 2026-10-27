@@ -17,7 +17,7 @@ from typing import Any
 
 import config
 from src.errors import GateError
-from src.harness.adapters.tabular import parse_batch
+from src.env.adapters.tabular import parse_batch
 
 
 class ShellDatabase:

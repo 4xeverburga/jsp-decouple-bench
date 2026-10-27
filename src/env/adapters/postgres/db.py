@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.harness.adapters.tabular import parse_batch
+from src.env.adapters.tabular import parse_batch
 
 
 class PostgresDatabase:
