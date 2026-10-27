@@ -1,0 +1,10 @@
+[
+  {
+    "name": "decouple_slice",
+    "description": "Decouple one feature boundary: RESTify its controllers, remove its server-rendered views, keep behaviour parity."
+  },
+  {
+    "name": "oneshot_decoupling",
+    "description": "Decouple the whole sample in one run (every case)."
+  }
+]

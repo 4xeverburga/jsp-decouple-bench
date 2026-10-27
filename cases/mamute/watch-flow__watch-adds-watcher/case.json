@@ -1,0 +1,122 @@
+{
+  "sample": "mamute",
+  "case": "watch-flow__watch-adds-watcher",
+  "e2e": {
+    "routes": [
+      "/sign-up",
+      "/ask",
+      "/{question.id}-{sluggedTitle}",
+      "/question/watched/{question.id}"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "signup",
+    "auth_notes": "Single actor: signs up in-flow with deterministic fixed credentials and asks its own question with the watching checkbox unchecked, so no Watcher row exists before the act. No seeded moderator is involved and no env credentials are read.",
+    "credentials": "",
+    "requires_db_reset": true,
+    "artifacts": [
+      "question_url",
+      "dom_before",
+      "dom_after",
+      "watch_state_before",
+      "watch_state_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "Users",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpvote",
+          "nameLastTouchedAt"
+        ]
+      },
+      {
+        "name": "LoginMethod",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Question",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpdatedAt"
+        ]
+      },
+      {
+        "name": "QuestionInformation",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "Tag",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "QuestionInformation_Tag",
+        "key_columns": [
+          "QuestionInformation_id",
+          "tags_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Watcher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "Question_Watchers",
+        "key_columns": [
+          "Question_id",
+          "watchers_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Question_Interactions",
+        "key_columns": [
+          "Question_id",
+          "userInteractions_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "ReputationEvent",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "date"
+        ]
+      }
+    ],
+    "notes": "expected_delta.json is captured from the pristine app (never hand-written). The arrange asks with the watching checkbox unchecked (no Watcher row) and the act clicks the eye widget, so the Watcher + Question_Watchers inserts ARE the behavior under test. The unwatch direction was deliberately not chosen as a slice: Question.remove(Watcher) mutates an in-memory list, so unwatching only deletes the Question_Watchers join row (net zero in a before/after dump) while the Watcher row persists \u2014 no observable DB delta. Table list otherwise matches the ask-flow sibling. Join tables use tags_id/watchers_id, not Tag_id/Watcher_id. UserSession is deliberately excluded: auth plumbing, volatile by nature. ignore_columns are stripped from inserted/deleted rows and update comparisons by the capture tooling."
+  }
+}

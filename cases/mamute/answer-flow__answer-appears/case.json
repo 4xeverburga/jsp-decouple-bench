@@ -1,0 +1,144 @@
+{
+  "sample": "mamute",
+  "case": "answer-flow__answer-appears",
+  "e2e": {
+    "routes": [
+      "/sign-up",
+      "/ask",
+      "/logout",
+      "/login",
+      "/{question.id}-{sluggedTitle}",
+      "/answer/{question.id}"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "mixed",
+    "auth_notes": "The arrange actor signs up in-flow (deterministic fixed credentials, DB is reset between test dirs by the orchestrator) and asks the question. The answering actor is the seeded moderator: the author cannot answer its own fresh question (karma gate), while the moderator has enough karma. Moderator credentials come from the sample .env only.",
+    "credentials": "env:MAMUTE_ADMIN_USER,MAMUTE_ADMIN_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "question_url",
+      "dom_before",
+      "dom_after",
+      "answers_count_before",
+      "answers_count_after",
+      "answer_visible_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "Users",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpvote",
+          "nameLastTouchedAt"
+        ]
+      },
+      {
+        "name": "LoginMethod",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Question",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpdatedAt"
+        ]
+      },
+      {
+        "name": "QuestionInformation",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "Tag",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "QuestionInformation_Tag",
+        "key_columns": [
+          "QuestionInformation_id",
+          "tags_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Watcher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "Question_Watchers",
+        "key_columns": [
+          "Question_id",
+          "watchers_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Answer",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpdatedAt"
+        ]
+      },
+      {
+        "name": "AnswerInformation",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "Question_Interactions",
+        "key_columns": [
+          "Question_id",
+          "userInteractions_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "ReputationEvent",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "date"
+        ]
+      }
+    ],
+    "notes": "expected_delta.json is captured from the pristine app (never hand-written). Table list starts from the ask-flow sibling plus Answer/AnswerInformation (the behavior under test); Answer_Votes/Answer_Flags join tables stay empty in this flow and are omitted unless the capture run proves otherwise. The answering actor is the seeded moderator (the author lacks the karma to answer its own fresh question), so Users shows the moderator's karma update. UserSession is deliberately excluded: auth plumbing, volatile by nature. ignore_columns are stripped from inserted/deleted rows and update comparisons by the capture tooling."
+  }
+}

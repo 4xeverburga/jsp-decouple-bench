@@ -1,0 +1,77 @@
+{
+  "sample": "openclinica",
+  "case": "subject-flow__subject-creation",
+  "e2e": {
+    "routes": [
+      "/",
+      "/j_spring_security_check",
+      "/AddNewSubject",
+      "/ListStudySubjects"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "seeded-admin",
+    "auth_notes": "Single actor: the seeded admin, whose credentials come from the sample .env only (openclinica has no in-flow signup). Pristine state is the fresh Liquibase seed after environments/openclinica/scripts/reset-pristine.sh \u2014 the sample's 'never drop the DB' contract applies to agent e2e tests, not to harness capture runs.",
+    "credentials": "env:OPENCLINICA_ADMIN_USER,OPENCLINICA_ADMIN_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "subject_url",
+      "dom_before",
+      "dom_after",
+      "subject_label",
+      "subject_visible_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "subject",
+        "key_columns": [
+          "subject_id"
+        ],
+        "ignore_columns": [
+          "date_created",
+          "date_updated",
+          "unique_identifier_md5",
+          "date_of_birth_change"
+        ]
+      },
+      {
+        "name": "study_subject",
+        "key_columns": [
+          "study_subject_id"
+        ],
+        "ignore_columns": [
+          "date_created",
+          "date_updated",
+          "enrollment_date"
+        ]
+      },
+      {
+        "name": "audit_log_event",
+        "key_columns": [
+          "audit_id"
+        ],
+        "ignore_columns": [
+          "audit_date"
+        ]
+      },
+      {
+        "name": "user_account",
+        "key_columns": [
+          "user_id"
+        ],
+        "ignore_columns": [
+          "date_created",
+          "date_updated",
+          "date_lastvisit"
+        ]
+      }
+    ],
+    "notes": "expected_delta.json is captured from the pristine app (never hand-written). subject/study_subject are the behavior under test; audit_log_event records the creation audit trail (audit_date ignored); user_account changes on login (date_lastvisit ignored). audit_user_login is deliberately excluded: auth plumbing with a volatile login_attempt_date, same rationale as mamute's UserSession. enrollment_date is ignored because the form prefills it with today; the flow fills a fixed date but the column format is locale-sensitive. Pristine state = fresh Liquibase seed after environments/openclinica/scripts/reset-pristine.sh."
+  }
+}

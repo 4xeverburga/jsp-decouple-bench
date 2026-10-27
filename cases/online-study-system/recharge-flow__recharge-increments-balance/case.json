@@ -1,0 +1,75 @@
+{
+  "sample": "online-study-system",
+  "case": "recharge-flow__recharge-increments-balance",
+  "e2e": {
+    "routes": [
+      "/login",
+      "/student/recharge",
+      "/student/updateBalance"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "seeded",
+    "auth_notes": "The actor is the seeded student \u5c0f\u660e (balance 80), whose credentials come from the sample .env only.",
+    "credentials": "env:OSS_STUDENT_USER,OSS_STUDENT_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "balance_before",
+      "balance_after",
+      "dom_before",
+      "dom_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "userlogin",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "teacher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "course",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student_course",
+        "key_columns": [
+          "course_id",
+          "student_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "role",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      }
+    ],
+    "notes": "Recharging 100 updates student 24's balance 80 -> 180. No transaction/ledger table exists in this schema \u2014 the balance column is the only fingerprint. expected_delta.json is captured from the pristine app (never hand-written). The schema has no volatile columns (no timestamps/counters): every seeded date is fixed in the dump and the flows fill any date input explicitly, so ignore_columns is empty. All six tables are listed so the capture tooling can warn about any change outside the spec. Shiro sessions live in memory, not in the DB \u2014 there is no session table to exclude."
+  }
+}

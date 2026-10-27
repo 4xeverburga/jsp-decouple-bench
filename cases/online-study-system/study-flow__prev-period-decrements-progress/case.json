@@ -1,0 +1,76 @@
+{
+  "sample": "online-study-system",
+  "case": "study-flow__prev-period-decrements-progress",
+  "e2e": {
+    "routes": [
+      "/login",
+      "/student/selectedCourse",
+      "/student/startStudy",
+      "/student/prePeriod"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "seeded",
+    "auth_notes": "The actor is the seeded student \u5c0f\u660e (course 1 enrolled at progress 0). The arrange advances two periods in-flow because \u4e0a\u4e00\u5b66\u65f6 clamps at zero; credentials come from the sample .env only.",
+    "credentials": "env:OSS_STUDENT_USER,OSS_STUDENT_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "progress_before",
+      "progress_after",
+      "dom_before",
+      "dom_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "userlogin",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "teacher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "course",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student_course",
+        "key_columns": [
+          "course_id",
+          "student_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "role",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      }
+    ],
+    "notes": "Arrange advances course 1 twice (0 -> 2), then one \u4e0a\u4e00\u5b66\u65f6 click updates student_course (1,24) progress 2 -> 1 (net 0 -> 1 in the before/after dump). Course 1 is used because \u4e0a\u4e00\u5b66\u65f6 clamps at zero and the only other seeded enrollment (course 4) is a completed course absent from the selected-courses page. expected_delta.json is captured from the pristine app (never hand-written). The schema has no volatile columns (no timestamps/counters): every seeded date is fixed in the dump and the flows fill any date input explicitly, so ignore_columns is empty. All six tables are listed so the capture tooling can warn about any change outside the spec. Shiro sessions live in memory, not in the DB \u2014 there is no session table to exclude."
+  }
+}

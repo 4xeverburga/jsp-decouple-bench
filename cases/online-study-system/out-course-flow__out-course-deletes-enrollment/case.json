@@ -1,0 +1,74 @@
+{
+  "sample": "online-study-system",
+  "case": "out-course-flow__out-course-deletes-enrollment",
+  "e2e": {
+    "routes": [
+      "/login",
+      "/student/selectedCourse",
+      "/student/outCourse"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "seeded",
+    "auth_notes": "The actor is the seeded student \u5c0f\u660e (course 1 enrolled, has_exam 0 \u2014 the only enrollment listed on the selected-courses page), whose credentials come from the sample .env only.",
+    "credentials": "env:OSS_STUDENT_USER,OSS_STUDENT_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "dom_before",
+      "dom_after",
+      "dropped_course_present_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "userlogin",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "teacher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "course",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student_course",
+        "key_columns": [
+          "course_id",
+          "student_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "role",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      }
+    ],
+    "notes": "Dropping course 1 deletes the student_course (1,24) row. No balance refund happens (upstream behavior \u2014 the price is not returned). Course 1 is the only has_exam=0 enrollment; course 4 is completed and only listed on the over-courses page, which has no drop widget. expected_delta.json is captured from the pristine app (never hand-written). The schema has no volatile columns (no timestamps/counters): every seeded date is fixed in the dump and the flows fill any date input explicitly, so ignore_columns is empty. All six tables are listed so the capture tooling can warn about any change outside the spec. Shiro sessions live in memory, not in the DB \u2014 there is no session table to exclude."
+  }
+}

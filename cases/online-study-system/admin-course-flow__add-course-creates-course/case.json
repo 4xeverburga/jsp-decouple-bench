@@ -1,0 +1,74 @@
+{
+  "sample": "online-study-system",
+  "case": "admin-course-flow__add-course-creates-course",
+  "e2e": {
+    "routes": [
+      "/login",
+      "/admin/showCourse",
+      "/admin/addCourse"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "seeded",
+    "auth_notes": "The actor is the seeded admin, whose credentials come from the sample .env only.",
+    "credentials": "env:OSS_ADMIN_USER,OSS_ADMIN_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "dom_before",
+      "dom_after",
+      "new_course_row"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "userlogin",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "teacher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "course",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student_course",
+        "key_columns": [
+          "course_id",
+          "student_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "role",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      }
+    ],
+    "notes": "Creating \u6d4b\u8bd5\u8bfe\u7a0b (teacher \u674e\u8001\u5e08, 15 periods, price 30) inserts course id 9. expected_delta.json is captured from the pristine app (never hand-written). The schema has no volatile columns (no timestamps/counters): every seeded date is fixed in the dump and the flows fill any date input explicitly, so ignore_columns is empty. All six tables are listed so the capture tooling can warn about any change outside the spec. Shiro sessions live in memory, not in the DB \u2014 there is no session table to exclude."
+  }
+}

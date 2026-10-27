@@ -1,0 +1,55 @@
+[
+  {
+    "slug": "mamute",
+    "project_id": "4xeverburga/mamute",
+    "branch": "main",
+    "commit_sha": "347a678241b4aa54f09a2dbb1a194c8515ca3095",
+    "license": "Apache-2.0",
+    "description": "Q&A (Stack Overflow clone). VRaptor 4, 49 JSPs, 78 tag files.",
+    "entrypoint": "compose.yaml",
+    "target_url": "http://localhost:8090",
+    "technologies": [
+      "java7",
+      "jsp",
+      "mysql",
+      "vraptor",
+      "tomcat"
+    ]
+  },
+  {
+    "slug": "online-study-system",
+    "project_id": "unknown/Online_Study_System",
+    "branch": "main",
+    "commit_sha": "fa9678557543d8c9dfceb8b042335ca55923feed",
+    "license": null,
+    "description": "Course/exam management. Spring MVC 4.3, Shiro, JSP/JSTL.",
+    "entrypoint": "compose.yaml",
+    "target_url": "http://localhost:8091/Examination_System",
+    "technologies": [
+      "java7",
+      "jsp",
+      "mysql",
+      "spring-mvc",
+      "shiro",
+      "tomcat"
+    ]
+  },
+  {
+    "slug": "openclinica",
+    "project_id": "4xeverburga/openclinica",
+    "branch": "main",
+    "commit_sha": "53469e85fd57a6506ddf4eeb9f04fe8829a66703",
+    "license": null,
+    "description": "Clinical data management. Spring MVC 3.2, 807 JSPs (bounded flow only).",
+    "entrypoint": null,
+    "target_url": "http://localhost:8089/OpenClinica",
+    "technologies": [
+      "java7",
+      "jsp",
+      "postgres",
+      "spring-mvc",
+      "liquibase",
+      "tomcat"
+    ]
+  }
+]

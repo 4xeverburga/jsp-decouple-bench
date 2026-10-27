@@ -1,0 +1,166 @@
+# SPEC — `behavior.md` (verbs, lifecycle, gates)
+
+Two verbs, plus three support verbs. Nothing else is public.
+
+```bash
+make db-init                                    # build bench.db from schema + seeds
+make task  MANIFEST_ID=<n> SAMPLE_LOCATION=<path> [HARNESS=pristine]   # → run_id
+make gate  GATE_ID=<id> RUN_ID=<run_id> [GATE_VERSION=<n>]             # → value
+make case-capture SAMPLE=<s> CASE=<c> SAMPLE_LOCATION=<path>           # freeze golden
+make pin   SAMPLE=<s> SAMPLE_LOCATION=<path>                           # re-pin commit
+```
+
+`HARNESS` defaults to `pristine` (no agent). Everything is also
+reachable directly via `python3 main.py …`, which is the stable
+interface; the Makefile is a convenience wrapper with no logic.
+
+## 1. `task` — start a run
+
+Inputs: a **manifest** (sample + task type + version + prompt + adapter
+bindings + case scope) and **where the sample lives on this filesystem**.
+
+`SAMPLE_LOCATION` is only a path. It is *not* a provenance claim: the
+pinned commit comes from `SAMPLE.commit_sha` via the manifest.
+
+Steps:
+
+1. Load manifest → sample → pin. Resolve bindings.
+2. **Precondition — pinned checkout.** In `SAMPLE_LOCATION`:
+   - if `HEAD != SAMPLE.commit_sha`, `git checkout --detach <sha>`;
+   - if the worktree is dirty after that, **abort** (`PreconditionError`).
+     No stash, no reset, no force.
+   - `SAMPLE.entrypoint` must exist in the checkout, else abort.
+3. Allocate `run_id = uuid4().hex`, create `out/runs/<run_id>/`.
+4. Insert `TASK_RUN` (`started_at`, `harness`, `environment`).
+5. Write `out/runs/<run_id>/task.json`:
+   `{run_id, manifest, prompt, sample{slug,commit_sha,location},
+     bindings, scope, preconditions{branch, commit, clean, entrypoint},
+     started_at}`.
+6. Capture `diff.patch` = `git diff` of the worktree against the pin
+   (empty for `pristine`, meaningful when an agent already worked).
+7. Print the `run_id` on stdout and nothing else. Exit 0.
+
+The runner does **not** start the stack and does **not** apply an agent's
+edits. Whether the run is "done" is decided by the gates.
+
+## 2. `gate` — evaluate a run
+
+Inputs: a gate id (plus optional version) and a `run_id`.
+
+Steps:
+
+1. Load run → manifest → sample → bindings → case scope.
+2. Start the stack from `SAMPLE.entrypoint` inside `SAMPLE_LOCATION`,
+   using the sample's own `compose.yaml` and `.env`. The harness injects
+   an override: project name `bench-<run_id>`, allocated host ports,
+   fixed healthcheck wait. The app is up when healthchecks pass.
+3. Evaluate, write `out/runs/<run_id>/gates/<gate_id>.json`.
+4. Tear the stack down (`down -v`) unless `KEEP_STACK=1`.
+5. Print the result JSON on stdout. Exit 0 on `pass`, 1 on `fail`,
+   2 on `error`, 3 on `pending`.
+
+### Result document
+
+```json
+{
+  "gate_id": "functional_parity",
+  "gate_version": 1,
+  "run_id": "3f2c…",
+  "value": 1.0,
+  "verdict": "pass",
+  "threshold": 0.999,
+  "direction": "maximize",
+  "duration_s": 812.4,
+  "measured_at": "2026-10-27T10:11:12Z",
+  "details": [{"case": "vote-flow__upvote-increments-count", "verdict": "pass"}]
+}
+```
+
+`verdict` ∈ `pass | fail | error | pending`. `value` is normalised to
+`[0,1]`, or `null` when the gate cannot measure. A gate **never**
+averages: `pass` requires every sub-check to pass.
+
+There is no ordering between gates and no composite score. Three gates
+exist today; more will be added (RL environments consume them
+individually).
+
+## 3. The three gates
+
+### `functional_parity` — direction `maximize`, threshold `1.0`
+
+For every case in `scope_json.cases`:
+
+1. reset the stack (`down -v && up --wait`), so ids are deterministic;
+2. `DatabasePort.dump` of the case's tables → **before**;
+3. run `flow.py` through `BrowserPort`, getting its artifacts dict;
+4. `DatabasePort.dump` → **after**; compute
+   `inserted/updated/deleted` per table with `key_columns` /
+   `ignore_columns` applied;
+5. compare, order-insensitively, against `expect.json.db`;
+6. compare each artifact listed in `case.json.e2e.artifacts` against
+   `expect.json.artifacts` (exact string match; DOM is normalised by
+   `flow.py` itself).
+
+`value = passed_cases / total_cases`. A case that throws is `error` for
+that case and forces the gate to `fail` (not `error`) if other cases
+were measurable; if *no* case could run, the gate is `error`.
+
+### `network_isolation` — direction `maximize`, threshold `1.0`
+
+Asserts the running stack's runtime shape matches what the sample
+declares, i.e. decoupling did not introduce a hidden dependency:
+
+- the app container is not in `network_mode: host`;
+- the app container is attached only to networks defined by the sample's
+  compose file (no extra network joined at runtime);
+- published ports are exactly the declared ones (no extra listen);
+- no container outside the compose project is reachable by name.
+
+`value = passed_assertions / total_assertions`.
+Known limit (v1): outbound egress is *not* blocked or measured; the gate
+reads shape, not traffic. Blocking egress belongs to the runner's
+network policy, not to a gate.
+
+### `trace_similarity` — **pending**
+
+Intent: capture OpenTelemetry traces for a run and compare them with an
+oracle (possibly an LLM) to detect calls that would violate the new
+decomposition — e.g. a controller still reaching into a view layer, or a
+new cross-module call that did not exist before.
+
+v1 ships the contract only: if `out/runs/<run_id>/traces.json` is
+missing, or `config.TRACE_ORACLE` is `none`, the gate writes
+`{"value": null, "verdict": "pending"}`. It must never fabricate a score.
+`traces.json` shape (produced by a trace adapter, not by this gate):
+
+```json
+{"resource": {"service.name": "mamute"},
+ "spans": [{"name": "POST /voto/positivo", "trace_id": "…",
+            "parent_id": null, "attributes": {"http.method": "POST"}}]}
+```
+
+## 4. Parallel runs
+
+Two runs may execute concurrently on the same machine, even on the same
+sample checkout, without sharing mutable state:
+
+| resource | why it cannot collide |
+|---|---|
+| files | every path is `out/runs/<uuid4>/…`; no timestamps, no reuse |
+| writes | `os.replace()` of a temp file in the same directory (atomic) |
+| docker | project name `bench-<run_id>`; no shared containers/volumes |
+| ports | each run reserves free host ports (`src/run/net.py`) and injects them as a compose override |
+| sqlite | WAL mode, one short transaction per write, no long-lived writer |
+
+Two runs on the **same checkout** are still serialised by the sample
+itself (both would mutate the same worktree). Run them on separate
+clones; the bench never locks the sample.
+
+## 5. Determinism
+
+- locale `en-US`, timezone `UTC`, viewport `1280x800` — from
+  `config.py`, copied into every browser context.
+- credentials come from the sample's `.env` (never from a case file, and
+  never hardcoded in `flow.py`).
+- ids come from a freshly reset stack (`requires_db_reset`).
+- nothing depends on wall-clock time or host locale.

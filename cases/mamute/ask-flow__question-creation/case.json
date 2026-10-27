@@ -1,0 +1,122 @@
+{
+  "sample": "mamute",
+  "case": "ask-flow__question-creation",
+  "e2e": {
+    "routes": [
+      "/sign-up",
+      "/ask",
+      "/{question.id}-{sluggedTitle}"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "signup",
+    "auth_notes": "Single actor: signs up in-flow with deterministic fixed credentials. Question creation only requires a logged-in user, so no seeded moderator is involved and no env credentials are read.",
+    "credentials": "",
+    "requires_db_reset": true,
+    "artifacts": [
+      "question_url",
+      "dom_before",
+      "dom_after",
+      "question_title",
+      "question_tag",
+      "vote_count_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "Users",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpvote",
+          "nameLastTouchedAt"
+        ]
+      },
+      {
+        "name": "LoginMethod",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Question",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpdatedAt"
+        ]
+      },
+      {
+        "name": "QuestionInformation",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "Tag",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "QuestionInformation_Tag",
+        "key_columns": [
+          "QuestionInformation_id",
+          "tags_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Watcher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "Question_Watchers",
+        "key_columns": [
+          "Question_id",
+          "watchers_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Question_Interactions",
+        "key_columns": [
+          "Question_id",
+          "userInteractions_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "ReputationEvent",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "date"
+        ]
+      }
+    ],
+    "notes": "expected_delta.json is captured from the pristine app (never hand-written). Table list starts from the vote-flow sibling minus the vote tables (no votes are cast in this flow); Question_Interactions is kept because the post-submit redirect lands on showQuestion, which pings the view counter. Join tables use tags_id/watchers_id, not Tag_id/Watcher_id. UserSession is deliberately excluded: auth plumbing, volatile by nature. ignore_columns are stripped from inserted/deleted rows and update comparisons by the capture tooling."
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "sample": "online-study-system",
+  "case": "teacher-mark-flow__save-mark-sets-grade",
+  "e2e": {
+    "routes": [
+      "/login",
+      "/teacher/showCourse",
+      "/teacher/gradeCourse",
+      "/teacher/mark",
+      "/teacher/saveMark"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "seeded",
+    "auth_notes": "The arrange actor is the seeded student \u5c0f\u660e (course 1 enrolled at progress 0, period 20) who completes the course in-flow; the grading actor is the seeded teacher \u674e\u8001\u5e08 (owner of course 1). Credentials come from the sample .env only.",
+    "credentials": "env:OSS_STUDENT_USER,OSS_STUDENT_PASSWORD,OSS_TEACHER_USER,OSS_TEACHER_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "mark_before",
+      "mark_after",
+      "dom_before",
+      "dom_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "userlogin",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "teacher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "course",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student_course",
+        "key_columns": [
+          "course_id",
+          "student_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "role",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      }
+    ],
+    "notes": "Arrange: \u5c0f\u660e completes course 1 (progress 0 -> 20, has_exam 0 -> 1 via the exam) because no seeded enrollment combines has_exam=1 with mark=null. Act: teacher \u674e\u8001\u5e08 saves mark 85, updating student_course (1,24) mark null -> 85. The frozen delta therefore contains the arrange's progress/has_exam update plus the mark update. expected_delta.json is captured from the pristine app (never hand-written). The schema has no volatile columns (no timestamps/counters): every seeded date is fixed in the dump and the flows fill any date input explicitly, so ignore_columns is empty. All six tables are listed so the capture tooling can warn about any change outside the spec. Shiro sessions live in memory, not in the DB \u2014 there is no session table to exclude."
+  }
+}

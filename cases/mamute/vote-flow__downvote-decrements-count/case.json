@@ -1,0 +1,142 @@
+{
+  "sample": "mamute",
+  "case": "vote-flow__downvote-decrements-count",
+  "e2e": {
+    "routes": [
+      "/sign-up",
+      "/ask",
+      "/login",
+      "/logout",
+      "/{question.id}-{sluggedTitle}",
+      "/question/{question.id}/voto/negativo"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "mixed",
+    "auth_notes": "The arrange actor signs up in-flow (deterministic fixed credentials, DB is reset between test dirs by the orchestrator). The vote actor is the seeded moderator, whose credentials come from the sample .env only. Moderators bypass the downvote karma gate (EnvironmentKarmaRule -> isModerator), so no karma arrange step is needed.",
+    "credentials": "env:MAMUTE_ADMIN_USER,MAMUTE_ADMIN_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "question_url",
+      "vote_count_before",
+      "vote_count_after",
+      "dom_before",
+      "dom_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "Users",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpvote",
+          "nameLastTouchedAt"
+        ]
+      },
+      {
+        "name": "LoginMethod",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Question",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpdatedAt"
+        ]
+      },
+      {
+        "name": "QuestionInformation",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "Tag",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "QuestionInformation_Tag",
+        "key_columns": [
+          "QuestionInformation_id",
+          "tags_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Watcher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "Question_Watchers",
+        "key_columns": [
+          "Question_id",
+          "watchers_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Vote",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpdatedAt"
+        ]
+      },
+      {
+        "name": "Question_Votes",
+        "key_columns": [
+          "Question_id",
+          "votes_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Question_Interactions",
+        "key_columns": [
+          "Question_id",
+          "userInteractions_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "ReputationEvent",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "date"
+        ]
+      }
+    ],
+    "notes": "expected_delta.json is captured from the pristine app (never hand-written). Table/column names confirmed empirically by diffing a full dump during capture (join tables use tags_id/watchers_id, not Tag_id/Watcher_id). UserSession is deliberately excluded: auth plumbing, volatile by nature \u2014 the independent_frontend gate allows re-implementing it. ignore_columns are stripped from inserted/deleted rows and update comparisons by the capture tooling."
+  }
+}

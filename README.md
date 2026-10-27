@@ -1,77 +1,131 @@
 # JSP-Decouple-Bench
 
 A falsifiable benchmark for **decoupling legacy JSP frontends from their
-backends with REST APIs**. Agents are graded on behavior parity against
-golden baselines — not on code style, not on the legacy test suite.
+backends with REST APIs**. An agent is graded on behaviour parity against
+frozen golden baselines — not on code style, and not on the legacy test
+suite.
 
-First benchmark in its category. Companion to (and inspired by the gap
-left by) [MigrationBench](https://github.com/amazon-science/MigrationBench),
-which covers Java version upgrades; this covers framework/view-layer
-decoupling.
+First benchmark in its category. Companion to (and filling the gap left by)
+[MigrationBench](https://github.com/amazon-science/MigrationBench), which
+covers Java version upgrades; this covers framework / view-layer decoupling.
 
 ## The task
 
-Given a legacy JSP web app and a feature boundary (e.g. "the vote flow"),
-decouple it: RESTify the controllers, remove the server-rendered JSP/tag
-rendering for that flow, keep behavior parity.
+Given a legacy JSP web app at a pinned commit and one feature boundary
+("the vote flow"), decouple it: RESTify the controllers, remove the
+server-rendered views for that flow, keep behaviour parity.
 
-**There is no edit whitelist.** The agent may modify anything it needs —
-shared tags, interceptors, config, other pages. What is bounded is the
-**verification scope**: the golden baseline the run is graded against.
+**There is no edit whitelist.** The agent may modify anything inside the
+sample checkout — shared tags, interceptors, config, other pages. What is
+bounded is the **verification scope**: the cases the run is graded against.
 
-## Success criteria (the four gates)
-
-| Gate | Meaning |
-|---|---|
-| `build` | The sample's build still succeeds |
-| `parity` | Replaying the baseline HTTP/DOM fixtures reproduces the recorded behavior (normalized) |
-| `db_state` | DB deltas (before → after) match the frozen golden deltas |
-| `independent_frontend` | The flow's UI no longer depends on server-side rendering: the backend serves no HTML for the flow's routes — the property that makes independent frontend deployment possible. **Scoped to the task's flow only**; other pages may stay server-rendered. Gates 1–3 are satisfiable by a no-op agent; this gate is what requires actual decoupling. |
-
-Legacy unit tests are **explicitly out of scope** — decoupling
-legitimately breaks view-layer tests.
-
-## Quickstart
+## The two commands
 
 ```bash
-make setup SAMPLE=mamute          # build image, compose up --wait, healthcheck
-make eval  SAMPLE=mamute TASK=vote-flow AGENT=pristine   # self-check: must be green
-make eval  SAMPLE=mamute TASK=vote-flow AGENT=<your-agent>
+make db-init                                                  # build bench.db from schema + seeds
+
+make task MANIFEST_ID=3 SAMPLE_LOCATION=../mamute             # -> run_id
+make gate GATE_ID=functional_parity RUN_ID=<run_id>           # -> value
 ```
 
-Agent protocol: your agent receives the sample repo + task JSON, produces
-a git diff, and the harness verifies it. Everything under `bench/` is
-read-only eval infrastructure — modifying it voids the run (`TAMPERED`).
+`SAMPLE_LOCATION` is only *where the sample checkout lives on this
+filesystem*. Provenance comes from `SAMPLE.commit_sha`: the runner checks
+the worktree out to that commit and **refuses to run on a dirty tree**.
+
+Inspection:
+
+```bash
+make samples      # registry: samples, pinned commits, entrypoints
+make manifests    # registry: manifests, case counts, adapter bindings
+make runs         # registry: runs
+```
+
+## Gates
+
+Gates are independent and unordered — there is no composite score. More
+will be added; RL environments consume them individually.
+
+| Gate | Measures | Direction |
+|---|---|---|
+| `functional_parity` | Replays each case's Playwright flow and compares its DB delta and flow artifacts with the frozen golden. `value = passed / total` | maximize, threshold 1.0 |
+| `network_isolation` | The running stack keeps the shape the sample declares: no host network, no undeclared networks, no undeclared published ports | maximize, threshold 1.0 |
+| `trace_similarity` | **Pending.** Intended: compare captured OTel traces with an oracle (possibly an LLM) to catch calls that violate the new decomposition. Emits `verdict: "pending"`, `value: null` until an oracle is configured | maximize |
+
+Every evaluation writes `out/runs/<run_id>/gates/<gate_id>.json`, recording
+the `value`, the `verdict`, and the threshold/direction that were applied:
+
+```json
+{"gate_id": "functional_parity", "gate_version": 1, "run_id": "3f2c…",
+ "value": 1.0, "verdict": "pass", "threshold": 1.0, "direction": "maximize",
+ "duration_s": 812.4, "details": [{"case": "vote-flow__upvote-…", "verdict": "pass"}]}
+```
+
+`verdict` ∈ `pass | fail | error | pending`. Exit codes: 0 / 1 / 2 / 3.
+
+## How an agent is scored
+
+1. The runner prepares a run from a manifest (prompt + adapter bindings +
+   case scope) and prints a `run_id`.
+2. The agent works in the sample checkout at the pinned commit.
+3. Gates are evaluated against that checkout and write one JSON each.
+   A decoupled run passes `functional_parity` **and** `network_isolation`;
+   `trace_similarity` stays `pending` until it is specified.
+
+A tree that does not build cannot pass `functional_parity`: the stack never
+becomes healthy and the gate reports `error` (never a fabricated score).
 
 ## Layout
 
 ```
-bench/                     # eval infrastructure (immutable, checksummed)
-├── MANIFEST.sha256        # tamper detection — verified by the harness
-├── baselines/<sample>/<task>/{http,dom,db}/
-├── db/db_validation.py    # generic orchestrator: discovers db/<sample>/<test>/, runs isolated
-├── db/<sample>/<test>/    # one dir per test: spec.json + expected_delta.json
-├── e2e/e2e_validation.py  # generic orchestrator: discovers e2e/<sample>/<test>/, runs isolated
-├── e2e/<sample>/<test>/   # one dir per test: spec.json + flow.py (Playwright)
-└── harness/               # shared libs: normalize.py, state.py, manifest.py
-environments/<sample>/     # Dockerfile + compose.yml per sample (deterministic)
-tasks/<sample>/            # task JSONs (prompt, tier, verification scope)
-samples/<name>.lock        # pinned commit of each sample repo
+bench.db                  # git-tracked registry: samples, technologies, manifests, runs, gates
+schema.sql                # its DDL (PRAGMA user_version guards drift)
+main.py  config.py        # the CLI and every tunable
+specs/                    # er.md, modules.md, behavior.md — the contract
+seeds/                    # rows loaded by `make db-init`
+cases/<sample>/<case>/    # case.json + expect.json + flow.py (+ images/)
+src/tasks/                # task types: decouple_slice, oneshot_decoupling
+src/gates/                # functional_parity, network_isolation, trace_similarity
+src/harness/              # capability ports + adapters, selected by technology
+out/runs/<run_id>/        # task.json, diff.patch, gates/*.json, images/ (gitignored)
 ```
 
-Test dirs are named `<task>__<behavior>` and live under their sample
-(`bench/db/mamute/vote-flow__upvote-increments-count/`), mirroring
-`baselines/` and `tasks/` — so samples can never collide and
-`make eval SAMPLE=<s>` filters by directory, not by parsing specs.
+Samples carry their own environment: **`compose.yaml` lives in the sample
+repo**, not here, and is part of the pinned commit. The harness exports
+`BENCH_HTTP_PORT` / `BENCH_DB_PORT` per run and gives each run its own
+compose project (`bench-<run_id>`), so concurrent runs never collide on
+files or ports.
+
+Adapters are chosen **by technology**, not by sample — `mysql@1` serves
+every MySQL sample. Which adapter a run uses is data: the manifest's
+`bindings_json`. Available: `compose@1`, `playwright@1`, `mysql@1`,
+`postgres@1`, `h2@1`, `shell@1`.
 
 ## Samples
 
-| Sample | Status | Notes |
-|---|---|---|
-| mamute | planned (first vertical slice) | VRaptor 4, 49 JSPs, 78 tags; vote-flow anchor |
-| openclinica | planned (scoped slice) | Spring MVC 3.2, 807 JSPs — bounded flow only |
+| Sample | DB | Stack | Entrypoint |
+|---|---|---|---|
+| `mamute` | MySQL | VRaptor 4, 49 JSPs, 78 tag files | `compose.yaml` |
+| `online-study-system` | MySQL | Spring MVC 4.3, Shiro, JSP/JSTL | `compose.yaml` |
+| `openclinica` | PostgreSQL | Spring MVC 3.2, 807 JSPs (bounded flow only) | not yet authored |
+
+17 behaviour cases, 13 manifests.
+
+### Adding or re-pinning a sample
+
+```bash
+cp -r <env assets> ../<sample>/          # compose.yaml, Dockerfile, .env(.example)
+git -C ../<sample> add -A && git -C ../<sample> commit -m "..."
+make pin SAMPLE=<slug> SAMPLE_LOCATION=../<sample>   # pin to that commit
+make case-capture SAMPLE=<slug> CASE=<case> SAMPLE_LOCATION=../<sample>
+```
+
+`expect.json` is always **generated** by `case-capture` from the pristine
+tree — never hand-written.
 
 ## Status
 
-v0.0 — scaffold. Harness, orchestrators, and the first baseline are being
-built; see `AGENTS.md` for the agent contract and the roadmap.
+v1.0 — the rewrite is complete: registry, both verbs, three gates, 17 cases
+and 13 manifests migrated. Not yet done: the trace adapter + oracle
+(`trace_similarity` stays `pending`), and `compose.yaml` for `openclinica`.
+See `ROADMAP.md` for decisions of record, `AGENTS.md` for the agent
+contract, and `specs/` for the normative definitions.

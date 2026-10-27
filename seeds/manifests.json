@@ -1,0 +1,464 @@
+[
+  {
+    "sample": "mamute",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple the answer flow of this sample: RESTify the controllers that serve it, remove the server-rendered views for the flow's routes, and keep behaviour parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "",
+          "database": "mamute_development"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "answer-flow__answer-appears"
+      ],
+      "routes": [
+        "/sign-up",
+        "/ask",
+        "/logout",
+        "/login",
+        "/{question.id}-{sluggedTitle}",
+        "/answer/{question.id}"
+      ]
+    },
+    "name": "answer-flow"
+  },
+  {
+    "sample": "mamute",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple the ask flow of this sample: RESTify the controllers that serve it, remove the server-rendered views for the flow's routes, and keep behaviour parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "",
+          "database": "mamute_development"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "ask-flow__question-creation"
+      ],
+      "routes": [
+        "/sign-up",
+        "/ask",
+        "/{question.id}-{sluggedTitle}"
+      ]
+    },
+    "name": "ask-flow"
+  },
+  {
+    "sample": "mamute",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple the vote flow of this sample: RESTify the controllers that serve it, remove the server-rendered views for the flow's routes, and keep behaviour parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "",
+          "database": "mamute_development"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "vote-flow__downvote-decrements-count",
+        "vote-flow__upvote-increments-count"
+      ],
+      "routes": [
+        "/sign-up",
+        "/ask",
+        "/login",
+        "/logout",
+        "/{question.id}-{sluggedTitle}",
+        "/question/{question.id}/voto/negativo",
+        "/question/{question.id}/voto/positivo"
+      ]
+    },
+    "name": "vote-flow"
+  },
+  {
+    "sample": "mamute",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple the watch flow of this sample: RESTify the controllers that serve it, remove the server-rendered views for the flow's routes, and keep behaviour parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "",
+          "database": "mamute_development"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "watch-flow__watch-adds-watcher"
+      ],
+      "routes": [
+        "/sign-up",
+        "/ask",
+        "/{question.id}-{sluggedTitle}",
+        "/question/watched/{question.id}"
+      ]
+    },
+    "name": "watch-flow"
+  },
+  {
+    "sample": "online-study-system",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "root",
+          "database": "online_study_system"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "admin-course-flow__add-course-creates-course"
+      ],
+      "routes": [
+        "/login",
+        "/admin/showCourse",
+        "/admin/addCourse"
+      ]
+    },
+    "name": "admin-course-flow"
+  },
+  {
+    "sample": "online-study-system",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "root",
+          "database": "online_study_system"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "admin-student-flow__add-student-creates-user",
+        "admin-student-flow__remove-student-cascades"
+      ],
+      "routes": [
+        "/login",
+        "/admin/showStudent",
+        "/admin/addStudent",
+        "/admin/removeStudent"
+      ]
+    },
+    "name": "admin-student-flow"
+  },
+  {
+    "sample": "online-study-system",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "root",
+          "database": "online_study_system"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "exam-flow__save-exam-marks-has-exam"
+      ],
+      "routes": [
+        "/login",
+        "/student/selectedCourse",
+        "/student/startStudy",
+        "/student/backPeriod",
+        "/student/startExam",
+        "/student/saveExam"
+      ]
+    },
+    "name": "exam-flow"
+  },
+  {
+    "sample": "online-study-system",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "root",
+          "database": "online_study_system"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "out-course-flow__out-course-deletes-enrollment"
+      ],
+      "routes": [
+        "/login",
+        "/student/selectedCourse",
+        "/student/outCourse"
+      ]
+    },
+    "name": "out-course-flow"
+  },
+  {
+    "sample": "online-study-system",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "root",
+          "database": "online_study_system"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "recharge-flow__recharge-increments-balance"
+      ],
+      "routes": [
+        "/login",
+        "/student/recharge",
+        "/student/updateBalance"
+      ]
+    },
+    "name": "recharge-flow"
+  },
+  {
+    "sample": "online-study-system",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "root",
+          "database": "online_study_system"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "select-course-flow__insufficient-balance-blocks-selection",
+        "select-course-flow__select-course-deducts-balance"
+      ],
+      "routes": [
+        "/login",
+        "/student/showCourse",
+        "/student/stuSelectedCourse",
+        "/student/selectedCourse"
+      ]
+    },
+    "name": "select-course-flow"
+  },
+  {
+    "sample": "online-study-system",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "root",
+          "database": "online_study_system"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "study-flow__next-period-increments-progress",
+        "study-flow__prev-period-decrements-progress"
+      ],
+      "routes": [
+        "/login",
+        "/student/selectedCourse",
+        "/student/startStudy",
+        "/student/backPeriod",
+        "/student/prePeriod"
+      ]
+    },
+    "name": "study-flow"
+  },
+  {
+    "sample": "online-study-system",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple this flow of the Online Study System (Spring MVC 4.3 + Shiro + JSP/JSTL): RESTify the controllers that serve it, remove the server-rendered JSP rendering for the flow's routes, and keep behavior parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "root",
+          "database": "online_study_system"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "teacher-mark-flow__save-mark-sets-grade"
+      ],
+      "routes": [
+        "/login",
+        "/teacher/showCourse",
+        "/teacher/gradeCourse",
+        "/teacher/mark",
+        "/teacher/saveMark"
+      ]
+    },
+    "name": "teacher-mark-flow"
+  },
+  {
+    "sample": "openclinica",
+    "task_type": "decouple_slice",
+    "version": 1,
+    "prompt": "Decouple the subject flow of this sample: RESTify the controllers that serve it, remove the server-rendered views for the flow's routes, and keep behaviour parity with the golden baselines. Other pages may stay server-rendered.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "shell@1",
+        "options": {
+          "cmd": "podman exec -i openclinica-pg psql -U clinica -d openclinica -X -A -F$'\\t' -P footer=off -P null=NULL",
+          "list_tables_sql": "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "subject-flow__subject-creation"
+      ],
+      "routes": [
+        "/",
+        "/j_spring_security_check",
+        "/AddNewSubject",
+        "/ListStudySubjects"
+      ]
+    },
+    "name": "subject-flow"
+  }
+]

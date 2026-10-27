@@ -1,12 +1,15 @@
-bench/MANIFEST.sha256
+# generated output — never a source of truth
+out/
 
-# Per-sample eval env: .env is TRACKED (synthetic, deterministic bench
-# credentials — reproducibility across researchers matters more than
-# secrecy here).  NEVER put real secrets (OAuth keys, API tokens) in a
-# tracked .env — those belong in gitignored files only.
+# secrets. Sample credentials live in <sample>/.env (also untracked);
+# .env.example is the tracked template.
+.env
+
+# python
 __pycache__/
 *.pyc
+.venv/
 
-# coverage measurement outputs (generated, not eval infra)
-coverage/
-environments/*/jacoco-exec/
+# sqlite sidecars (bench.db itself IS tracked)
+bench.db-wal
+bench.db-shm

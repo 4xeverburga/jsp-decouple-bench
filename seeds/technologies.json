@@ -1,0 +1,38 @@
+[
+  {
+    "name": "java7",
+    "kind": "language"
+  },
+  {
+    "name": "jsp",
+    "kind": "framework"
+  },
+  {
+    "name": "mysql",
+    "kind": "database"
+  },
+  {
+    "name": "postgres",
+    "kind": "database"
+  },
+  {
+    "name": "spring-mvc",
+    "kind": "framework"
+  },
+  {
+    "name": "vraptor",
+    "kind": "framework"
+  },
+  {
+    "name": "shiro",
+    "kind": "framework"
+  },
+  {
+    "name": "liquibase",
+    "kind": "framework"
+  },
+  {
+    "name": "tomcat",
+    "kind": "server"
+  }
+]

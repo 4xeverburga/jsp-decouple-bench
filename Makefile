@@ -1,38 +1,73 @@
-# JSP-Decouple-Bench — the two commands
+# JSP-Decouple-Bench
 #
-#   make setup SAMPLE=<name>                        build + compose up --wait
-#   make eval SAMPLE=<name> TASK=<t> AGENT=<a>      run harness, emit verdict.json
+# Two verbs. Everything else is `python3 main.py ...`.
 #
-SAMPLE ?= mamute
-TASK   ?= vote-flow
-AGENT  ?= pristine
+#   make db-init
+#   make task  MANIFEST_ID=1 SAMPLE_LOCATION=../mamute    # -> run_id
+#   make gate  GATE_ID=functional_parity RUN_ID=<run_id>  # -> value
 
-# docker must be sudo-free (one-time: `sudo usermod -aG docker $USER`,
-# then a fresh login).  Override on the command line if needed, e.g.
-#   make setup COMPOSE="podman-compose -f environments/mamute/compose.yml"
-COMPOSE ?= docker compose -f environments/$(SAMPLE)/compose.yml
+PYTHON ?= python3
 
-.PHONY: setup eval down verify-manifest logs help
+MANIFEST_ID     ?=
+SAMPLE_LOCATION ?=
+HARNESS         ?= pristine
+GATE_ID         ?=
+GATE_VERSION    ?=
+RUN_ID          ?=
+SAMPLE          ?=
+TASK            ?=
+CASE            ?=
+
+.PHONY: help db-init db-init-force samples manifests runs task gate case-capture case-run pin
 
 help:
-	@echo "make setup SAMPLE=$(SAMPLE)   — build image, start stack, wait for healthcheck"
-	@echo "make eval  SAMPLE=$(SAMPLE) TASK=$(TASK) AGENT=$(AGENT) — run harness"
+	@echo "make db-init                                    build bench.db from schema.sql + seeds"
+	@echo "make task  MANIFEST_ID=1 SAMPLE_LOCATION=../mamute [HARNESS=pristine]"
+	@echo "         or  SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute"
+	@echo "make gate  GATE_ID=functional_parity RUN_ID=<run_id> [GATE_VERSION=1]"
+	@echo "make case-capture SAMPLE=mamute CASE=<case> SAMPLE_LOCATION=../mamute"
+	@echo "make pin   SAMPLE=mamute SAMPLE_LOCATION=../mamute"
+	@echo "make samples | manifests | runs                 inspect the registry"
 
-setup: ## build image and start the stack; returns only when healthy
-	$(COMPOSE) build
-	$(COMPOSE) up -d --wait
-	@echo "Sample '$(SAMPLE)' is up."
+db-init:
+	$(PYTHON) main.py db init
 
-logs: ## follow the app's logs
-	$(COMPOSE) logs -f app
+db-init-force:
+	$(PYTHON) main.py db init --force
 
-verify-manifest: ## step 0 of every eval: bench/ must be unmodified
-	python3 bench/harness/manifest.py verify bench/MANIFEST.sha256
+samples:
+	$(PYTHON) main.py db samples
 
-eval: verify-manifest ## run the harness for one task; emits verdict.json
-	@echo "TODO: harness not yet implemented (Mamute vote-flow vertical slice)"
-	@echo "Planned: build gate -> parity replay -> db delta -> no-server-html -> verdict.json"
-	@exit 2
+manifests:
+	$(PYTHON) main.py db manifests
 
-down:
-	$(COMPOSE) down -v
+runs:
+	$(PYTHON) main.py db runs
+
+task:
+	@test -n "$(SAMPLE_LOCATION)" || (echo "SAMPLE_LOCATION is required" && exit 2)
+	$(PYTHON) main.py task run \
+		$(if $(MANIFEST_ID),--manifest $(MANIFEST_ID),--sample $(SAMPLE) --task $(TASK)) \
+		--sample-location "$(SAMPLE_LOCATION)" --harness "$(HARNESS)"
+
+gate:
+	@test -n "$(GATE_ID)" || (echo "GATE_ID is required" && exit 2)
+	@test -n "$(RUN_ID)" || (echo "RUN_ID is required" && exit 2)
+	$(PYTHON) main.py gate run --gate $(GATE_ID) --run $(RUN_ID) $(if $(GATE_VERSION),--gate-version $(GATE_VERSION))
+
+case-capture:
+	@test -n "$(SAMPLE)" -a -n "$(CASE)" -a -n "$(SAMPLE_LOCATION)" || \
+		(echo "SAMPLE, CASE and SAMPLE_LOCATION are required" && exit 2)
+	$(PYTHON) main.py case capture --sample $(SAMPLE) --case $(CASE) \
+		--sample-location "$(SAMPLE_LOCATION)"
+
+case-run:
+	@test -n "$(SAMPLE)" -a -n "$(CASE)" -a -n "$(SAMPLE_LOCATION)" || \
+		(echo "SAMPLE, CASE and SAMPLE_LOCATION are required" && exit 2)
+	$(PYTHON) main.py case run --sample $(SAMPLE) --case $(CASE) \
+		--sample-location "$(SAMPLE_LOCATION)"
+
+pin:
+	@test -n "$(SAMPLE)" -a -n "$(SAMPLE_LOCATION)" || \
+		(echo "SAMPLE and SAMPLE_LOCATION are required" && exit 2)
+	$(PYTHON) main.py pin --sample $(SAMPLE) --sample-location "$(SAMPLE_LOCATION)"

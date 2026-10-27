@@ -1,0 +1,223 @@
+{
+  "sample": "mamute",
+  "case": "watch-flow__watch-adds-watcher",
+  "sample_commit": "347a678241b4aa54f09a2dbb1a194c8515ca3095",
+  "captured_at": "migrated-from-bench",
+  "db": {
+    "tables": {
+      "LoginMethod": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [],
+        "inserted": [
+          {
+            "id": "18",
+            "serviceEmail": "watcher@bench.test",
+            "token": "f21c3dea560906b290c893caa9f5f272ab5a1cf4900397b5e4a7d9e014465d43",
+            "type": "BRUTAL",
+            "user_id": "1002"
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      },
+      "Question": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpdatedAt"
+        ],
+        "inserted": [
+          {
+            "id": "206",
+            "answerCount": "0",
+            "invisible": "0",
+            "views": "1",
+            "voteCount": "0",
+            "author_id": "1002",
+            "information_id": "207",
+            "lastTouchedBy_id": "1002",
+            "solution_id": null,
+            "deleted": "0"
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      },
+      "QuestionInformation": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ],
+        "inserted": [
+          {
+            "id": "207",
+            "comment": "new question",
+            "description": "I created a question but I did not check the watching option. How do I start receiving updates about this question from the question page itself?",
+            "ip": "172.19.0.1",
+            "markedDescription": "<p>I created a question but I did not check the watching option. How do I start receiving updates about this question from the question page itself?</p>\n",
+            "moderatedAt": null,
+            "sluggedTitle": "how-do-i-follow-updates-about-a-question-i-created",
+            "status": "NO_NEED_TO_APPROVE",
+            "title": "How do I follow updates about a question I created?",
+            "author_id": "1002",
+            "moderatedBy_id": null,
+            "question_id": "206"
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      },
+      "QuestionInformation_Tag": {
+        "key_columns": [
+          "QuestionInformation_id",
+          "tags_id"
+        ],
+        "ignore_columns": [],
+        "inserted": [
+          {
+            "QuestionInformation_id": "207",
+            "tags_id": "15",
+            "tag_order": "0"
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      },
+      "Question_Interactions": {
+        "key_columns": [
+          "Question_id",
+          "userInteractions_id"
+        ],
+        "ignore_columns": [],
+        "inserted": [
+          {
+            "Question_id": "206",
+            "userInteractions_id": "1002"
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      },
+      "Question_Watchers": {
+        "key_columns": [
+          "Question_id",
+          "watchers_id"
+        ],
+        "ignore_columns": [],
+        "inserted": [
+          {
+            "Question_id": "206",
+            "watchers_id": "4"
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      },
+      "ReputationEvent": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "date"
+        ],
+        "inserted": [
+          {
+            "id": "6",
+            "context_type": "QUESTION",
+            "context_id": "206",
+            "karmaReward": "2",
+            "type": "CREATED_QUESTION",
+            "user_id": "1002",
+            "deleted": "0"
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      },
+      "Tag": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ],
+        "inserted": [
+          {
+            "id": "15",
+            "description": "",
+            "name": "jsp",
+            "usageCount": "1",
+            "author_id": "1002"
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      },
+      "Users": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpvote",
+          "nameLastTouchedAt"
+        ],
+        "inserted": [
+          {
+            "id": "1002",
+            "about": null,
+            "birthDate": null,
+            "confirmedEmail": "0",
+            "email": "watcher@bench.test",
+            "forgotPasswordToken": "",
+            "isBanned": "0",
+            "isSubscribed": "1",
+            "karma": "2",
+            "location": null,
+            "markedAbout": null,
+            "moderator": "0",
+            "name": "Bench Watcher",
+            "photoUri": null,
+            "sluggedName": "bench-watcher",
+            "website": null,
+            "avatarImage_id": null,
+            "receiveAllUpdates": "0",
+            "deleted": "0"
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      },
+      "Watcher": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ],
+        "inserted": [
+          {
+            "id": "4",
+            "active": "1",
+            "watcher_id": "1002"
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      }
+    }
+  },
+  "artifacts": {
+    "question_url": "http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created",
+    "dom_before": "<!DOCTYPE html><html lang=\"en\"><head> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"> <title>jsp - How do I follow updates about a question I created?</title> <meta name=\"description\" content=\"How do I follow updates about a question I created? &lt;p&gt;I created a question but I did not check the watching option. How do I start receiving updates about this question from the question page itself?\"> <meta property=\"og:title\" content=\"\"> <meta property=\"og:site_name\" content=\"mamute.org.br\"> <meta property=\"og:url\" content=\"http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created\"> <meta property=\"og:type\" content=\"website\"> <meta property=\"og:image\" content=\"http://localhost:8090/imgs/logo-fb.png\"> <link rel=\"stylesheet\" href=\"/css/mamute.9ed6758a.css\"> <link rel=\"stylesheet\" href=\"/css/deps/custom.css\"> <!--[if lt IE 9]> <![endif]--> <!--[if lte IE 8]> <![endif]--> <link rel=\"canonical\" href=\"http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created\"> </head> <body style=\"\"> <header class=\"header clear\"> <section class=\"first-header\"> <div class=\"container header-container\"> <a class=\"logo big-logo sprite\" href=\"/\">Mamute</a> <nav class=\"nav main-nav piped-nav\"> <ul class=\"nav-items\"> <li class=\"nav-item\"> <a class=\"button current\" href=\"/\"> Questions </a> </li> <li class=\"nav-item menu-unanswered\"> <a class=\"button unanswered \" href=\"/unanswered\"> Unanswered </a> </li> <li class=\"nav-item menu-rank\"> <a class=\"button \" href=\"/ranking\"> Users </a> </li> <li class=\"nav-item\"> <a class=\"button \" href=\"/news\"> News </a> </li> <li class=\"ask nav-item\"> <a class=\"button ask-a-question\" href=\"/ask\"> Ask Question </a> </li> </ul> </nav> </div> </section> <section class=\"second-header\"> <div class=\"container\"> <section class=\"user-area\"> <nav class=\"nav\"> <ul class=\"nav-items\"> <li class=\"nav-item user-item\"> <a class=\"user-name\" href=\"/users/1002/bench-watcher\"> <img class=\"user-image menu-user-image\" src=\"http://www.gravatar.com/avatar/8a8c9cd0171a84184fc30587623db16c.png?r=PG&amp;size=32x32&amp;d=https%3A%2F%2Frobohash.org%2Fsize_32x32%2Fset_set1%2Fbgset_any%2F8a8c9cd0171a84184fc30587623db16c.png\"> Bench Watcher <span class=\"reputation\">(2)</span> </a> </li> <li class=\"nav-item\"> <a class=\"logout\" href=\"/logout\"> Sign out </a> </li> <li class=\"nav-item\"> <a class=\"about\" href=\"/about\"> About </a> </li> <li class=\"nav-item\"> <a class=\"intro new-users\" href=\"#\" style=\"visibility: visible;\">Help!</a> </li> <li class=\"nav-item\"> <a href=\"#\" class=\"search-dropdown dropdown-trigger\" data-target-id=\"dropdown-search-form\">Search</a> </li> </ul> </nav> </section> </div> <div class=\"container dropdown-target\" id=\"dropdown-search-form\"> </div> </section> </header> <div class=\"container\"> <ul> <li class=\"message alert\"> Make sure the spelling, grammar and formatting of your question is correct, this will increase the chance of getting replies </li> </ul> <div class=\"hidden\" itemprop=\"breadcrumb\" xmlns:v=\"http://rdf.data-vocabulary.org/#\"> <span typeof=\"v:Breadcrumb\"> <a rel=\"v:url\" property=\"v:title\" href=\"/\"> Questions </a> </span> <span>\u00ef\u00bf\u00bd</span> <span typeof=\"v:Breadcrumb\"> <a rel=\"v:url\" property=\"v:title\" href=\"/tag/jsp\"> jsp </a> </span> <span>\u00ef\u00bf\u00bd</span> <span typeof=\"v:Breadcrumb\"> <a rel=\"v:url\" property=\"v:title\" href=\"/206-How+do+I+follow+updates+about+a+question+I+created%3F\"> How do I follow updates about a question I created? </a> </span> </div> <section class=\"first-content content\"> <section itemscope=\"\" itemtype=\"http://schema.org/Article\" class=\"post-area question-area \"> <h1 itemprop=\"name\" class=\"title subheader main-thread-title question-title\">How do I follow updates about a question I created?</h1> <div class=\"post-meta\"> <div class=\"vote-container post-vote\"> <a rel=\"nofollow\" class=\"container requires-login requires-karma author-cant up-vote up-arrow arrow vote-option \" data-value=\"positivo\" data-author=\"true\" data-type=\"Question\" data-karma=\"10\" data-id=\"206\" title=\"This question was well formulated, is useful or clear.\"> up </a> <span class=\"vote-count post-vote-count\">0</span> <a rel=\"nofollow\" class=\"container requires-login author-cant down-vote down-arrow arrow vote-option requires-karma \" data-value=\"negativo\" data-author=\"true\" data-type=\"Question\" data-karma=\"100\" data-id=\"206\" title=\"This question wasnt well formulated, it isnt useful or clear. (-2 score for the author -2 and for you)\"> down </a> </div> <div> <a rel=\"nofollow\" class=\"watch requires-login\" href=\"/question/watched/206\"> <span class=\"icon-eye-off icon-muted icon-2x container\" title=\"Click here to receive news about this question and its answers. \"> </span> </a> </div> </div> <div class=\"post-container\"> <div itemprop=\"articleBody\" class=\"post-text question-description\" id=\"question-description-206\"> <p>I created a question but I did not check the watching option. How do I start receiving updates about this question from the question page itself?</p> </div> <ul class=\"tags\" itemprop=\"keywords\"> <li class=\"tags-item\"> <a href=\"/tag/jsp\" class=\"tag-brutal\">jsp</a> </li> </ul> <div class=\"post-interactions\"> <ul class=\"post-action-nav piped-nav nav\"> <li class=\"nav-item\"> <a class=\"post-action show-popup\" href=\"#\"> share </a> <div class=\"popup share small\"> <div class=\"question-warnings\" style=\"display: none;\"><h4 class=\"section-title hint-title\">Please review your post</h4><ul></ul></div><form class=\"validated-form\" novalidate=\"novalidate\"> <label for=\"share-url\">share a link for this question</label> <input type=\"text\" class=\"text-input required ignore\" id=\"share-url\" value=\"http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created\"> </form> <a target=\"_blank\" class=\"share-button\" data-shareurl=\"http://www.facebook.com/sharer/sharer.php?u=http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created\"> <i class=\"icon-facebook-squared icon-almost-3x\"></i> </a> <a target=\"_blank\" class=\"share-button\" data-shareurl=\"https://twitter.com/share?text=How do I follow updates about a question I created?&amp;url=http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created\"> <i class=\"icon-twitter-squared icon-almost-3x\"></i> </a> <a target=\"_blank\" class=\"share-button\" data-shareurl=\"https://plus.google.com/share?&amp;url=http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created\"> <i class=\"icon-gplus-squared icon-almost-3x\"></i> </a> <a class=\"close-popup\">close</a> </div> </li> <li class=\"nav-item\"> <a class=\"post-action edit-question requires-login requires-karma\" data-author=\"true\" data-karma=\"20\" href=\"/question/edit/206\"> edit </a> </li> <li class=\"nav-item\"> <a href=\"#\" data-author=\"true\" data-karma=\"10\" data-modal-id=\"question-flag-modal206\" class=\"post-action author-cant requires-login flag-it requires-karma\"> flag </a> <div class=\"hidden modal modal-flag\" id=\"question-flag-modal206\"> <ul class=\"nav\"> <li class=\"modal-close-button\">x</li> </ul> <form class=\"validated-form\" action=\"/question/206/mark\" novalidate=\"novalidate\"> <input type=\"radio\" value=\"RUDE\" name=\"flagType\" id=\"flag-type-rude\" class=\"ignore\"> <label for=\"flag-type-rude\">Offensive or rude</label> <input type=\"radio\" value=\"NOT_CONSTRUCTIVE\" name=\"flagType\" id=\"flag-type-notconstructive\" class=\"ignore\"> <label for=\"flag-type-notconstructive\">not constructive</label> <input type=\"radio\" value=\"OBSOLETE\" name=\"flagType\" id=\"flag-type-obsolete\" class=\"ignore\"> <label for=\"flag-type-obsolete\">Obsolete</label> <input class=\"other-option ignore\" type=\"radio\" value=\"OTHER\" name=\"flagType\" id=\"flag-type-other\" data-reason-id=\"other-reason\"> <label for=\"flag-type-other\">other...</label> <div id=\"other-reason\" class=\"hidden\"> <label for=\"reason-text\">Reason</label> <textarea id=\"reason-text\" name=\"reason\"></textarea> </div> <label class=\"error\"></label> <input type=\"submit\" value=\"Flag\" class=\"ignore\"> </form> </div> </li> </ul> <ul class=\"post-touchs\"> <li class=\"touch author-touch\"> <div class=\"complete-user\"> <time class=\"when\" itemprop=\"dateCreated\" datetime=\"2026-10-13T01:08:23.000Z\">created moments ago </time> <a href=\"/users/1002/bench-watcher\"><img border=\"0\" class=\"user-image\" src=\"http://www.gravatar.com/avatar/8a8c9cd0171a84184fc30587623db16c.png?r=PG&amp;size=48x48&amp;d=https%3A%2F%2Frobohash.org%2Fsize_48x48%2Fset_set1%2Fbgset_any%2F8a8c9cd0171a84184fc30587623db16c.png\"></a> <div class=\"user-info\" itemscope=\"\" itemtype=\"http://schema.org/Person\" itemprop=\"author\"> <a class=\"user-name ellipsis\" itemprop=\"name\" href=\"/users/1002/bench-watcher\"> Bench Watcher </a> <div title=\"a way to measure the user's score\" class=\"user-karma ellipsis\">2 reputation score</div> </div> </div> </li> </ul> </div> <ul class=\"comment-list hidden\" id=\"new-comment-for-question-new-comment-206\"> </ul> <div class=\"simple-ajax-form\"> <a href=\"#\" class=\"requires-login post-action add-comment requires-karma\" data-karma=\"0\"> Add comment </a> <div class=\"ajax-form hidden\"> <form method=\"post\" action=\"/question/206/comment\" class=\"validated-form ajax\" data-ajax-on-callback=\"append\" data-ajax-result=\"new-comment-for-question-new-comment-206\" novalidate=\"novalidate\"> <textarea class=\"comment-textarea required to-focus hintable text-input\" minlength=\"15\" maxlength=\"600\" name=\"comment\" data-hint-id=\"new-comment-for-question-new-comment-206-hint\"></textarea> <input class=\"post-submit submit ignore\" type=\"submit\" value=\"Add comment\"> <div class=\"comment-remaining-characters\">Remaining characters:<span class=\"comment-length-counter\"> 600</span></div> <button class=\"post-submit submit cancel \"> Cancel </button> <label class=\"form-watch\"> <input type=\"checkbox\" name=\"watching\" value=\"true\" checked=\"checked\" class=\"ignore\"> Follow this topic via e-mail. </label> </form> <div class=\"hint\" id=\"new-comment-for-question-new-comment-206-hint\"> <h2 class=\"title section-title hint-title\">Comment</h2><p>Use mini-Markdown format: [link](http://example.com) _italic_ **bold** `code`.</p><p>Comments must have, a maximum of, 600 characters. If you find necessary, make use of links instead of copied text, or even edit your question/answer to provide further information</p> </div> </div> </div> </div> </section> <ol id=\"intro\"> <li data-button=\"next\" data-class=\"post-meta\" data-options=\"tipLocation:right\">You will see these arrows in every question page. They allow you to upvote/downvote according to the relevancy of the question/answer.</li> <li data-button=\"next\" data-class=\"edit-question\" data-options=\"tipLocation:bottom\">Edit your question/answer if you wish to change it or update it.</li> <li data-button=\"next\" data-class=\"add-comment\" data-options=\"tipLocation:bottom\">If you dont understand something about the question, leave a comment asking. The answer field should be only used for answers.</li> <li data-button=\"next\" data-class=\"solution-tick\" data-options=\"tipLocation:right\">If the author of a question marks an answer as the solution, this mark will be visible.</li> <li data-button=\"next\" data-class=\"about\" data-options=\"tipLocation:bottom\">Click here to see more details about the operation of the system!</li> </ol> <div class=\"subheader\"> <h2 class=\"title page-title\"> 0 answer </h2> </div> <ul> </ul> <div class=\"message alert not-enough-karma\"> You don't have <a href=\"/about\">enough reputation to answer your own question</a>. If you still have questions about another subject, <a href=\"/ask\">create a new question</a>. </div> <section class=\"notice\"> <h3 class=\"title\"> Search other questions with the tags <a href=\"/tag/jsp\" class=\"tag-brutal\">jsp</a> or <a href=\"/ask\">make your own questions</a>. </h3> </section> </section> <aside class=\"sidebar\"> <div class=\"subheader\"> <h3 class=\"title page-title\">Recent tags</h3> </div> <ol class=\"tags-usage\"> <li class=\"tags-item\"> <a href=\"/tag/jsp\" class=\"tag-brutal\">jsp</a> x 1</li> </ol> <div class=\"subheader\"> <h3 class=\"title page-title\">Related questions</h3> </div> <ol class=\"related-questions\"> <li><span>0</span> <a href=\"/206-how-do-i-follow-updates-about-a-question-i-created\"> How do I follow updates about a question I created? </a> </li> </ol> </aside> </div> <footer class=\"footer dark-footer\"> <div class=\"container\"> <div class=\"footer-muted-message\"> Mamute </div> <span class=\"footer-menu\"> <a href=\"/unsolved\" class=\"unsolved-link\">Unsolved</a> <a href=\"/unanswered\">Unanswered</a> </span> <span class=\"footer-vraptor\"> Powered by: <a href=\"http://www.vraptor.org/\">VRaptor</a> and <a href=\"http://www.mamute.org/\">Mamute</a> </span> <span class=\"footer-muted-message\"> </span> </div> </footer> <div class=\"joyride-tip-guide\" data-index=\"0\"><span class=\"joyride-nub\"></span><div class=\"joyride-content-wrapper\" role=\"dialog\">You will see these arrows in every question page. They allow you to upvote/downvote according to the relevancy of the question/answer.<a href=\"#\" class=\"joyride-next-tip\">next</a><a href=\"#close\" class=\"joyride-close-tip\">X</a></div></div><div class=\"joyride-tip-guide\" data-index=\"1\"><span class=\"joyride-nub\"></span><div class=\"joyride-content-wrapper\" role=\"dialog\">Edit your question/answer if you wish to change it or update it.<a href=\"#\" class=\"joyride-next-tip\">next</a><a href=\"#close\" class=\"joyride-close-tip\">X</a></div></div><div class=\"joyride-tip-guide\" data-index=\"2\"><span class=\"joyride-nub\"></span><div class=\"joyride-content-wrapper\" role=\"dialog\">If you dont understand something about the question, leave a comment asking. The answer field should be only used for answers.<a href=\"#\" class=\"joyride-next-tip\">next</a><a href=\"#close\" class=\"joyride-close-tip\">X</a></div></div><div class=\"joyride-tip-guide\" data-index=\"3\"><span class=\"joyride-nub\"></span><div class=\"joyride-content-wrapper\" role=\"dialog\">If the author of a question marks an answer as the solution, this mark will be visible.<a href=\"#\" class=\"joyride-next-tip\">next</a><a href=\"#close\" class=\"joyride-close-tip\">X</a></div></div><div class=\"joyride-tip-guide\" data-index=\"4\"><span class=\"joyride-nub\"></span><div class=\"joyride-content-wrapper\" role=\"dialog\">Click here to see more details about the operation of the system!<a href=\"#\" class=\"joyride-next-tip\">next</a><a href=\"#close\" class=\"joyride-close-tip\">X</a></div></div></body></html>",
+    "dom_after": "<!DOCTYPE html><html lang=\"en\"><head> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"> <title>jsp - How do I follow updates about a question I created?</title> <meta name=\"description\" content=\"How do I follow updates about a question I created? &lt;p&gt;I created a question but I did not check the watching option. How do I start receiving updates about this question from the question page itself?\"> <meta property=\"og:title\" content=\"\"> <meta property=\"og:site_name\" content=\"mamute.org.br\"> <meta property=\"og:url\" content=\"http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created\"> <meta property=\"og:type\" content=\"website\"> <meta property=\"og:image\" content=\"http://localhost:8090/imgs/logo-fb.png\"> <link rel=\"stylesheet\" href=\"/css/mamute.9ed6758a.css\"> <link rel=\"stylesheet\" href=\"/css/deps/custom.css\"> <!--[if lt IE 9]> <![endif]--> <!--[if lte IE 8]> <![endif]--> <link rel=\"canonical\" href=\"http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created\"> </head> <body style=\"\"> <header class=\"header clear\"> <section class=\"first-header\"> <div class=\"container header-container\"> <a class=\"logo big-logo sprite\" href=\"/\">Mamute</a> <nav class=\"nav main-nav piped-nav\"> <ul class=\"nav-items\"> <li class=\"nav-item\"> <a class=\"button current\" href=\"/\"> Questions </a> </li> <li class=\"nav-item menu-unanswered\"> <a class=\"button unanswered \" href=\"/unanswered\"> Unanswered </a> </li> <li class=\"nav-item menu-rank\"> <a class=\"button \" href=\"/ranking\"> Users </a> </li> <li class=\"nav-item\"> <a class=\"button \" href=\"/news\"> News </a> </li> <li class=\"ask nav-item\"> <a class=\"button ask-a-question\" href=\"/ask\"> Ask Question </a> </li> </ul> </nav> </div> </section> <section class=\"second-header\"> <div class=\"container\"> <section class=\"user-area\"> <nav class=\"nav\"> <ul class=\"nav-items\"> <li class=\"nav-item user-item\"> <a class=\"user-name\" href=\"/users/1002/bench-watcher\"> <img class=\"user-image menu-user-image\" src=\"http://www.gravatar.com/avatar/8a8c9cd0171a84184fc30587623db16c.png?r=PG&amp;size=32x32&amp;d=https%3A%2F%2Frobohash.org%2Fsize_32x32%2Fset_set1%2Fbgset_any%2F8a8c9cd0171a84184fc30587623db16c.png\"> Bench Watcher <span class=\"reputation\">(2)</span> </a> </li> <li class=\"nav-item\"> <a class=\"logout\" href=\"/logout\"> Sign out </a> </li> <li class=\"nav-item\"> <a class=\"about\" href=\"/about\"> About </a> </li> <li class=\"nav-item\"> <a class=\"intro new-users\" href=\"#\" style=\"visibility: visible;\">Help!</a> </li> <li class=\"nav-item\"> <a href=\"#\" class=\"search-dropdown dropdown-trigger\" data-target-id=\"dropdown-search-form\">Search</a> </li> </ul> </nav> </section> </div> <div class=\"container dropdown-target\" id=\"dropdown-search-form\"> </div> </section> </header> <div class=\"container\"> <ul> <li class=\"message alert\"> Make sure the spelling, grammar and formatting of your question is correct, this will increase the chance of getting replies </li> </ul> <div class=\"hidden\" itemprop=\"breadcrumb\" xmlns:v=\"http://rdf.data-vocabulary.org/#\"> <span typeof=\"v:Breadcrumb\"> <a rel=\"v:url\" property=\"v:title\" href=\"/\"> Questions </a> </span> <span>\u00ef\u00bf\u00bd</span> <span typeof=\"v:Breadcrumb\"> <a rel=\"v:url\" property=\"v:title\" href=\"/tag/jsp\"> jsp </a> </span> <span>\u00ef\u00bf\u00bd</span> <span typeof=\"v:Breadcrumb\"> <a rel=\"v:url\" property=\"v:title\" href=\"/206-How+do+I+follow+updates+about+a+question+I+created%3F\"> How do I follow updates about a question I created? </a> </span> </div> <section class=\"first-content content\"> <section itemscope=\"\" itemtype=\"http://schema.org/Article\" class=\"post-area question-area \"> <h1 itemprop=\"name\" class=\"title subheader main-thread-title question-title\">How do I follow updates about a question I created?</h1> <div class=\"post-meta\"> <div class=\"vote-container post-vote\"> <a rel=\"nofollow\" class=\"container requires-login requires-karma author-cant up-vote up-arrow arrow vote-option \" data-value=\"positivo\" data-author=\"true\" data-type=\"Question\" data-karma=\"10\" data-id=\"206\" title=\"This question was well formulated, is useful or clear.\"> up </a> <span class=\"vote-count post-vote-count\">0</span> <a rel=\"nofollow\" class=\"container requires-login author-cant down-vote down-arrow arrow vote-option requires-karma \" data-value=\"negativo\" data-author=\"true\" data-type=\"Question\" data-karma=\"100\" data-id=\"206\" title=\"This question wasnt well formulated, it isnt useful or clear. (-2 score for the author -2 and for you)\"> down </a> </div> <div> <a rel=\"nofollow\" class=\"watch requires-login\" href=\"/question/watched/206\"> <span class=\"icon-2x container icon-eye\" title=\"Click here to stop following this post.\"> </span> </a> </div> </div> <div class=\"post-container\"> <div itemprop=\"articleBody\" class=\"post-text question-description\" id=\"question-description-206\"> <p>I created a question but I did not check the watching option. How do I start receiving updates about this question from the question page itself?</p> </div> <ul class=\"tags\" itemprop=\"keywords\"> <li class=\"tags-item\"> <a href=\"/tag/jsp\" class=\"tag-brutal\">jsp</a> </li> </ul> <div class=\"post-interactions\"> <ul class=\"post-action-nav piped-nav nav\"> <li class=\"nav-item\"> <a class=\"post-action show-popup\" href=\"#\"> share </a> <div class=\"popup share small\"> <div class=\"question-warnings\" style=\"display: none;\"><h4 class=\"section-title hint-title\">Please review your post</h4><ul></ul></div><form class=\"validated-form\" novalidate=\"novalidate\"> <label for=\"share-url\">share a link for this question</label> <input type=\"text\" class=\"text-input required ignore\" id=\"share-url\" value=\"http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created\"> </form> <a target=\"_blank\" class=\"share-button\" data-shareurl=\"http://www.facebook.com/sharer/sharer.php?u=http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created\"> <i class=\"icon-facebook-squared icon-almost-3x\"></i> </a> <a target=\"_blank\" class=\"share-button\" data-shareurl=\"https://twitter.com/share?text=How do I follow updates about a question I created?&amp;url=http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created\"> <i class=\"icon-twitter-squared icon-almost-3x\"></i> </a> <a target=\"_blank\" class=\"share-button\" data-shareurl=\"https://plus.google.com/share?&amp;url=http://localhost:8090/206-how-do-i-follow-updates-about-a-question-i-created\"> <i class=\"icon-gplus-squared icon-almost-3x\"></i> </a> <a class=\"close-popup\">close</a> </div> </li> <li class=\"nav-item\"> <a class=\"post-action edit-question requires-login requires-karma\" data-author=\"true\" data-karma=\"20\" href=\"/question/edit/206\"> edit </a> </li> <li class=\"nav-item\"> <a href=\"#\" data-author=\"true\" data-karma=\"10\" data-modal-id=\"question-flag-modal206\" class=\"post-action author-cant requires-login flag-it requires-karma\"> flag </a> <div class=\"hidden modal modal-flag\" id=\"question-flag-modal206\"> <ul class=\"nav\"> <li class=\"modal-close-button\">x</li> </ul> <form class=\"validated-form\" action=\"/question/206/mark\" novalidate=\"novalidate\"> <input type=\"radio\" value=\"RUDE\" name=\"flagType\" id=\"flag-type-rude\" class=\"ignore\"> <label for=\"flag-type-rude\">Offensive or rude</label> <input type=\"radio\" value=\"NOT_CONSTRUCTIVE\" name=\"flagType\" id=\"flag-type-notconstructive\" class=\"ignore\"> <label for=\"flag-type-notconstructive\">not constructive</label> <input type=\"radio\" value=\"OBSOLETE\" name=\"flagType\" id=\"flag-type-obsolete\" class=\"ignore\"> <label for=\"flag-type-obsolete\">Obsolete</label> <input class=\"other-option ignore\" type=\"radio\" value=\"OTHER\" name=\"flagType\" id=\"flag-type-other\" data-reason-id=\"other-reason\"> <label for=\"flag-type-other\">other...</label> <div id=\"other-reason\" class=\"hidden\"> <label for=\"reason-text\">Reason</label> <textarea id=\"reason-text\" name=\"reason\"></textarea> </div> <label class=\"error\"></label> <input type=\"submit\" value=\"Flag\" class=\"ignore\"> </form> </div> </li> </ul> <ul class=\"post-touchs\"> <li class=\"touch author-touch\"> <div class=\"complete-user\"> <time class=\"when\" itemprop=\"dateCreated\" datetime=\"2026-10-13T01:08:23.000Z\">created moments ago </time> <a href=\"/users/1002/bench-watcher\"><img border=\"0\" class=\"user-image\" src=\"http://www.gravatar.com/avatar/8a8c9cd0171a84184fc30587623db16c.png?r=PG&amp;size=48x48&amp;d=https%3A%2F%2Frobohash.org%2Fsize_48x48%2Fset_set1%2Fbgset_any%2F8a8c9cd0171a84184fc30587623db16c.png\"></a> <div class=\"user-info\" itemscope=\"\" itemtype=\"http://schema.org/Person\" itemprop=\"author\"> <a class=\"user-name ellipsis\" itemprop=\"name\" href=\"/users/1002/bench-watcher\"> Bench Watcher </a> <div title=\"a way to measure the user's score\" class=\"user-karma ellipsis\">2 reputation score</div> </div> </div> </li> </ul> </div> <ul class=\"comment-list hidden\" id=\"new-comment-for-question-new-comment-206\"> </ul> <div class=\"simple-ajax-form\"> <a href=\"#\" class=\"requires-login post-action add-comment requires-karma\" data-karma=\"0\"> Add comment </a> <div class=\"ajax-form hidden\"> <form method=\"post\" action=\"/question/206/comment\" class=\"validated-form ajax\" data-ajax-on-callback=\"append\" data-ajax-result=\"new-comment-for-question-new-comment-206\" novalidate=\"novalidate\"> <textarea class=\"comment-textarea required to-focus hintable text-input\" minlength=\"15\" maxlength=\"600\" name=\"comment\" data-hint-id=\"new-comment-for-question-new-comment-206-hint\"></textarea> <input class=\"post-submit submit ignore\" type=\"submit\" value=\"Add comment\"> <div class=\"comment-remaining-characters\">Remaining characters:<span class=\"comment-length-counter\"> 600</span></div> <button class=\"post-submit submit cancel \"> Cancel </button> <label class=\"form-watch\"> <input type=\"checkbox\" name=\"watching\" value=\"true\" checked=\"checked\" class=\"ignore\"> Follow this topic via e-mail. </label> </form> <div class=\"hint\" id=\"new-comment-for-question-new-comment-206-hint\"> <h2 class=\"title section-title hint-title\">Comment</h2><p>Use mini-Markdown format: [link](http://example.com) _italic_ **bold** `code`.</p><p>Comments must have, a maximum of, 600 characters. If you find necessary, make use of links instead of copied text, or even edit your question/answer to provide further information</p> </div> </div> </div> </div> </section> <ol id=\"intro\"> <li data-button=\"next\" data-class=\"post-meta\" data-options=\"tipLocation:right\">You will see these arrows in every question page. They allow you to upvote/downvote according to the relevancy of the question/answer.</li> <li data-button=\"next\" data-class=\"edit-question\" data-options=\"tipLocation:bottom\">Edit your question/answer if you wish to change it or update it.</li> <li data-button=\"next\" data-class=\"add-comment\" data-options=\"tipLocation:bottom\">If you dont understand something about the question, leave a comment asking. The answer field should be only used for answers.</li> <li data-button=\"next\" data-class=\"solution-tick\" data-options=\"tipLocation:right\">If the author of a question marks an answer as the solution, this mark will be visible.</li> <li data-button=\"next\" data-class=\"about\" data-options=\"tipLocation:bottom\">Click here to see more details about the operation of the system!</li> </ol> <div class=\"subheader\"> <h2 class=\"title page-title\"> 0 answer </h2> </div> <ul> </ul> <div class=\"message alert not-enough-karma\"> You don't have <a href=\"/about\">enough reputation to answer your own question</a>. If you still have questions about another subject, <a href=\"/ask\">create a new question</a>. </div> <section class=\"notice\"> <h3 class=\"title\"> Search other questions with the tags <a href=\"/tag/jsp\" class=\"tag-brutal\">jsp</a> or <a href=\"/ask\">make your own questions</a>. </h3> </section> </section> <aside class=\"sidebar\"> <div class=\"subheader\"> <h3 class=\"title page-title\">Recent tags</h3> </div> <ol class=\"tags-usage\"> <li class=\"tags-item\"> <a href=\"/tag/jsp\" class=\"tag-brutal\">jsp</a> x 1</li> </ol> <div class=\"subheader\"> <h3 class=\"title page-title\">Related questions</h3> </div> <ol class=\"related-questions\"> <li><span>0</span> <a href=\"/206-how-do-i-follow-updates-about-a-question-i-created\"> How do I follow updates about a question I created? </a> </li> </ol> </aside> </div> <footer class=\"footer dark-footer\"> <div class=\"container\"> <div class=\"footer-muted-message\"> Mamute </div> <span class=\"footer-menu\"> <a href=\"/unsolved\" class=\"unsolved-link\">Unsolved</a> <a href=\"/unanswered\">Unanswered</a> </span> <span class=\"footer-vraptor\"> Powered by: <a href=\"http://www.vraptor.org/\">VRaptor</a> and <a href=\"http://www.mamute.org/\">Mamute</a> </span> <span class=\"footer-muted-message\"> </span> </div> </footer> <div class=\"joyride-tip-guide\" data-index=\"0\"><span class=\"joyride-nub\"></span><div class=\"joyride-content-wrapper\" role=\"dialog\">You will see these arrows in every question page. They allow you to upvote/downvote according to the relevancy of the question/answer.<a href=\"#\" class=\"joyride-next-tip\">next</a><a href=\"#close\" class=\"joyride-close-tip\">X</a></div></div><div class=\"joyride-tip-guide\" data-index=\"1\"><span class=\"joyride-nub\"></span><div class=\"joyride-content-wrapper\" role=\"dialog\">Edit your question/answer if you wish to change it or update it.<a href=\"#\" class=\"joyride-next-tip\">next</a><a href=\"#close\" class=\"joyride-close-tip\">X</a></div></div><div class=\"joyride-tip-guide\" data-index=\"2\"><span class=\"joyride-nub\"></span><div class=\"joyride-content-wrapper\" role=\"dialog\">If you dont understand something about the question, leave a comment asking. The answer field should be only used for answers.<a href=\"#\" class=\"joyride-next-tip\">next</a><a href=\"#close\" class=\"joyride-close-tip\">X</a></div></div><div class=\"joyride-tip-guide\" data-index=\"3\"><span class=\"joyride-nub\"></span><div class=\"joyride-content-wrapper\" role=\"dialog\">If the author of a question marks an answer as the solution, this mark will be visible.<a href=\"#\" class=\"joyride-next-tip\">next</a><a href=\"#close\" class=\"joyride-close-tip\">X</a></div></div><div class=\"joyride-tip-guide\" data-index=\"4\"><span class=\"joyride-nub\"></span><div class=\"joyride-content-wrapper\" role=\"dialog\">Click here to see more details about the operation of the system!<a href=\"#\" class=\"joyride-next-tip\">next</a><a href=\"#close\" class=\"joyride-close-tip\">X</a></div></div></body></html>",
+    "watch_state_before": "not-watching",
+    "watch_state_after": "watching"
+  }
+}
