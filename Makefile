@@ -18,7 +18,7 @@ SAMPLE          ?=
 TASK            ?=
 CASE            ?=
 
-.PHONY: help db-init db-init-force samples manifests runs task gate case-capture case-run pin
+.PHONY: help db-init db-init-force samples manifests runs task gate case-capture pin
 
 help:
 	@echo "make db-init                                    build bench.db from schema.sql + seeds"
@@ -59,12 +59,6 @@ case-capture:
 	@test -n "$(SAMPLE)" -a -n "$(CASE)" -a -n "$(SAMPLE_LOCATION)" || \
 		(echo "SAMPLE, CASE and SAMPLE_LOCATION are required" && exit 2)
 	$(PYTHON) main.py case capture --sample $(SAMPLE) --case $(CASE) \
-		--sample-location "$(SAMPLE_LOCATION)"
-
-case-run:
-	@test -n "$(SAMPLE)" -a -n "$(CASE)" -a -n "$(SAMPLE_LOCATION)" || \
-		(echo "SAMPLE, CASE and SAMPLE_LOCATION are required" && exit 2)
-	$(PYTHON) main.py case run --sample $(SAMPLE) --case $(CASE) \
 		--sample-location "$(SAMPLE_LOCATION)"
 
 pin:

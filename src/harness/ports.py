@@ -36,11 +36,16 @@ class StackPort(Protocol):
 
 @runtime_checkable
 class BrowserPort(Protocol):
-    """Executes a case's Playwright flow."""
+    """Executes a flow file (a case's Playwright script).
 
-    def run_case(self, case_name: str, base_url: str) -> dict[str, Any]: ...
+    Takes the path, not a case name: adapters know nothing about where the
+    corpus lives.
+    """
 
-    def capture_case(self, case_name: str, base_url: str,
+    def run_case(self, flow_path: Path, base_url: str,
+                 e2e: dict[str, Any]) -> dict[str, Any]: ...
+
+    def capture_case(self, flow_path: Path, base_url: str, e2e: dict[str, Any],
                      images_dir: Path) -> dict[str, Any]: ...
 
 

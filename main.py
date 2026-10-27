@@ -6,14 +6,12 @@
     python3 main.py task run --manifest N --sample-location PATH
     python3 main.py gate run --gate G --run RUN_ID
     python3 main.py case capture --sample S --case C --sample-location PATH
-    python3 main.py case run     --sample S --case C --sample-location PATH
     python3 main.py pin --sample S --sample-location PATH
 """
 from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import subprocess
 import sys
 import time
@@ -21,9 +19,9 @@ from pathlib import Path
 
 from src.errors import BenchError, NotFound
 from src.gates import registry as gate_registry
+from src.gates.functional_parity.capture import capture
 from src.run import RunContext, RunPaths, new_run_id, utcnow
 from src.run.atomic import write_json
-from src.run.sample_checkout import ensure_pinned
 from src.store import db as store_db
 from src.store import repo
 from src.tasks import registry as task_registry
@@ -121,8 +119,7 @@ def cmd_task_run(args) -> int:
 
         started = time.monotonic()
         try:
-            runner = task_registry.resolve(manifest["task_type"])
-            runner.prepare(ctx)
+            task_registry.resolve(manifest["task_type"]).prepare(ctx)
         finally:
             repo.finish_run(conn, run_id, utcnow(), time.monotonic() - started,
                             args.estimated_cost)
@@ -151,86 +148,24 @@ def cmd_gate_run(args) -> int:
 
 
 # --- case --------------------------------------------------------------------
-def _capture_ctx(args) -> RunContext:
+def cmd_case_capture(args) -> int:
+    """Authoring only: freeze a golden. The corpus itself lives in the gate."""
     task = args.case.split("__", 1)[0]
     conn = store_db.connect()
     try:
         manifest = _resolve_manifest(conn, args.sample, task)
     finally:
         conn.close()
+
     run_id = new_run_id()
-    return RunContext(
+    ctx = RunContext(
         run_id=run_id,
         paths=RunPaths.create(run_id),
         manifest=manifest,
         sample_location=Path(args.sample_location).expanduser(),
     )
-
-
-def cmd_case_capture(args) -> int:
-    ctx = _capture_ctx(args)
-    sample = ctx.sample
-
-    # Golden capture is only meaningful from the pinned, unmodified tree.
-    preconditions = ensure_pinned(ctx.sample_location, sample["commit_sha"],
-                                  sample.get("entrypoint"))
-
-    case = ctx.case(args.case)
-    tables = (case.get("db") or {}).get("tables") or []
-    declared_artifacts = (case.get("e2e") or {}).get("artifacts") or []
-
-    stack = ctx.stack()
-    database = ctx.adapter("db")
-    browser = ctx.adapter("browser")
-    try:
-        stack.reset()
-        base_url = ctx.base_url()
-        table_names = [t["name"] for t in tables]
-        before = database.dump_many(table_names)
-        artifacts = browser.capture_case(args.case, base_url, ctx.paths.images)
-        after = database.dump_many(table_names)
-    finally:
-        stack.down() if not args.keep_stack else None
-
-    from src.gates.functional_parity.delta import delta_table  # local: avoid cycle noise
-
-    payload = {
-        "sample": sample["slug"],
-        "case": args.case,
-        "sample_commit": preconditions["commit"],
-        "captured_at": utcnow(),
-        "db": {"tables": {
-            t["name"]: delta_table(
-                before.get(t["name"]) or [],
-                after.get(t["name"]) or [],
-                t.get("key_columns") or ["id"],
-                t.get("ignore_columns") or [],
-            )
-            for t in tables
-        }},
-        "artifacts": {key: artifacts.get(key) for key in declared_artifacts},
-    }
-    expect_path = ctx.cases_dir / args.case / "expect.json"
-    write_json(expect_path, payload)
-
-    images = ctx.cases_dir / args.case / "images"
-    if ctx.paths.images.is_dir():
-        shutil.copytree(ctx.paths.images, images, dirs_exist_ok=True)
-
-    print(f"captured {sample['slug']}/{args.case} -> {expect_path}")
-    return 0
-
-
-def cmd_case_run(args) -> int:
-    ctx = _capture_ctx(args)
-    ensure_pinned(ctx.sample_location, ctx.sample["commit_sha"], ctx.sample.get("entrypoint"))
-    stack = ctx.stack()
-    try:
-        stack.up()
-        artifacts = ctx.adapter("browser").run_case(args.case, ctx.base_url())
-    finally:
-        stack.down() if not args.keep_stack else None
-    print(json.dumps(artifacts, indent=2))
+    print(f"captured {args.sample}/{args.case} -> "
+          f"{capture(ctx, args.case, keep_stack=args.keep_stack)}")
     return 0
 
 
@@ -294,18 +229,14 @@ def build_parser() -> argparse.ArgumentParser:
     gate_run.add_argument("--gate-version", type=int, default=None)
     gate_run.set_defaults(func=cmd_gate_run)
 
-    case = sub.add_parser("case", help="behaviour cases")
+    case = sub.add_parser("case", help="freeze a case's golden")
     case_sub = case.add_subparsers(dest="action", required=True)
-    for action, func, text in (
-        ("capture", cmd_case_capture, "freeze the golden db delta + artifacts"),
-        ("run", cmd_case_run, "execute one flow against the current stack"),
-    ):
-        node = case_sub.add_parser(action, help=text)
-        node.add_argument("--sample", required=True)
-        node.add_argument("--case", required=True)
-        node.add_argument("--sample-location", required=True)
-        node.add_argument("--keep-stack", action="store_true")
-        node.set_defaults(func=func)
+    case_capture = case_sub.add_parser("capture", help="capture expect.json + images")
+    case_capture.add_argument("--sample", required=True)
+    case_capture.add_argument("--case", required=True)
+    case_capture.add_argument("--sample-location", required=True)
+    case_capture.add_argument("--keep-stack", action="store_true")
+    case_capture.set_defaults(func=cmd_case_capture)
 
     pin = sub.add_parser("pin", help="re-pin a sample to its checkout's HEAD")
     pin.add_argument("--sample", required=True)

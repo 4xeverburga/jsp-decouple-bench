@@ -1,7 +1,10 @@
 """src/run/context.py — everything a task or a gate is allowed to know.
 
-Built once per invocation. It is also the only place that resolves an
-adapter, so tasks and gates never import an adapter module directly.
+Built once per invocation, and the only place that resolves an adapter, so
+tasks and gates never import an adapter module directly.
+
+It deliberately knows nothing about cases: the behaviour corpus belongs to
+the `functional_parity` gate (see that package's `corpus.py`).
 """
 from __future__ import annotations
 
@@ -10,7 +13,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import config
 from src.errors import NotFound
 from src.run.paths import RunPaths
 
@@ -36,10 +38,6 @@ class RunContext:
     def scope(self) -> dict[str, Any]:
         return self.manifest["scope"]
 
-    @property
-    def cases_dir(self) -> Path:
-        return Path(config.CASES_DIR) / self.sample["slug"]
-
     def binding(self, capability: str) -> dict[str, Any]:
         if capability not in self.bindings:
             raise NotFound(
@@ -61,25 +59,6 @@ class RunContext:
 
     def base_url(self) -> str:
         return self.stack().base_url()
-
-    # --- cases ---------------------------------------------------------------
-    def case(self, name: str) -> dict[str, Any]:
-        path = self.cases_dir / name / "case.json"
-        if not path.is_file():
-            raise NotFound(f"no such case: {path}")
-        return json.loads(path.read_text())
-
-    def expect(self, name: str) -> dict[str, Any]:
-        path = self.cases_dir / name / "expect.json"
-        if not path.is_file():
-            raise NotFound(f"case {name} has no expect.json — run `make case-capture`")
-        return json.loads(path.read_text())
-
-    def flow_file(self, name: str) -> Path:
-        path = self.cases_dir / name / "flow.py"
-        if not path.is_file():
-            raise NotFound(f"no such flow: {path}")
-        return path
 
     # --- construction --------------------------------------------------------
     @classmethod

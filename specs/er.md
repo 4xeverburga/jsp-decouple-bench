@@ -15,8 +15,16 @@ erDiagram
     SAMPLE     ||--o{ TASK_MANIFEST : "defines"
     TASK_TYPE  ||--o{ TASK_MANIFEST : "typed by"
     TASK_MANIFEST ||--o{ TASK_RUN : "executed as"
-    GATE       ||--o{ GATE_EVALUATION_FILE : "evaluated in (on disk)"
+    GATE       ||--o{ GATE_RESULT : "writes (file)"
+    SAMPLE     ||--o{ CASE : "has (file)"
+    GATE       ||--o{ CASE : "owns (file)"
+    CASE       ||--|| CASE_GOLDEN : "frozen by (file)"
+    CASE       ||--o{ CASE_RESULT : "evaluated as (file)"
+    TASK_RUN   ||--o{ CASE_RESULT : "logs (file)"
 ```
+
+Solid boxes are tables in `bench.db`. Anything marked `(file)` is a
+filesystem entity documented in §"File-backed entities".
 
 `GATE` deliberately has **no FK to `TASK` or `TASK_MANIFEST`**: gates
 simply exist (v1 ships three, more will be added), they are not ordered,
@@ -142,6 +150,47 @@ the `value`, the `verdict`, *and* the threshold/direction that were
 applied, so an old result stays self-describing after the gate definition
 is bumped.
 
+## File-backed entities
+
+Three things are files by design: the case corpus (which belongs to
+`functional_parity`), the goldens it freezes, and the results gates emit.
+
+| entity | path | written by | read by |
+|---|---|---|---|
+| `CASE` | `src/gates/functional_parity/cases/<sample>/<case>/case.json` | a human | `functional_parity` |
+| `CASE_FLOW` | `…/<case>/flow.py` | a human | the `browser` adapter |
+| `CASE_GOLDEN` | `…/<case>/expect.json` | `make case-capture` | `functional_parity` |
+| `CASE_IMAGES` | `…/<case>/images/` | `make case-capture` | humans |
+| `CASE_RESULT` | `out/runs/<run_id>/cases/<case>.json` | `functional_parity` | **any gate** |
+| `GATE_RESULT` | `out/runs/<run_id>/gates/<gate_id>.json` | the gate itself | anyone |
+
+Relationships:
+
+- `SAMPLE 1—N CASE` — a case name is unique inside its sample.
+- `GATE (functional_parity) 1—N CASE` — the corpus is that gate's fixture:
+  **a case is a functional-parity test**, which is why it lives inside
+  `src/gates/functional_parity/`. No module outside that package may depend
+  on the corpus layout.
+- `CASE 1—1 CASE_GOLDEN` — every case has exactly one frozen golden.
+- `TASK_RUN 1—N CASE_RESULT`, `CASE 1—N CASE_RESULT` — a run logs one
+  result per evaluated case.
+
+`CASE_RESULT` is the **cross-gate interface**: it carries the verdict, the
+reason, the flow artifacts and the actual DB delta, so another gate can
+reuse a case's outcome without re-running it and without reading the
+corpus:
+
+```json
+{"case": "vote-flow__upvote-increments-count", "sample": "mamute",
+ "verdict": "pass", "detail": "", "duration_s": 41.2,
+ "artifacts": {"vote_count_before": "0", "vote_count_after": "1"},
+ "db": {"tables": {"Vote": {"inserted": [], "updated": [], "deleted": []}}}}
+```
+
+Unstructured per-case metadata (tables, key/ignored columns, artifact
+names, notes) stays in `case.json` / `expect.json`: one gate reads it and
+humans diff it, so normalising it into `bench.db` would buy nothing.
+
 ## Invariants
 
 1. Every FK is a single-column surrogate; natural keys are `UNIQUE`.
@@ -150,3 +199,5 @@ is bumped.
 4. `SAMPLE.commit_sha` must contain whatever `SAMPLE.entrypoint` points at.
 5. Deleting a row never cascades into history: `TASK_RUN` uses
    `ON DELETE RESTRICT`.
+6. `CASE` is owned by `functional_parity`; data crosses between gates only
+   through `CASE_RESULT` / `GATE_RESULT` files under the run directory.

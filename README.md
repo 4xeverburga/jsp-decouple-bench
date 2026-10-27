@@ -47,7 +47,7 @@ will be added; RL environments consume them individually.
 
 | Gate | Measures | Direction |
 |---|---|---|
-| `functional_parity` | Replays each case's Playwright flow and compares its DB delta and flow artifacts with the frozen golden. `value = passed / total` | maximize, threshold 1.0 |
+| `functional_parity` | Replays each case's Playwright flow and compares its DB delta and flow artifacts with the frozen golden. Logs every case to `out/runs/<run_id>/cases/<case>.json`. `value = passed / total` | maximize, threshold 1.0 |
 | `network_isolation` | The running stack keeps the shape the sample declares: no host network, no undeclared networks, no undeclared published ports | maximize, threshold 1.0 |
 | `trace_similarity` | **Pending.** Intended: compare captured OTel traces with an oracle (possibly an LLM) to catch calls that violate the new decomposition. Emits `verdict: "pending"`, `value: null` until an oracle is configured | maximize |
 
@@ -82,11 +82,10 @@ schema.sql                # its DDL (PRAGMA user_version guards drift)
 main.py  config.py        # the CLI and every tunable
 specs/                    # er.md, modules.md, behavior.md — the contract
 seeds/                    # rows loaded by `make db-init`
-cases/<sample>/<case>/    # case.json + expect.json + flow.py (+ images/)
-src/tasks/                # task types: decouple_slice, oneshot_decoupling
-src/gates/                # functional_parity, network_isolation, trace_similarity
+src/tasks/                # one task implementation (scope comes from the manifest)
+src/gates/                # functional_parity (+ its case corpus), network_isolation, trace_similarity
 src/harness/              # capability ports + adapters, selected by technology
-out/runs/<run_id>/        # task.json, diff.patch, gates/*.json, images/ (gitignored)
+out/runs/<run_id>/        # task.json, diff.patch, cases/*.json, gates/*.json (gitignored)
 ```
 
 Samples carry their own environment: **`compose.yaml` lives in the sample

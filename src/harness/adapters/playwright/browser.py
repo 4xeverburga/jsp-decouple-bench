@@ -1,8 +1,8 @@
 """src/harness/adapters/playwright/browser.py — `playwright@1` → BrowserPort.
 
-Runs `cases/<sample>/<case>/flow.py` (the single source of truth for a
-behaviour). Locale, timezone and viewport come from the case, falling back
-to config.py — never from the host.
+Takes a flow path plus the case's e2e contract; it knows nothing about
+where cases live. Locale, timezone and viewport come from the contract,
+falling back to config.py — never from the host.
 """
 from __future__ import annotations
 
@@ -52,7 +52,6 @@ class PlaywrightBrowser:
         self.options = options
         self._env_loaded = False
 
-    # --- helpers -------------------------------------------------------------
     def _ensure_credentials(self, e2e: dict[str, Any]) -> None:
         if not self._env_loaded:
             config.load_env_file(Path(self.ctx.sample_location) / config.SAMPLE_ENV_FILE)
@@ -68,25 +67,20 @@ class PlaywrightBrowser:
                 f"{config.SAMPLE_ENV_FILE} (never hardcode them in flow.py)"
             )
 
-    def _load_flow(self, case_name: str) -> Any:
-        path = self.ctx.flow_file(case_name)
-        spec = importlib.util.spec_from_file_location(f"bench_case_{case_name}", path)
-        if spec is None or spec.loader is None:  # pragma: no cover
-            raise CaseError(f"cannot import {path}")
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        if not hasattr(module, "run"):
-            raise CaseError(f"{path} defines no run(page, base_url)")
-        return module
-
-    def _execute(self, case_name: str, base_url: str,
-                 images_dir: Path | None) -> dict[str, Any]:
+    def _execute(self, flow_path: Path, base_url: str, e2e: dict[str, Any],
+                 images_dir: Path | None = None) -> dict[str, Any]:
         from playwright.sync_api import sync_playwright  # local: db-init must not need it
 
-        case = self.ctx.case(case_name)
-        e2e = case.get("e2e") or {}
         self._ensure_credentials(e2e)
-        flow = self._load_flow(case_name)
+
+        path = Path(flow_path)
+        spec = importlib.util.spec_from_file_location(f"case_{path.parent.name}", path)
+        if spec is None or spec.loader is None:  # pragma: no cover
+            raise CaseError(f"cannot import {path}")
+        flow = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(flow)
+        if not hasattr(flow, "run"):
+            raise CaseError(f"{path} defines no run(page, base_url)")
 
         with sync_playwright() as playwright:
             browser = getattr(playwright, config.BROWSER_ENGINE).launch(
@@ -104,9 +98,10 @@ class PlaywrightBrowser:
                 browser.close()
 
     # --- BrowserPort ---------------------------------------------------------
-    def run_case(self, case_name: str, base_url: str) -> dict[str, Any]:
-        return self._execute(case_name, base_url, images_dir=None)
+    def run_case(self, flow_path: Path, base_url: str,
+                 e2e: dict[str, Any]) -> dict[str, Any]:
+        return self._execute(flow_path, base_url, e2e)
 
-    def capture_case(self, case_name: str, base_url: str,
+    def capture_case(self, flow_path: Path, base_url: str, e2e: dict[str, Any],
                      images_dir: Path) -> dict[str, Any]:
-        return self._execute(case_name, base_url, images_dir=Path(images_dir))
+        return self._execute(flow_path, base_url, e2e, images_dir=Path(images_dir))

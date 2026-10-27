@@ -8,7 +8,8 @@
 - The case scope: the case names your work is graded against.
 
 You work **inside the sample checkout**. The bench repo (this one) is not
-your worktree: `bench.db`, `cases/`, `seeds/` and `specs/` are the grader.
+your worktree: `bench.db`, `src/gates/functional_parity/cases/`, `seeds/`
+and `specs/` are the grader.
 
 ## What you must do
 

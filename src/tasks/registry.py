@@ -1,28 +1,17 @@
-"""src/tasks/registry.py — task_type name → implementation.
+"""src/tasks/registry.py — task_type name → runner.
 
-Mirrors the TASK_TYPE table: adding a task type means a seed row plus one
-package here.
+Both rows of `TASK_TYPE` share one implementation; what differs is the
+manifest's case scope. An unknown name is a seed error, not a code path.
 """
 from __future__ import annotations
 
-import importlib
-from typing import Any
-
 from src.errors import NotFound
-from src.tasks.ports import TaskInputPort
+from src.tasks.base import Task
 
-CATALOG: dict[str, tuple[str, str]] = {
-    "decouple_slice": ("src.tasks.decouple_slice.run", "RUNNER"),
-    "oneshot_decoupling": ("src.tasks.oneshot_decoupling.run", "RUNNER"),
-}
+TASK_TYPES = frozenset({"decouple_slice", "oneshot_decoupling"})
 
 
-def resolve(task_type: str) -> TaskInputPort:
-    if task_type not in CATALOG:
-        raise NotFound(
-            f"no implementation for task_type '{task_type}'. "
-            f"known: {sorted(CATALOG)}"
-        )
-    module_name, attr = CATALOG[task_type]
-    runner: Any = getattr(importlib.import_module(module_name), attr)
-    return runner
+def resolve(task_type: str) -> Task:
+    if task_type not in TASK_TYPES:
+        raise NotFound(f"unknown task_type '{task_type}'. known: {sorted(TASK_TYPES)}")
+    return Task(task_type)

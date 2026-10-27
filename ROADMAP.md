@@ -23,6 +23,7 @@ data and the behaviour cases. Everything else was rebuilt.
 | D11 | `compose.yaml` lives in the sample, part of the pinned commit. | done |
 | D12 | Edge-case samples stay in scope (Solr, LDAP, …) — local run is the bar. | accepted |
 | D13 | Only the three specified gates exist. No ordering, no composite score. | done |
+| D14 | The case corpus lives **inside** `functional_parity` (a case is that gate's test); other gates read a case's **logged result**, never the corpus. | done |
 
 ## 2. What was built
 
@@ -33,10 +34,13 @@ main.py                    db | task | gate | case | pin
 config.py                  every path, port, timeout, env read
 seeds/                     9 technologies, 3 samples, 2 task types,
                            13 manifests, 3 gates
-cases/<sample>/<case>/     17 cases: case.json + expect.json + flow.py + images/
+src/gates/functional_parity/
+  cases/<sample>/<case>/    17 cases: case.json + expect.json + flow.py + images/
+  corpus.py                 the only module that knows those paths
+  capture.py                freezes expect.json from a pristine checkout
 src/run/                   run_id, paths, atomic writes, port allocation,
                            pinned-checkout precondition, adapters context
-src/tasks/                 decouple_slice, oneshot_decoupling (registry)
+src/tasks/                 one implementation; scope comes from the manifest
 src/gates/                 functional_parity, network_isolation, trace_similarity
 src/harness/               ports + adapters: compose@1, playwright@1,
                            mysql@1, postgres@1, h2@1, shell@1
@@ -68,7 +72,17 @@ Verified end to end:
    free text; the runner records who produced the diff but does not manage
    agents.
 4. **Keep `out/runs/<run_id>/images/`** (per-run screenshots) alongside the
-   golden `cases/<case>/images/`; only the latter is tracked.
+   golden `…/functional_parity/cases/<case>/images/`; only the latter is
+   tracked.
+5. **Cases moved into the gate, and their results are logged.** Moving the
+   corpus in removed `RunContext`'s case accessors and `config.CASES_DIR`;
+   the `browser` adapter now takes a flow **path** instead of a case name,
+   so harness code never learns the corpus layout. Per-case outcomes are
+   written to `out/runs/<run_id>/cases/<case>.json` — that file, not the
+   corpus, is how another gate observes a case.
+6. **One task implementation.** `decouple_slice` and `oneshot_decoupling`
+   differed only in scope widening, which is manifest data; the registry
+   maps both names to `Task`. Net effect of 5–6: −97 lines of Python.
 
 ## 4. Known gaps (deliberate)
 

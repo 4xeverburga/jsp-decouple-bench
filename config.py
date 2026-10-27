@@ -14,11 +14,8 @@ ROOT = Path(__file__).resolve().parent
 BENCH_DB = Path(os.environ.get("BENCH_DB", ROOT / "bench.db"))
 SCHEMA_SQL = ROOT / "schema.sql"
 SEEDS_DIR = Path(os.environ.get("BENCH_SEEDS_DIR", ROOT / "seeds"))
-CASES_DIR = Path(os.environ.get("BENCH_CASES_DIR", ROOT / "cases"))
-SPECS_DIR = ROOT / "specs"
 OUT_DIR = Path(os.environ.get("BENCH_OUT_DIR", ROOT / "out"))
 RUNS_DIR = OUT_DIR / "runs"
-TRACES_DB = OUT_DIR / "traces.db"
 
 # --- sample / stack ----------------------------------------------------------
 COMPOSE_FILE_NAME = os.environ.get("BENCH_COMPOSE_FILE", "compose.yaml")
@@ -27,7 +24,6 @@ DOCKER = os.environ.get("BENCH_DOCKER", "docker")
 COMPOSE = os.environ.get("BENCH_COMPOSE", "compose")
 COMPOSE_PROJECT_PREFIX = "bench-"
 STACK_UP_TIMEOUT_S = int(os.environ.get("STACK_UP_TIMEOUT_S", "900"))
-STACK_UP_SETTLE_S = int(os.environ.get("STACK_UP_SETTLE_S", "0"))
 KEEP_STACK = os.environ.get("KEEP_STACK", "") not in ("", "0", "false", "False")
 
 # Host ports are allocated per run, so two runs never collide. Samples must
@@ -43,9 +39,6 @@ VIEWPORT = {"width": 1280, "height": 800}
 # --- browser -----------------------------------------------------------------
 BROWSER_ENGINE = os.environ.get("BENCH_BROWSER", "chromium")
 HEADLESS = os.environ.get("BENCH_HEADLESS", "1") not in ("0", "false", "False")
-
-# --- case capture ------------------------------------------------------------
-CAPTURE_SCREENSHOTS = True
 
 # --- trace_similarity oracle -------------------------------------------------
 # "none" keeps the gate at verdict="pending". A future oracle is a command

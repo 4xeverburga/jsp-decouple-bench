@@ -1,9 +1,11 @@
 """functional_parity — replay each case, compare its DB delta and artifacts
-against the frozen golden.
+against the frozen golden, and **log every case result** so other gates can
+consume it (`out/runs/<run_id>/cases/<case>.json`) without touching the
+corpus.
 
-value        = passed_cases / total_cases
-verdict      = pass only if every case passes; error only if no case could
-               even be measured (stack down, DB unreachable).
+value   = passed_cases / total_cases
+verdict = pass only if every case passes; error only if no case could be
+          measured at all (stack down, fixture corrupt).
 """
 from __future__ import annotations
 
@@ -11,7 +13,9 @@ import time
 from typing import Any
 
 import config
+from src.gates.functional_parity import corpus
 from src.gates.functional_parity.delta import canonical, delta_table, summary
+from src.run.atomic import write_json
 from src.run.results import CaseResult, GateResult
 
 
@@ -23,7 +27,6 @@ class FunctionalParity:
         self.definition = definition
         self._started = 0.0
 
-    # --- result helper -------------------------------------------------------
     def _result(self, verdict: str, value: float | None,
                 details: list[CaseResult], notes: list[str]) -> GateResult:
         return GateResult(
@@ -39,11 +42,14 @@ class FunctionalParity:
             notes=notes,
         )
 
-    # --- one case ------------------------------------------------------------
     def _case(self, name: str) -> CaseResult:
+        sample = self.ctx.sample["slug"]
+        started = time.monotonic()
+        record: dict[str, Any] = {"case": name, "sample": sample}
         try:
-            case = self.ctx.case(name)
-            expect = self.ctx.expect(name)
+            case = corpus.contract(sample, name)
+            e2e = case.get("e2e") or {}
+            expect = corpus.golden(sample, name)
             tables = (case.get("db") or {}).get("tables") or []
 
             stack = self.ctx.stack()
@@ -52,10 +58,10 @@ class FunctionalParity:
 
             stack.reset()
             base_url = self.ctx.base_url()
-            table_names = [t["name"] for t in tables]
-            before = database.dump_many(table_names)
-            artifacts = browser.run_case(name, base_url)
-            after = database.dump_many(table_names)
+            columns = [t["name"] for t in tables]
+            before = database.dump_many(columns)
+            artifacts = browser.run_case(corpus.flow(sample, name), base_url, e2e)
+            after = database.dump_many(columns)
 
             actual = {"tables": {
                 t["name"]: delta_table(
@@ -70,22 +76,23 @@ class FunctionalParity:
             problems: list[str] = []
             if canonical(actual) != canonical(expect.get("db")):
                 problems.append("db: " + summary(actual, expect.get("db")))
-
             expected_artifacts = expect.get("artifacts") or {}
-            for key in (case.get("e2e") or {}).get("artifacts") or []:
+            for key in e2e.get("artifacts") or []:
                 if canonical(artifacts.get(key)) != canonical(expected_artifacts.get(key)):
                     problems.append(f"artifact {key!r} differs")
 
-            return CaseResult(
-                case=name,
-                verdict="fail" if problems else "pass",
-                detail="; ".join(problems),
-            )
+            record.update(verdict="fail" if problems else "pass",
+                          detail="; ".join(problems),
+                          artifacts=artifacts, db=actual)
         except Exception as exc:  # a broken case must not hide the others
-            return CaseResult(case=name, verdict="error",
-                              detail=f"{type(exc).__name__}: {exc}")
+            record.update(verdict="error", detail=f"{type(exc).__name__}: {exc}")
 
-    # --- GateInputPort -------------------------------------------------------
+        record["duration_s"] = round(time.monotonic() - started, 3)
+        # The cross-gate interface: results are logged, the corpus stays private.
+        write_json(self.ctx.paths.case(name), record)
+        return CaseResult(case=name, verdict=record["verdict"],
+                          detail=record.get("detail", ""))
+
     def evaluate(self) -> GateResult:
         self._started = time.monotonic()
         cases = list(self.ctx.scope.get("cases") or [])
@@ -101,13 +108,9 @@ class FunctionalParity:
             if not config.KEEP_STACK:
                 stack.down()
 
-        total = len(details)
         passed = sum(1 for d in details if d.verdict == "pass")
-        measured = [d for d in details if d.verdict != "error"]
-
-        if passed == total:
+        if passed == len(details):
             return self._result("pass", 1.0, details, [])
-        if not measured:
-            # nothing could be measured: a number here would be a lie
+        if all(d.verdict == "error" for d in details):
             return self._result("error", None, details, [])
-        return self._result("fail", round(passed / total, 4), details, [])
+        return self._result("fail", round(passed / len(details), 4), details, [])

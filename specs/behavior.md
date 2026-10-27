@@ -99,7 +99,10 @@ For every case in `scope_json.cases`:
 5. compare, order-insensitively, against `expect.json.db`;
 6. compare each artifact listed in `case.json.e2e.artifacts` against
    `expect.json.artifacts` (exact string match; DOM is normalised by
-   `flow.py` itself).
+   `flow.py` itself);
+7. **log the case** to `out/runs/<run_id>/cases/<case>.json` (verdict,
+   detail, artifacts, actual DB delta). This is the only way another gate
+   may observe a case's outcome — the corpus stays private to this gate.
 
 `value = passed_cases / total_cases`. A case that throws is `error` for
 that case and forces the gate to `fail` (not `error`) if other cases

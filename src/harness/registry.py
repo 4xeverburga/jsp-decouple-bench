@@ -22,13 +22,6 @@ CATALOG: dict[str, tuple[str, str, str]] = {
 }
 
 
-def capabilities() -> dict[str, list[str]]:
-    out: dict[str, list[str]] = {}
-    for adapter, (capability, _, _) in CATALOG.items():
-        out.setdefault(capability, []).append(adapter)
-    return out
-
-
 def resolve(ctx: Any, capability: str) -> Any:
     binding = ctx.binding(capability)
     adapter_id = binding.get("adapter")

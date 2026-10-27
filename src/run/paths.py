@@ -41,3 +41,7 @@ class RunPaths:
 
     def gate(self, gate_id: str) -> Path:
         return self.root / "gates" / f"{gate_id}.json"
+
+    def case(self, case: str) -> Path:
+        """Per-case gate output — the cross-gate interface."""
+        return self.root / "cases" / f"{case}.json"
