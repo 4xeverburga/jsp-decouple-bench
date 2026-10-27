@@ -155,6 +155,34 @@ cases/mamute/vote-flow__upvote-increments-count/
 
 `expect.json` is **generated** by `make case-capture`, never hand-written.
 
+### Who owns the corpus
+
+`functional_parity` is the **only gate** that interprets these files, but the
+corpus is *not* gate code and does not live under `src/gates/`:
+
+| consumer | why it needs the corpus |
+|---|---|
+| `src/run/context.py` | `cases_dir`, `case()`, `expect()`, `flow_file()` — the accessors |
+| `src/gates/functional_parity/eval.py` | replays a case, compares against `expect.json` |
+| `src/tasks/oneshot_decoupling/run.py` | discovers a sample's whole scope from `*/case.json` |
+| `main.py case capture` | writes `expect.json` + `images/` for a case |
+
+Nesting the corpus inside the gate package would put a **core module**
+(`src/run`) and a **task** (`oneshot_decoupling`) in the position of
+depending on a **gate** — the exact direction the dependency rule above
+forbids, and it would mean "adding a sample" touches gate code. So `cases/`
+sits beside `seeds/` and `bench.db`: frozen **data the code interprets**,
+scoped by sample, named by the manifest.
+
+Rule: a gate may read `cases/`; no gate may *own* a path that core reads.
+If a second gate ever needs fixtures of its own, give it
+`cases/<gate>/…` — do not move the shared corpus.
+
+Per-case metadata that is unstructured (which tables, which artifacts,
+coverage notes) stays in `case.json` / `expect.json`. It is not
+normalised into `bench.db`: the registry holds *inputs and identity*, the
+case directory holds *the golden itself*.
+
 ## `out/`
 
 ```
