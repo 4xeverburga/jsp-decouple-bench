@@ -4,8 +4,9 @@ description: >
   Add a new behavior case to a sample in this benchmark: pick the behavior,
   author the Playwright flow (case.json + flow.py), let `make case-capture`
   freeze the golden (expect.json), prove determinism with a second capture,
-  and wire the case into a task manifest. Use when asked to "add a test
-  slice", "create a new behavior test", "author another flow for <sample>",
+  prove that the slice fully covers at least one controller, and wire the
+  cases into a task manifest. Use when asked to "add a test slice",
+  "create a new behavior test", "author another flow for <sample>",
   "capture a golden delta", or "test another slice of <sample>".
 ---
 
@@ -23,6 +24,27 @@ src/gates/functional_parity/cases/<sample>/<slice>__<behavior>/
 └── images/        # step screenshots from the golden capture (generated)
 ```
 
+## Acceptance rule — a slice must fully cover one controller
+
+A slice is **not done** until its cases, taken together, **completely
+cover at least one controller**: the controller whose routes the slice
+asks an agent to decouple. "Completely" means, measured with JaCoCo over
+the slice's cases only (not other slices):
+
+- every handler method (route + HTTP verb) of that controller class is
+  executed by at least one case — `METHOD_MISSED = 0` for the handlers;
+- every reachable branch in those handlers has a case: success,
+  validation failure, permission/karma denial, not-found;
+- every line or branch still missed is listed individually, with the
+  reason it cannot be reached in the deterministic environment (needs an
+  external OAuth/Solr/mail service, dead defensive code). "Hard to drive"
+  is not a reason — add the case.
+
+One behaviour case on a controller with five handlers does not make a
+slice. If the controller cannot be driven to this level through the UI,
+pick another controller or do not make it a slice. The evidence is
+recorded in the manifest (§8) and re-checked by `dataset-ready-check`.
+
 ## Procedure
 
 ### 1. Design the behavior (read the sample's source)
@@ -32,6 +54,11 @@ Trace the controller/route for the behavior in the sample checkout
 it, permission/karma gates (and whether the seeded actor bypasses them),
 and which tables the DAO layer touches. Split multi-behavior ideas into
 separate cases — granularity makes verdicts diagnosable.
+
+**Inventory the controller first.** List every handler of the target
+controller (method, route, verb, guard conditions, error branches) and
+plan which case drives each one. Gaps in this list are the cases you
+still have to write; it becomes the `handlers` map in §8.
 
 ### 2. Author `case.json`
 
@@ -112,19 +139,67 @@ Run `case-capture` a second time; `expect.json` must be identical
 Ids are stable because every fresh boot replays the same seed — if they
 differ, the environment is not deterministic; stop and fix that first.
 
-### 7. Wire it into a manifest
+### 7. Prove the controller is fully covered (mandatory)
+
+Measure dynamic coverage of the slice's cases with the **JaCoCo agent**
+attached to the app JVM, and read the target controller's row in the CSV
+report.
+
+- Attach the agent in **tcpserver mode** and pull the data with
+  `jacococli dump` after each case; never `output=file` (the file is
+  truncated by the next JVM boot, and every case resets the stack).
+- Run each of the slice's cases on its own pristine stack, dump one
+  `.exec` per case, then `jacococli report <all .exec> --classfiles
+  <compiled classes> --sourcefiles <sample>/src/main/java --csv out.csv`.
+- Use one agent port per sample, and pin the JDK the app itself uses
+  (never the shell's `JAVA_HOME`).
+- Do this on a throwaway clone with the agent wired in locally; the
+  instrumentation is never committed to the sample's pin.
+- Read the controller's row: every handler executed, no unexplained
+  missed lines or branches. Missing ones mean more cases (back to §1).
+
+There is no coverage command in this rewrite yet. The proven procedure
+(vendored `jacocoagent.jar`/`jacococli.jar`, per-case dump, per-sample
+knobs) is on the `main` branch: `scripts/measure-coverage.sh` and
+`tools/jacoco/`. Porting it is tracked in `ROADMAP.md`. Until then, run
+those steps by hand and keep the CSV as the evidence attached to the
+slice's review.
+
+### 8. Wire it into a manifest
 
 ```bash
-# seeds/manifests.json: add the case to the right sample+name entry
+# seeds/manifests.json: add the cases to the right sample+name entry
 make db-init
 make manifests          # confirm the case count went up
 ```
 
+Record the coverage claim in the same entry's `scope.covers` (data only;
+it is the answer key's index and never reaches the agent):
+
+```json
+"scope": {
+  "cases": ["vote-flow__upvote-increments-count",
+            "vote-flow__downvote-decrements-count"],
+  "routes": ["..."],
+  "covers": [{
+    "controller": "<package>.VoteController",
+    "handlers": {"upvote": ["vote-flow__upvote-increments-count"],
+                 "downvote": ["vote-flow__downvote-decrements-count"]},
+    "unreachable": [{"where": "VoteController#<method>:<line>",
+                     "reason": "needs an external service"}]
+  }]
+}
+```
+
+Every handler of the controller appears in `handlers` with at least one
+case. An empty `unreachable` is the goal; each entry is something a
+reviewer can challenge.
+
 A new *slice* (not just a behavior) also needs its own entry:
 `{"sample": ..., "name": "<slice>", "task_type": "decouple_slice",
   "version": 1, "prompt": ..., "bindings": {...}, "scope": {"cases": [...],
-  "routes": [...]}}`. `name` is the slice; `task_type` is only the *kind*
-of work — identity is `UNIQUE(sample, name, version)`.
+  "routes": [...], "covers": [...]}}`. `name` is the slice; `task_type` is
+only the *kind* of work — identity is `UNIQUE(sample, name, version)`.
 
 ## Pitfalls that cost a debug cycle (learned on mamute + openclinica)
 

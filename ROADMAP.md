@@ -76,6 +76,24 @@ that captures OTel spans into `out/runs/<run_id>/traces.json`. The gate
 then compares against an oracle (`BENCH_TRACE_ORACLE_CMD`, contract in the
 gate's docstring). Until both exist it must keep saying `pending`.
 
+Sample side (skill `prepare-repo-for-dataset` §3): each sample installs the
+OpenTelemetry Java agent in its own `Dockerfile`/`compose.yaml`, pinned,
+configured via `OTEL_*` in `.env`, any collector declared in the compose
+file. None of the three samples has it yet, so the pristine trace base
+cannot be captured for them.
+
+### 2.3b Coverage command and slice retrofit
+
+Skill `test-slice` now requires each slice to fully cover at least one
+controller (manifest `scope.covers`). Two gaps:
+
+- there is no coverage command in this rewrite; port
+  `scripts/measure-coverage.sh` and `tools/jacoco/` from `main` (JaCoCo
+  tcpserver mode, per-case dump, per-sample knobs);
+- the 13 existing manifests have no `scope.covers`; their slices were
+  authored before the rule and must be measured, then backfilled with
+  extra cases or re-scoped.
+
 ### 2.4 First real agent run
 
 ```bash

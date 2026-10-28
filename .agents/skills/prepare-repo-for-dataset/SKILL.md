@@ -57,9 +57,11 @@ the pristine upstream state. A rewritten history destroys that.
   ```bash
   git tag pristine && git push origin pristine
   ```
-  Baselines are captured against this tag; every future re-capture or
-  audit diffs against it. If the repo is a HEAD-only upstream mirror,
-  this single commit IS the provenance anchor — treat it as immutable.
+  This tag preserves the original upstream provenance; it is not a harness
+  or a runtime selector. Benchmark runs and captures use the sample's pinned
+  `commit_sha` in `bench.db`, managed with `make pin`. If the repo is a
+  HEAD-only upstream mirror, this single commit IS the provenance anchor —
+  treat it as immutable.
 - **Work on feature branches, merge with merge commits** into `main`
   (`git merge --no-ff`). No squash merges, no fast-forward-only flows —
   the point-by-point history of how the sample was built is part of the
@@ -99,6 +101,71 @@ agent eval depend on the environment behaving identically.
   that are gitignored but regenerable), keep those steps documented and
   working — a fresh clone must reach a running app via the runbook.
 
+## 3. Install the OpenTelemetry agent (trace base)
+
+`trace_similarity` compares the traces of a finished run with a base taken
+from the pristine app, so every sample must be able to emit them. The
+sample must have the **OpenTelemetry Java agent** installed **before** its
+pin is created and before any golden or trace base is captured: the agent
+is part of the pinned environment, not an afterthought.
+
+- **Attach it from outside the app.** Add the agent in the sample's
+  `Dockerfile` / `compose.yaml` (JVM flag `-javaagent:` through the
+  variable the app's launcher honours — e.g. `JAVA_TOOL_OPTIONS`, or
+  `MAVEN_OPTS` when the app runs via `mvn exec:java`, since that is the
+  JVM that hosts it). Do not touch `pom.xml`, app source or app
+  dependencies: this is instrumentation, not a dependency upgrade.
+- **Pin and vendor it.** Exact agent version and `sha256` verified at
+  image build; no download at boot. A fresh clone must still reach a
+  running app offline after the first image pull. The app's runtime must
+  be supported by the agent (Java 8+); if not, record that in the
+  assessment and stop — the sample cannot feed `trace_similarity`.
+- **Configure only through `OTEL_*` variables** in the sample's `.env`
+  (tracked, synthetic) and document them in `.env.example`:
+  `OTEL_SERVICE_NAME=<sample slug>`, `OTEL_TRACES_SAMPLER=always_on`,
+  `OTEL_METRICS_EXPORTER=none`, `OTEL_LOGS_EXPORTER=none`, and the traces
+  exporter/endpoint. For the spans the oracle needs beyond HTTP, JDBC and
+  JSP render (all automatic), list the controller/DAO methods via
+  `OTEL_INSTRUMENTATION_METHODS_INCLUDE`.
+- **Declare every moving part in `compose.yaml`.** A collector or sidecar
+  is a service of the sample's own stack on its own declared network, so
+  `network_isolation` (no host network, no undeclared networks or
+  published ports) keeps passing. The agent never joins `host`.
+- **Fail open and change nothing observable.** The app must boot and
+  pass its healthcheck with the collector down, and the no-op
+  `functional_parity` run must stay green with the agent attached.
+- **Deterministic.** Same flow, same span tree shape (names, parentage,
+  `http.method`/route); only ids and timestamps vary.
+- Document in the sample's `AGENTS.md` how to see spans locally.
+
+The trace adapter that writes `out/runs/<run_id>/traces.json` is not
+implemented yet (ROADMAP §2.3); until it is, `trace_similarity` stays
+`pending`. Installing the agent now means the base exists the day it
+lands. `dataset-ready-check` §7 verifies it.
+
+## 4. How benchmark runs execute an agent
+
+The agent adapter is selected per run with `HARNESS` (`command`,
+`claude-code`, `opencode`, or `pi`). The runner uses the sample's
+`commit_sha`, checks out that commit detached when needed, and refuses to
+start if the sample worktree is dirty. It does not stash or discard changes.
+
+After the sample is wired into the registry and its cases are ready, pin the
+commit to evaluate and launch a task:
+
+```bash
+make pin SAMPLE=<slug> SAMPLE_LOCATION=../<sample>
+make task SAMPLE=<slug> TASK=<task> SAMPLE_LOCATION=../<sample> \
+  HARNESS=claude-code
+make gate GATE_ID=functional_parity RUN_ID=<run_id>
+```
+
+`make task` prints the `run_id`; a run itself has no pass/fail verdict.
+Evaluate gates separately, as independent measurements. For the no-op
+self-check, use `HARNESS=command HARNESS_CMD=true`; run this only after the
+sample's benchmark cases and environment have been authored. A `command`
+harness that launches a real agent requires its command via `HARNESS_CMD`.
+
 ## Checklist (all must be true before authoring starts)
 
 - [ ] GitHub branch protection/ruleset active on `main`: direct pushes
@@ -113,6 +180,10 @@ agent eval depend on the environment behaving identically.
       (build → boot → healthcheck) on the current tree.
 - [ ] No dependency versions changed (`git diff` on build manifests is
       empty apart from intentional, documented changes).
+- [ ] OpenTelemetry Java agent installed, version pinned and checksummed,
+      configured via `OTEL_*` in `.env`, collector (if any) declared in
+      `compose.yaml`, app still boots with it and with the collector
+      down, and committed **before** `make pin`.
 - [ ] Working tree clean apart from intentional, committed changes;
       local artifacts gitignored.
 
@@ -127,6 +198,9 @@ agent eval depend on the environment behaving identically.
   document it, move on.
 - Leaving the runbook stale after changing ports/paths/credentials —
   the next person (or agent) loses hours to drift.
+- Adding the OTel agent after goldens were captured, or by editing the
+  app's `pom.xml`/source — it changes the pinned environment under
+  existing goldens; install it first, from outside the app.
 - Committing generated artifacts that belong in `.gitignore`, or
   gitignoring things the runbook needs (e.g. tracked `.env` with
   synthetic bench credentials — see `authoring-bench-tests`).
