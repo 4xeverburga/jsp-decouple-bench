@@ -109,7 +109,10 @@ class ComposeStack:
                 f"({self.compose_file}). Add it to the sample and re-pin."
             )
         self._allocate()
-        self._run("up", "-d", "--remove-orphans")
+        # `--build` is not optional: the sample's image IS its code, so a
+        # gate that skipped the build would grade the pinned commit instead
+        # of whatever the agent left in the worktree.
+        self._run("up", "-d", "--build", "--remove-orphans")
         self.await_ready()
         return self.base_url()
 

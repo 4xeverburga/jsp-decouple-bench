@@ -32,6 +32,16 @@ ANSWER_BODY = (
     "you migrate each flow."
 )
 
+# True once the submitted answer is observable on the page. Deliberately
+# transport-agnostic: a redirect re-renders the page, an in-place update
+# inserts the fragment, and both leave an `.answer .post-text` or bump the
+# count heading to 1.
+ANSWER_APPEARED_JS = r"""() => {
+  const heading = document.querySelector('h2.page-title');
+  const count = heading ? heading.textContent.trim().split(/\s+/)[0] : null;
+  return count === '1' || !!document.querySelector('.answer .post-text');
+}"""
+
 
 def _normalize(html):
     """Strip volatile markup so two runs of this flow are identical."""
@@ -107,8 +117,12 @@ def run(page, base_url):
     dom_before = _normalize(page.content())
 
     page.fill("form.answer-form textarea[name=description]", ANSWER_BODY)
-    with page.expect_navigation(wait_until="load"):
-        page.locator("form.answer-form input[type=submit]").click()
+    # Answering may come back as a redirect to the question page or as an
+    # in-place update of a JSON response; both are the same behaviour, so
+    # wait for the outcome (answer on the page, or the count updated)
+    # rather than for a navigation that a decoupled form never performs.
+    page.locator("form.answer-form input[type=submit]").click()
+    page.wait_for_function(ANSWER_APPEARED_JS, timeout=30000)
     page.wait_for_load_state("networkidle")
 
     # --- assert: the answer is rendered and the count went up ------------

@@ -18,6 +18,8 @@ def _git(location: Path, *args: str) -> str:
         ["git", "-C", str(location), *args],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     if proc.returncode != 0:
         raise PreconditionError(
@@ -75,12 +77,19 @@ def ensure_pinned(
 
 
 def diff(location: Path, base_commit: str) -> str:
-    """Worktree diff against the pin (empty if the agent changed nothing)."""
+    """Worktree diff against the pin (empty if the agent changed nothing).
+
+    Legacy sources are not always valid UTF-8, and `--binary` splices raw
+    bytes in, so the patch is decoded lossily: it is an audit artifact, not
+    something to feed back into git.
+    """
     location = Path(location).expanduser().resolve()
     proc = subprocess.run(
         ["git", "-C", str(location), "diff", "--binary", base_commit],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     if proc.returncode != 0:
         raise PreconditionError(f"git diff failed: {proc.stderr.strip()}")
