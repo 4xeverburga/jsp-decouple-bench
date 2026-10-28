@@ -12,6 +12,7 @@ not for you — you have no reason to be reading it.
 | registry of samples, manifests, runs, gates | `bench.db` (`schema.sql`, `seeds/`) |
 | the prompts agents receive | `TASK_MANIFEST.prompt` (seeds) |
 | the graded behaviour (the answer key) | `src/gates/functional_parity/cases/` |
+| the stack shape every sample commits | `templates/compose.template.yaml` |
 | how to start / drive / inspect a sample | `src/env/` |
 | how to run an agent | `src/harness/` |
 
@@ -48,9 +49,11 @@ make gate GATE_ID=functional_parity RUN_ID=<run_id>
    prompt, a case or a flow.
 7. **Determinism.** `en-US`, `UTC`, `1280x800`, fresh DB per case. Do not
    introduce time-, locale- or host-dependent behaviour anywhere.
-8. **Do not weaken the stack's declared shape.** `network_isolation` fails
-   if the app joins `host` networking, adds networks, or publishes ports
-   the sample's `compose.yaml` does not declare.
+8. **Do not weaken the stack's declared shape.** `network_isolation`
+   grades the pinned `compose.yaml` (`templates/compose.template.yaml`),
+   never the worktree: `front` must stop sharing `data` with `db`, `db`
+   stays on `data` alone, and only `front` publishes. The pin is
+   deliberately non-conformant, so a no-op run must fail this gate.
 9. **No defaults, no optional parameters.** No function may declare a
    default value or an optional parameter, and no code may carry a fallback
    literal for a tunable (`os.environ.get(k, "x")`, `or "x"`). Every
@@ -72,6 +75,9 @@ make gate GATE_ID=functional_parity RUN_ID=<run_id>     # must pass
 A no-op command (`true`) leaves the tree untouched, so `functional_parity`
 must reproduce every golden exactly. If that fails, the sample or the
 environment is wrong and **no agent score on it means anything**.
+
+`network_isolation` must **fail** on that same run: it grades the work,
+not the behaviour. Parity green plus isolation red is the healthy pin.
 
 ## How a run is scored
 

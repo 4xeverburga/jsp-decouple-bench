@@ -157,15 +157,20 @@ def run(page, base_url):
         or "/answer/" not in page.url
     ), "expected redirect back to the question page, stayed on %r" % page.url
     answers_count_after = _answers_count(page)
-    answer_visible_after = page.locator(
-        ".answer .post-text"
-    ).first.inner_text()
     dom_after = _normalize(page.content())
 
     assert answers_count_after == "1", (
-        "expected answers count '1' after answering, got %r"
-        % answers_count_after
+        "expected answers count '1' after answering, got %r (%s)"
+        % (answers_count_after, _state(page))
     )
+    # Count and body can disagree: a heading that says "1 answer" with an
+    # empty list is a failed answer, not a page to keep waiting on.
+    answer_bodies = page.locator(".answer .post-text")
+    assert answer_bodies.count() > 0, (
+        "the answers list is empty even though the count says %r (%s)"
+        % (answers_count_after, _state(page))
+    )
+    answer_visible_after = answer_bodies.first.inner_text()
     assert "REST endpoint" in answer_visible_after, (
         "expected the answer body rendered on the page, got %r"
         % answer_visible_after[:200]

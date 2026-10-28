@@ -57,6 +57,8 @@ Steps:
    using the sample's own `compose.yaml` and `.env`. The harness injects
    an override: project name `bench-<run_id>`, allocated host ports,
    fixed healthcheck wait. The app is up when healthchecks pass.
+   Gates that only read declarations (`network_isolation`) skip this step
+   entirely and render the compose files instead.
 3. Evaluate, write `out/runs/<run_id>/gates/<gate_id>.json`.
 4. Tear the stack down (`down -v`) unless `KEEP_STACK=1`.
 5. Print the result JSON on stdout. Exit 0 on `pass`, 1 on `fail`,
@@ -113,16 +115,34 @@ were measurable; if *no* case could run, the gate is `error`.
 
 ### `network_isolation` — direction `maximize`, threshold `1.0`
 
-Asserts the running stack's runtime shape matches what the sample
-declares, i.e. decoupling did not introduce a hidden dependency:
+Asserts the stack's **declared** topology conforms to the sample's pinned
+shape (`templates/compose.template.yaml`): the work was done and no
+hidden dependency was introduced.
 
-- the app container is not in `network_mode: host`;
-- the app container is attached only to networks defined by the sample's
-  compose file (no extra network joined at runtime);
-- published ports are exactly the declared ones (no extra listen);
-- no container outside the compose project is reachable by name.
+**Static.** No container is started. Both files are rendered with
+`compose config` (about 0.1 s) — the contract from
+`git show <commit_sha>:compose.yaml`, the submission from the worktree —
+and the two documents are compared. Reading the worktree for the contract
+would let an agent widen the allowance it is measured against.
+
+Assertions:
+
+- no service uses `network_mode:` (`host` or `service:`);
+- every service attaches only to networks the pin declares;
+- every service publishes only the ports the pin declares for it;
+- `db` attaches to `data` only;
+- `front` shares no network with `db` — this is the task.
 
 `value = passed_assertions / total_assertions`.
+
+The pinned shape attaches `front` to both networks (the pristine app is
+server-rendered and talks to the database directly), so on an untouched
+tree this gate **fails** while `functional_parity` **passes**. That
+disagreement is the point: parity proves the goldens still reproduce,
+isolation proves the work has not been done yet. One repository, one
+application: `front` and `back` are built from the same context, so the
+data side is isolatable and the frontend can be refactored later.
+
 Known limit (v1): outbound egress is *not* blocked or measured; the gate
 reads shape, not traffic. Blocking egress belongs to the runner's
 network policy, not to a gate.

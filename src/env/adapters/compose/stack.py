@@ -24,6 +24,7 @@ from urllib.request import urlopen
 import config
 from src import run as run_pkg
 from src.errors import GateError
+from src.run.sample_checkout import show_file
 
 
 class ComposeStack:
@@ -64,11 +65,27 @@ class ComposeStack:
             env["BENCH_DB_PORT"] = str(self._ports["db"])
         return env
 
-    def _run(
-        self, *args: str, stdin: str | None = None, check: bool = True
+    def _cmd_for(self, compose_file: Path, *args: str) -> list[str]:
+        return [
+            config.DOCKER,
+            config.COMPOSE,
+            "-p",
+            self.project,
+            "-f",
+            str(compose_file),
+            "--project-directory",
+            str(self.location),
+            *args,
+        ]
+
+    def _run_cmd(
+        self,
+        cmd: list[str],
+        stdin: str | None = None,
+        check: bool = True,
     ) -> subprocess.CompletedProcess:
         proc = subprocess.run(
-            self._cmd(*args),
+            cmd,
             cwd=str(self.location),
             env=self._env(),
             input=stdin,
@@ -77,21 +94,16 @@ class ComposeStack:
         )
         if check and proc.returncode != 0:
             raise GateError(
-                f"compose {' '.join(args)} failed ({proc.returncode}) in "
-                f"{self.project}: "
+                f"compose {' '.join(cmd[4:])} failed "
+                f"({proc.returncode}) in {self.project}: "
                 f"{(proc.stderr or proc.stdout).strip()[-2000:]}"
             )
         return proc
 
-    def _docker(self, *args: str) -> str:
-        proc = subprocess.run(
-            [config.DOCKER, *args], capture_output=True, text=True
-        )
-        if proc.returncode != 0:
-            raise GateError(
-                f"docker {' '.join(args)} failed: {proc.stderr.strip()}"
-            )
-        return proc.stdout
+    def _run(
+        self, *args: str, stdin: str | None = None, check: bool = True
+    ) -> subprocess.CompletedProcess:
+        return self._run_cmd(self._cmd(*args), stdin, check)
 
     # --- lifecycle -----------------------------------------------------------
     def _allocate(self) -> None:
@@ -220,19 +232,32 @@ class ComposeStack:
                 json.loads(line) for line in out.splitlines() if line.strip()
             ]
 
-    def inspect(self) -> list[dict[str, Any]]:
-        ids = [row["ID"] for row in self.ps() if row.get("ID")]
-        if not ids:
-            return []
-        return json.loads(self._docker("inspect", *ids))
+    def declared_pinned(self) -> dict[str, Any]:
+        # The contract is the PINNED compose file, never the worktree one:
+        # an agent that adds a network or a published port must not thereby
+        # widen the allowance it is graded against. The blob is written
+        # under the run directory so the rendered contract is auditable.
+        self._allocate()
+        commit_sha = self.ctx.sample["commit_sha"]
+        blob = show_file(
+            self.location, commit_sha, self.compose_file.name
+        )
+        rendered = self.ctx.paths.root / f"pinned-{self.compose_file.name}"
+        rendered.write_text(blob)
+        return self._render(rendered)
 
     def declared(self) -> dict[str, Any]:
-        # Render with this run's ports: `config` publishes whatever
-        # BENCH_HTTP_PORT/BENCH_DB_PORT say, and a gate comparing the
-        # rendered file against the running containers must see the same
-        # numbers.
+        # The submission: the worktree file, rendered with the same run
+        # ports as the contract so the two are comparable.
         self._allocate()
-        out = self._run("config", "--format", "json").stdout
+        return self._render(self.compose_file)
+
+    def _render(self, compose_file: Path) -> dict[str, Any]:
+        # Offline: `config` resolves substitution, override files,
+        # `external:` and `name:` without a docker daemon.
+        out = self._run_cmd(
+            self._cmd_for(compose_file, "config", "--format", "json")
+        ).stdout
         return json.loads(out)
 
     def exec_(

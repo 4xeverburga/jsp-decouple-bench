@@ -26,11 +26,19 @@ class StackPort(Protocol):
 
     def ps(self) -> list[dict[str, Any]]: ...
 
-    def inspect(self) -> list[dict[str, Any]]:
-        """Raw `docker inspect` JSON for every container of the project."""
+    def declared_pinned(self) -> dict[str, Any]:
+        """`compose config` of the PINNED compose file, normalised.
+
+        Rendered from `SAMPLE.commit_sha`, never from the worktree, so a
+        gate is never graded against the allowance the agent wrote.
+        """
 
     def declared(self) -> dict[str, Any]:
-        """`docker compose config` normalised: services, networks, ports."""
+        """`compose config` of the worktree compose file — the submission.
+
+        Same project and run ports as `declared_pinned`, so the two
+        documents are directly comparable. Starts no container.
+        """
 
     def exec_(
         self, service: str, argv: list[str], stdin: str | None = None
@@ -46,7 +54,11 @@ class BrowserPort(Protocol):
     """
 
     def run_case(
-        self, flow_path: Path, base_url: str, e2e: dict[str, Any]
+        self,
+        flow_path: Path,
+        base_url: str,
+        e2e: dict[str, Any],
+        failure_png: Path,
     ) -> dict[str, Any]: ...
 
     def capture_case(

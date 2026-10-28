@@ -13,6 +13,7 @@ verdict = pass only if every case passes; error only if no case could be
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import Any
 
 import config
@@ -55,6 +56,7 @@ class FunctionalParity:
         sample = self.ctx.sample["slug"]
         started = time.monotonic()
         record: dict[str, Any] = {"case": name, "sample": sample}
+        failure_png = self.ctx.paths.images / f"{name}.png"
         try:
             case = corpus.contract(sample, name)
             e2e = case.get("e2e") or {}
@@ -70,7 +72,7 @@ class FunctionalParity:
             columns = [t["name"] for t in tables]
             before = database.dump_many(columns)
             artifacts = browser.run_case(
-                corpus.flow(sample, name), base_url, e2e
+                corpus.flow(sample, name), base_url, e2e, failure_png
             )
             artifacts = normalize(artifacts, base_url)
             after = database.dump_many(columns)
@@ -107,10 +109,13 @@ class FunctionalParity:
             record.update(
                 verdict="fail",
                 detail=str(exc) or "flow assertion failed",
+                screenshot=self._shot(failure_png),
             )
         except Exception as exc:  # a broken case must not hide the others
             record.update(
-                verdict="error", detail=f"{type(exc).__name__}: {exc}"
+                verdict="error",
+                detail=f"{type(exc).__name__}: {exc}",
+                screenshot=self._shot(failure_png),
             )
 
         record["duration_s"] = round(time.monotonic() - started, 3)
@@ -122,6 +127,12 @@ class FunctionalParity:
             verdict=record["verdict"],
             detail=record.get("detail", ""),
         )
+
+    def _shot(self, failure_png: Path) -> str | None:
+        """The failure screenshot relative to the run, if one was written."""
+        if not failure_png.is_file():
+            return None
+        return str(failure_png.relative_to(self.ctx.paths.root))
 
     def evaluate(self) -> GateResult:
         self._started = time.monotonic()

@@ -77,7 +77,8 @@ class PlaywrightBrowser:
         flow_path: Path,
         base_url: str,
         e2e: dict[str, Any],
-        images_dir: Path | None = None,
+        images_dir: Path | None,
+        failure_png: Path | None,
     ) -> dict[str, Any]:
         from playwright.sync_api import (
             sync_playwright,  # local: db-init must not need it
@@ -110,15 +111,40 @@ class PlaywrightBrowser:
                 target = (
                     _ScreenshotPage(page, images_dir) if images_dir else page
                 )
-                return flow.run(target, base_url)
+                try:
+                    return flow.run(target, base_url)
+                except Exception:
+                    # A failure is the one moment worth a picture: the
+                    # page is still where the flow gave up.
+                    self._shot_failure(page, failure_png)
+                    raise
             finally:
                 browser.close()
 
+    @staticmethod
+    def _shot_failure(page: Any, failure_png: Path | None) -> None:
+        """Screenshot the page that failed, when a target was given.
+
+        Dropped silently if the page is gone: losing the picture must not
+        replace the exception that explains the failure.
+        """
+        if failure_png is None:
+            return
+        try:
+            failure_png.parent.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(failure_png), full_page=True)
+        except Exception:
+            pass
+
     # --- BrowserPort ---------------------------------------------------------
     def run_case(
-        self, flow_path: Path, base_url: str, e2e: dict[str, Any]
+        self,
+        flow_path: Path,
+        base_url: str,
+        e2e: dict[str, Any],
+        failure_png: Path,
     ) -> dict[str, Any]:
-        return self._execute(flow_path, base_url, e2e)
+        return self._execute(flow_path, base_url, e2e, None, failure_png)
 
     def capture_case(
         self,
@@ -127,6 +153,4 @@ class PlaywrightBrowser:
         e2e: dict[str, Any],
         images_dir: Path,
     ) -> dict[str, Any]:
-        return self._execute(
-            flow_path, base_url, e2e, images_dir=Path(images_dir)
-        )
+        return self._execute(flow_path, base_url, e2e, Path(images_dir), None)

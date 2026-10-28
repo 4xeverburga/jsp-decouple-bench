@@ -43,24 +43,28 @@ step 1 below and the only number that means anything so far.
 
 ### 2.1 The self-check (do this first)
 
-`compose.yaml` + `Dockerfile` + `.env.example` are sitting **uncommitted**
-in `../mamute` and `../Online_Study_System`, so the pinned commits do not
-contain them and the harness refuses to start.
+Both samples now commit their stack at the pin (`git show
+<sha>:compose.yaml` renders), so nothing needs to be committed to run the
+self-check. What blocks it is the dirty worktree an agent run left behind —
+the harness refuses to start from a dirty checkout. When migrating a
+sample's `compose.yaml` to `templates/compose.template.yaml` (two networks,
+`front` on both at the pin), re-pin before capturing.
 
 ```bash
-cd ../mamute && git add -A && git commit -m "bench: add compose stack" && cd -
-cd ../Online_Study_System && git add -A && git commit -m "bench: add compose stack" && cd -
-
-make pin SAMPLE=mamute              SAMPLE_LOCATION=../mamute
-make pin SAMPLE=online-study-system SAMPLE_LOCATION=../Online_Study_System
+# the agent run left the tree dirty; restore it to the pin first, the
+# harness refuses to start from a dirty checkout
+cd ../mamute && git checkout -- . && git clean -fd && cd -
 
 RUN=$(make task SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute HARNESS=command HARNESS_CMD=true | tail -1)
 make gate GATE_ID=functional_parity RUN_ID=$RUN   # must be pass, value 1.0
-make gate GATE_ID=network_isolation RUN_ID=$RUN   # must be pass
+make gate GATE_ID=network_isolation RUN_ID=$RUN   # must FAIL (pin is monolithic)
 ```
 
 If `functional_parity` fails on a no-op run, the **sample or the environment
-is wrong**, not the agent — fix that before recording any agent score.
+is wrong**, not the agent — fix that before recording any agent score. If
+`network_isolation` *passes* on a no-op run, the sample ships pre-decoupled
+and has no task left in it: re-pin to the monolithic shape
+(`templates/README.md`).
 
 ### 2.2 `openclinica`
 
@@ -189,6 +193,7 @@ Ranked by value, since two of these would have caught bugs we already hit.
 bench.db  schema.sql  seeds/      registry: inputs only
 main.py  config.py                the two verbs + every tunable
 specs/{er,modules,behavior}.md    the contract
+templates/compose.template.yaml   the stack shape every sample commits
 src/run/       run_id, paths, atomic writes, ports, pinned checkout, RunContext
 src/store/     sqlite connection + repositories
 src/tasks/     one Task: assert pin, hand prompt to harness, record

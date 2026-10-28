@@ -1,0 +1,75 @@
+# templates/compose.template.yaml — the canonical stack shape.
+#
+# Copy this into a sample as `compose.yaml`, keep the service and network
+# names, and adapt only the lines marked ADAPT. Commit it at the pin
+# BEFORE any golden is captured.
+#
+# This is ONE repository and ONE application. The file does not describe
+# two projects: it describes a deployment in which the data side can be
+# isolated from the presentation side. Making that separation true in the
+# code is the task the sample poses; the frontend can be refactored later
+# without the data side moving.
+#
+#   front   presentation. The only service that publishes a host port.
+#           Serves what the goldens were captured from.
+#   back    data side. Owns every path to the database. Not present at
+#           the pin — it appears when the work is done, built from the
+#           same context as `front`.
+#   db      the database. Never published.
+#
+#   api     front <-> back
+#   data    back <-> db
+#
+# AT THE PIN `front` IS ATTACHED TO BOTH NETWORKS, ON PURPOSE. The
+# pristine app is server-rendered and talks to the database directly, so
+# the isolation assertion is false at the pin and can only become true
+# once the work is done. Do not "tidy" this away: a pin whose front is
+# already off `data` makes the gate vacuous and grades nothing.
+#
+# What the gate reads from THIS FILE (at the pinned commit, never from
+# the agent's worktree):
+#   - every container is attached only to `api` and/or `data`
+#   - `db` is attached to `data` only
+#   - `front` is NOT attached to `data`          <- the task
+#   - only `front` publishes a host port
+#   - no `network_mode:` at all (neither `host` nor `service:`)
+
+networks:
+  api: {}
+  data: {}
+
+services:
+  front:
+    build:
+      context: .                            # ADAPT: image or dockerfile
+    networks:
+      - api
+      - data                                # ADAPT: the task removes this
+    ports:
+      - "${BENCH_HTTP_PORT:-8080}:8080"     # ADAPT: inner port
+    # ADAPT: keep the sample's healthcheck, depends_on and environment.
+    # The gate waits for every container to settle and for the published
+    # URL to answer, so a missing healthcheck makes the run racy.
+
+  db:
+    image: mysql:5.7                        # ADAPT: engine and version
+    networks:
+      - data
+    # NO `ports:`. The harness reads the schema by running the client
+    # inside this container (`docker compose exec`, env adapter
+    # `mysql@1` / `postgres@1` / `h2@1`), so the database is never
+    # reachable from the host and needs nothing published.
+    # ADAPT: keep the sample's volume, environment and healthcheck.
+
+# Not declared here, because an empty service breaks `compose config`:
+#
+#   back:
+#     build:
+#       context: .                           # SAME context — one app
+#     networks:
+#       - api
+#       - data
+#
+# Create it when the data side is extracted. It must not publish a port,
+# and it must be built from the same context as `front`: two repositories
+# would make the task a rewrite instead of a decoupling.

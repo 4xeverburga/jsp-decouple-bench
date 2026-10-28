@@ -76,6 +76,16 @@ def ensure_pinned(
     }
 
 
+def show_file(location: Path, commit_sha: str, path: str) -> str:
+    """The text of `path` as committed at `commit_sha`.
+
+    Reads the object database, never the worktree: the pinned commit is
+    the sample's contract, and the worktree is the agent's work.
+    """
+    location = Path(location).expanduser().resolve()
+    return _git(location, "show", f"{commit_sha}:{path}")
+
+
 def diff(location: Path, base_commit: str) -> str:
     """Worktree diff against the pin (empty if the agent changed nothing).
 

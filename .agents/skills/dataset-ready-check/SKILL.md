@@ -2,12 +2,13 @@
 name: dataset-ready-check
 description: >
   Validate that a sample is ready for release in this benchmark: it boots
-  from a fresh clone at its pinned commit, the no-op self-check is green,
-  the gates are sensitive to real breakage, results are deterministic, the
-  agent cannot see the answer key, at least one controller is fully
-  covered, and the OpenTelemetry agent produces a usable trace base for
-  `trace_similarity`. Use when asked to "check if this sample is dataset
-  ready", "validate the sample", or "is this sample ready to publish".
+  from a fresh clone at its pinned commit, the no-op self-check reproduces
+  the goldens while isolation still fails, the gates are sensitive to real
+  breakage, results are deterministic, the agent cannot see the answer key,
+  at least one controller is fully covered, and the OpenTelemetry agent
+  produces a usable trace base for `trace_similarity`. Use when asked to
+  "check if this sample is dataset ready", "validate the sample", or "is
+  this sample ready to publish".
 ---
 
 # Dataset-ready check for a sample
@@ -45,17 +46,29 @@ works, and keeps destructive checks off the real working tree.
 - The sample's `.env` is tracked and holds only synthetic credentials;
   `.env.example` documents every variable. No real secrets anywhere
   (grep for tokens/keys).
-- `docker compose down -v` then a gate run (it starts the stack itself):
-  healthchecks go green with no network beyond the first image pull.
-  Record the cold-start time; > 15 min is a usability problem.
+- `docker compose down -v` then a `functional_parity` gate run (it
+  starts the stack itself): healthchecks go green with no network beyond
+  the first image pull. Record the cold-start time; > 15 min is a
+  usability problem.
 - `grep -rE '/home/|/usr/lib/jvm' compose.yaml Dockerfile .env* scripts/`
   is empty. Only docker + make are needed on the host.
+- `compose.yaml` follows `templates/compose.template.yaml`: services
+  `front` and `db` (plus `back` once the work lands), networks `api` and
+  `data`, only `front` publishes a host port, no `network_mode:`. At the
+  pin `front` is attached to **both** networks — check 2 depends on it.
 
 ### 2. No-op self-check (the most important check)
+The two gates must **disagree** on an untouched tree, and that
+disagreement is the whole point: parity proves the golden is
+reproducible, isolation proves the task is still undone.
 - A `HARNESS=command HARNESS_CMD=true` run must have `diff_empty: true`
   in `out/runs/<run_id>/harness.json`.
 - `functional_parity` must be `pass`, `value 1.0`, for **every** manifest
-  of the sample. `network_isolation` must be `pass`.
+  of the sample.
+- `network_isolation` must **fail**, on the `front:isolated_from_db`
+  sub-check: the pinned `front` still shares `data` with `db`. A `pass`
+  here means the sample ships pre-decoupled and grades nothing — re-pin
+  to the monolithic shape (see `templates/README.md`).
 - If parity fails on an untouched tree, **the sample, the environment or
   the golden is wrong, not an agent**. Fix the cause (pinning, seed,
   flow) — never loosen a comparison or an `ignore_columns` list to pass.
@@ -68,6 +81,20 @@ A gate that cannot fail proves nothing.
 - Flip one byte of a case's `expect.json`: that case must fail. Restore
   with `git checkout -- <file>` and confirm `git diff --exit-code` is
   clean.
+- **Isolation must be sensitive in both directions**, but only one of
+  them is cheap to confirm.
+  - *Fails when it should*: in the fresh clone, add a `ports:` entry to
+    `db` and re-run — isolation must fail. Then give `front`
+    `network_mode: host` and confirm it fails again. Restore with
+    `git checkout -- compose.yaml`.
+  - *Passes when it should*: remove `data` from `front.networks` in the
+    clone and re-run — isolation must go `pass` at once, because it reads
+    declarations and nothing has to boot. Parity is a separate
+    measurement: an app that no longer reaches the database fails
+    `functional_parity`, not isolation. Restore with
+    `git checkout -- compose.yaml`.
+  - A `pass` on the pristine pin is not sensitivity: it means the sample
+    ships pre-decoupled (check 2). Re-pin instead.
 
 ### 4. Determinism
 - Repeat check 2 **twice** on fresh stacks: every case result identical
@@ -106,13 +133,15 @@ A gate that cannot fail proves nothing.
 `trace_similarity` compares the traces of a finished run against a base
 taken from the pristine app, so the sample must emit a stable one.
 - The app container starts with the OTel Java agent attached
-  (`docker compose exec app ps -ef | grep javaagent` or the JVM flags in
+  (`docker compose exec <service> ps -ef | grep javaagent` — `front` at
+  the pin, both `front` and `back` after the split — or the JVM flags in
   `docker inspect`); jar version pinned, checksum verified in the image
   build, no download at boot.
 - Config comes only from `OTEL_*` variables in the sample's `.env`
   (`OTEL_SERVICE_NAME=<slug>`, sampler `always_on`, metrics and logs
   exporters `none`). Any collector/sidecar is **declared in
-  `compose.yaml`**, so `network_isolation` still passes (check 2).
+  `compose.yaml`**, attached to `api` or `data` and publishing no port,
+  so `front:networks` stays the gate's only failing sub-check (check 2).
 - The app boots and passes its healthcheck with the collector stopped
   (the agent fails open; a missing collector must not break the sample).
 - Attaching the agent changes no behaviour: check 2 is green **with the
@@ -142,8 +171,8 @@ taken from the pristine app, so the sample must emit a stable one.
 | Check | Result | Notes |
 |---|---|---|
 | 1. Boots from scratch | pass/fail | cold start: X min |
-| 2. No-op self-check | pass/fail | parity N/N, isolation pass |
-| 3. Sensitivity | pass/fail | broken controller → fail |
+| 2. No-op self-check | pass/fail | parity N/N pass, isolation fails as required |
+| 3. Sensitivity | pass/fail | broken controller → parity fail; `front` off `data` → isolation pass |
 | 4. Determinism | pass/fail | 2 runs, recapture clean |
 | 5. Answer key hidden | pass/fail | |
 | 6. Registry, cases, coverage | pass/fail | <controller>: methods N/N |
@@ -158,5 +187,8 @@ taken from the pristine app, so the sample must emit a stable one.
 - Do NOT accept "works on my machine" — check 1 uses a fresh clone.
 - Do NOT publish a sample whose no-op self-check is red or whose gates
   cannot fail (check 3).
+- Do NOT make a no-op run pass `network_isolation`. A sample whose pin
+  already keeps `front` off `data` has no task left in it; re-pin to the
+  monolithic shape instead of accepting the vacuous pass.
 - Do NOT treat `trace_similarity: pending` as a pass or a fail: it is
   neither; check 7 verifies the evidence the gate will need.

@@ -101,6 +101,36 @@ agent eval depend on the environment behaving identically.
   that are gitignored but regenerable), keep those steps documented and
   working — a fresh clone must reach a running app via the runbook.
 
+### The stack shape (compose template)
+
+Every sample commits the same stack shape at its pin, copied from
+`templates/compose.template.yaml` in the bench repo and adapted. It is
+what makes `network_isolation` a real assertion instead of a description
+of whatever the app happens to look like.
+
+- **One repository, one application.** `front` and `back` are built from
+  the same context. The sample is not two projects: it is one app whose
+  data side can be isolated, so the frontend can be refactored later
+  without the data side moving.
+- **Keep the names**: services `front`, `back`, `db`; networks `api`
+  (`front` <-> `back`) and `data` (`back` <-> `db`). The gate's
+  vocabulary is these names; inventing new ones breaks the contract.
+- **At the pin, `front` is attached to BOTH `api` and `data`.** The
+  pristine app is server-rendered and reaches the database directly, so
+  the isolation assertion must be **false** on the pinned commit. If you
+  "fix" it while preparing the sample, the sample has no task left in it
+  and the gate is vacuous. `dataset-ready-check` §2 verifies this.
+- **Only `front` publishes a host port.** The harness reads the database
+  with `compose exec`, so every extra published port is surface with no
+  purpose.
+- **No `network_mode:`**, neither `host` nor `service:`.
+- **Add services, never networks.** A collector or sidecar joins `api` or
+  `data`; a new top-level network is a contract change and belongs in the
+  template first.
+- **Commit it at the pin** before any golden is captured: the gate reads
+  the contract from `git show <commit_sha>:compose.yaml`, never from the
+  worktree, so the file must be in the pinned commit.
+
 ## 3. Install the OpenTelemetry agent (trace base)
 
 `trace_similarity` compares the traces of a finished run with a base taken
@@ -128,9 +158,9 @@ is part of the pinned environment, not an afterthought.
   JSP render (all automatic), list the controller/DAO methods via
   `OTEL_INSTRUMENTATION_METHODS_INCLUDE`.
 - **Declare every moving part in `compose.yaml`.** A collector or sidecar
-  is a service of the sample's own stack on its own declared network, so
-  `network_isolation` (no host network, no undeclared networks or
-  published ports) keeps passing. The agent never joins `host`.
+  is a service of the sample's own stack, attached to `api` or `data` and
+  publishing no port, so `network_isolation` keeps passing. It never joins
+  `host` and never adds a network.
 - **Fail open and change nothing observable.** The app must boot and
   pass its healthcheck with the collector down, and the no-op
   `functional_parity` run must stay green with the agent attached.
@@ -180,6 +210,13 @@ harness that launches a real agent requires its command via `HARNESS_CMD`.
       (build → boot → healthcheck) on the current tree.
 - [ ] No dependency versions changed (`git diff` on build manifests is
       empty apart from intentional, documented changes).
+- [ ] `compose.yaml` follows `templates/compose.template.yaml`: services
+      `front`/`db` (plus `back` when the work lands), networks `api` and
+      `data`, only `front` publishes, no `network_mode:`, and at the pin
+      `front` is attached to **both** `api` and `data`.
+- [ ] The stack shape is in the pinned commit: `git show
+      <commit_sha>:compose.yaml` renders, and on the pristine tree
+      `network_isolation` **fails** while `functional_parity` passes.
 - [ ] OpenTelemetry Java agent installed, version pinned and checksummed,
       configured via `OTEL_*` in `.env`, collector (if any) declared in
       `compose.yaml`, app still boots with it and with the collector
@@ -201,6 +238,9 @@ harness that launches a real agent requires its command via `HARNESS_CMD`.
 - Adding the OTel agent after goldens were captured, or by editing the
   app's `pom.xml`/source — it changes the pinned environment under
   existing goldens; install it first, from outside the app.
+- Tidying the pin's `compose.yaml` so `front` no longer touches `data` —
+  that deletes the task: a no-op run would then pass isolation, and the
+  gate could no longer tell a working agent from one that did nothing.
 - Committing generated artifacts that belong in `.gitignore`, or
   gitignoring things the runbook needs (e.g. tracked `.env` with
   synthetic bench credentials — see `authoring-bench-tests`).

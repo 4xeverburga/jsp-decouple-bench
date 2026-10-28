@@ -1,13 +1,27 @@
-"""network_isolation — the running stack must have the shape the sample
-declares. Decoupling must not introduce a hidden dependency.
+"""network_isolation — the stack's declared topology, read statically.
+
+No container is started: both compose files are rendered with `compose
+config` and compared, so the gate costs ~0.1 s and cannot be confused by
+an app that fails to boot. Topology is declarative, and `config` already
+resolves substitution, override files, `external:` and `name:`.
+
+The contract is the PINNED file (`git show <commit_sha>:compose.yaml`),
+never the worktree one: an agent that adds a network or a published port
+must not thereby widen the allowance it is graded against.
 
 Assertions (value = passed / total, all must pass):
-  1. no container runs with network_mode: host
-  2. every container is attached only to networks the compose file declares
-  3. every published host port is one the compose file declares
+  1. no service declares `network_mode:` (`host` or `service:`)
+  2. every service attaches only to networks the pin declares
+  3. every service publishes only the ports the pin declares for it
+  4. db attaches to exactly the pin's networks
+  5. `front` shares no network with db — this is the task
 
-Not measured in v1: outbound egress. Blocking egress is a property of the
-runner's network policy, not of a gate — a gate only reads shape.
+The pin attaches `front` to the backend network on purpose (the pristine
+app is server-rendered and reads the database directly), so an untouched
+tree fails 5 and only real work can make it pass.
+
+What this cannot see is anything a container does at run time. That is
+the runner's network policy, not a gate — a gate only reads shape.
 """
 
 from __future__ import annotations
@@ -15,9 +29,31 @@ from __future__ import annotations
 import time
 from typing import Any
 
-import config
-from src.errors import BenchError
+from src.errors import BenchError, NotFoundError
 from src.run.results import CaseResult, GateResult
+
+FRONT_SERVICE = "front"
+
+
+def _networks(rendered: dict[str, Any], service: str) -> set[str]:
+    spec = (rendered.get("services") or {}).get(service) or {}
+    return set(spec.get("networks") or {})
+
+
+def _ports(rendered: dict[str, Any], service: str) -> set[str]:
+    spec = (rendered.get("services") or {}).get(service) or {}
+    ports: set[str] = set()
+    for entry in spec.get("ports") or []:
+        if isinstance(entry, dict):
+            if entry.get("published") is not None:
+                ports.add(str(entry["published"]))
+        elif isinstance(entry, str) and ":" in entry:
+            ports.add(entry.split(":")[-2])
+    return ports
+
+
+def _escaped(mode: str) -> bool:
+    return mode == "host" or mode.startswith("service:")
 
 
 class NetworkIsolation:
@@ -48,109 +84,57 @@ class NetworkIsolation:
             notes=notes,
         )
 
-    @staticmethod
-    def _declared_ports(declared: dict[str, Any]) -> set[str]:
-        ports: set[str] = set()
-        for service in (declared.get("services") or {}).values():
-            for entry in service.get("ports") or []:
-                if (
-                    isinstance(entry, dict)
-                    and entry.get("published") is not None
-                ):
-                    ports.add(str(entry["published"]))
-                elif isinstance(entry, str) and ":" in entry:
-                    ports.add(entry.split(":")[-2])
-        return ports
-
-    @staticmethod
-    def _published_ports(container: dict[str, Any]) -> set[str]:
-        bindings = (container.get("HostConfig") or {}).get(
-            "PortBindings"
-        ) or {}
-        return {
-            str(binding["HostPort"])
-            for entries in bindings.values()
-            for binding in (entries or [])
-            if binding.get("HostPort")
-        }
-
     def evaluate(self) -> GateResult:
         self._started = time.monotonic()
         stack = self.ctx.stack()
 
         try:
-            declared = stack.declared()
+            db_service = self.ctx.binding("db")["options"]["service"]
+        except (KeyError, NotFoundError) as exc:
+            return self._result(
+                "error", None, [], [f"no db service bound: {exc}"]
+            )
+
+        try:
+            contract = stack.declared_pinned()
+            current = stack.declared()
         except BenchError as exc:
             return self._result(
                 "error", None, [], [f"compose config failed: {exc}"]
             )
 
-        allowed_networks = set(declared.get("networks") or {}) | {"default"}
-        project_networks = {
-            f"{stack.project}_{name}" for name in allowed_networks
-        }
-        allowed_ports = self._declared_ports(declared)
-
-        try:
-            stack.up()
-            containers = stack.inspect()
-        except BenchError as exc:
-            return self._result(
-                "error", None, [], [f"stack did not come up: {exc}"]
-            )
-        finally:
-            if not config.KEEP_STACK:
-                stack.down()
-
-        if not containers:
-            return self._result(
-                "error",
-                None,
-                [],
-                ["stack is up but has no containers to inspect"],
-            )
-
+        allowed = set(contract.get("networks") or {})
         checks: list[CaseResult] = []
-        for container in containers:
-            name = (container.get("Name") or "?").lstrip("/")
-            service = (
-                (container.get("Config") or {}).get("Labels") or {}
-            ).get("com.docker.compose.service", "?")
-
-            mode = (container.get("HostConfig") or {}).get("NetworkMode")
+        for name in sorted(current.get("services") or {}):
+            mode = current["services"][name].get("network_mode") or ""
             checks.append(
                 CaseResult(
-                    case=f"{service}:network_mode",
-                    verdict="pass" if mode != "host" else "fail",
-                    detail=f"network_mode={mode}",
+                    case=f"{name}:network_mode",
+                    verdict="fail" if _escaped(mode) else "pass",
+                    detail=f"network_mode={mode or 'none'}",
                 )
             )
 
-            attached = set(
-                (
-                    (container.get("NetworkSettings") or {}).get("Networks")
-                    or {}
-                )
-            )
-            extra = attached - project_networks
+            attached = _networks(current, name)
+            extra = attached - allowed
             checks.append(
                 CaseResult(
-                    case=f"{service}:networks",
-                    verdict="pass" if not extra else "fail",
+                    case=f"{name}:networks",
+                    verdict="fail" if extra else "pass",
                     detail=(
-                        "only declared networks"
+                        f"attached {sorted(attached)}"
                         if not extra
-                        else f"joined undeclared networks {sorted(extra)}"
+                        else f"undeclared networks {sorted(extra)}"
                     ),
                 )
             )
 
-            published = self._published_ports(container)
-            undeclared = published - allowed_ports
+            published = _ports(current, name)
+            undeclared = published - _ports(contract, name)
             checks.append(
                 CaseResult(
-                    case=f"{service}:ports",
-                    verdict="pass" if not undeclared else "fail",
+                    case=f"{name}:ports",
+                    verdict="fail" if undeclared else "pass",
                     detail=(
                         f"published {sorted(published)}"
                         if not undeclared
@@ -158,8 +142,44 @@ class NetworkIsolation:
                     ),
                 )
             )
-            if not name:  # pragma: no cover - defensive
-                checks[-1].detail += " (unnamed container)"
+
+        services = current.get("services") or {}
+        missing = ""
+        if FRONT_SERVICE not in services:
+            missing = FRONT_SERVICE
+        elif db_service not in services:
+            missing = db_service
+
+        shared = _networks(current, FRONT_SERVICE) & _networks(
+            current, db_service
+        )
+        if missing:
+            reason = f"{missing} is missing"
+        elif shared:
+            reason = f"shares {sorted(shared)} with {db_service}"
+        else:
+            reason = f"shares no network with {db_service}"
+        checks.append(
+            CaseResult(
+                case=f"{FRONT_SERVICE}:isolated_from_db",
+                verdict="fail" if missing or shared else "pass",
+                detail=reason,
+            )
+        )
+
+        database = _networks(current, db_service)
+        widened = database - _networks(contract, db_service)
+        checks.append(
+            CaseResult(
+                case=f"{db_service}:networks_unchanged",
+                verdict="fail" if widened or not database else "pass",
+                detail=(
+                    f"attached {sorted(database)}"
+                    if not widened
+                    else f"the database joined {sorted(widened)}"
+                ),
+            )
+        )
 
         total = len(checks)
         passed = sum(1 for c in checks if c.verdict == "pass")
