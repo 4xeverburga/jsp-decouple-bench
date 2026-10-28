@@ -8,6 +8,7 @@ by path, because a case is data: adding one must not mean touching Python.
 import importlib.util
 import json
 from pathlib import Path
+from uuid import uuid4
 
 from . import settings
 from .settings import ARTIFACTS, CORPUS
@@ -25,8 +26,31 @@ def golden(slug: str, case: str) -> dict:
     return json.loads((CORPUS / slug / case / "expect.json").read_text())
 
 
+def _screenshot(page, case: str) -> str | None:
+    """Stage the page a case ended on, under out/evidence.
+
+    Staged, not placed: a later passing run of the same case must not
+    overwrite the picture a failing one left, so the scorer promotes the
+    file only if the case actually fails.
+
+    Best effort: a case that failed must report why it failed, not a second
+    error from the camera.
+    """
+    target = settings.EVIDENCE / f".{uuid4().hex}-{case}.png"
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        page.screenshot(path=str(target), full_page=True)
+    except Exception:
+        return None
+    return str(target.relative_to(settings.ROOT))
+
+
 def play(slug: str, case: str) -> dict:
-    """Run the case's flow against the running stack; report the artifacts."""
+    """Run the case's flow against the running stack; report the artifacts.
+
+    A difference is not left as a list of keys: the page it happened on is
+    written to out/evidence, because "the count differs" is not evidence.
+    """
     from playwright.sync_api import sync_playwright
 
     normalize = load(ARTIFACTS, "bench_artifacts").normalize
@@ -45,9 +69,19 @@ def play(slug: str, case: str) -> dict:
         page = context.new_page()
         try:
             actual = normalize(flow.run(page, base_url), base_url)
+            differing = [
+                key for key in expect if actual.get(key) != expect[key]
+            ]
+            # Always take the shot: whether the case passes is not known
+            # here. The rows are compared after the page is gone, so a
+            # failure can be DB-only with the page looking right — and that
+            # is precisely the failure worth a picture. The scorer keeps
+            # the file only if something differs.
+            shot = _screenshot(page, case)
+        except Exception:
+            _screenshot(page, case)
+            raise
         finally:
             browser.close()
 
-    return {
-        "differing": [key for key in expect if actual.get(key) != expect[key]]
-    }
+    return {"differing": differing, "screenshot": shot}

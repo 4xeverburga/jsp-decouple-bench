@@ -14,6 +14,10 @@ SEEDS = ROOT / "seeds"
 ARTIFACTS = Path(__file__).with_name("artifacts.py")
 CORPUS = Path(__file__).with_name("corpus")
 
+# What a failing case leaves behind: a screenshot of the page it ended on.
+# Deterministic per case, so a re-run replaces it instead of piling up.
+EVIDENCE = ROOT / "out" / "evidence"
+
 
 # Read when asked, not at import: listing the manifests must not require
 # a checkout, a published URL or a sandbox.

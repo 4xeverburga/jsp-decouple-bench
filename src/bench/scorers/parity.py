@@ -18,7 +18,7 @@ import asyncio
 from inspect_ai.scorer import CORRECT, INCORRECT, Score, Target, scorer
 from inspect_ai.solver import TaskState
 
-from .. import db
+from .. import db, settings
 from ..cases import golden, play
 from ..delta import canonical, delta_table
 from .metrics import all_must_pass
@@ -41,6 +41,26 @@ def _db_differences(
     return differing
 
 
+def _keep(
+    staged: str | None, slug: str, case: str, failed: bool
+) -> str | None:
+    """Promote a staged shot when the case failed; drop it when it passed.
+
+    The path is per case, so only the latest failure kept — but a pass never
+    erases a failure's evidence, which is the property that matters.
+    """
+    if not staged:
+        return None
+    source = settings.ROOT / staged
+    if not failed:
+        source.unlink(missing_ok=True)
+        return None
+    target = settings.EVIDENCE / slug / f"{case}.png"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    source.replace(target)
+    return str(target.relative_to(settings.ROOT))
+
+
 @scorer(metrics=[all_must_pass()])
 def parity(slug: str, db_service: str, database: str) -> scorer:
     """Grade the case this sample names, artifacts and rows both."""
@@ -52,9 +72,10 @@ def parity(slug: str, db_service: str, database: str) -> scorer:
         artifacts = await asyncio.to_thread(play, slug, case)
         after = await db.snapshot(db_service, database, tables)
 
-        differing = artifacts["differing"] + _db_differences(
-            slug, case, before, after
-        )
+        browser = artifacts["differing"]
+        rows = _db_differences(slug, case, before, after)
+        differing = browser + rows
+        shot = _keep(artifacts["screenshot"], slug, case, bool(differing))
         return Score(
             value=INCORRECT if differing else CORRECT,
             answer=case,
@@ -63,7 +84,15 @@ def parity(slug: str, db_service: str, database: str) -> scorer:
                 if not differing
                 else f"{case}=differs:{','.join(differing)}"
             ),
-            metadata={"case": case, "differing": differing},
+            # The screenshot is the evidence a reader needs: without it a
+            # failure is a list of keys, and no one can say what it looked
+            # like.
+            metadata={
+                "case": case,
+                "artifacts": browser,
+                "db": rows,
+                "screenshot": shot,
+            },
         )
 
     return score
