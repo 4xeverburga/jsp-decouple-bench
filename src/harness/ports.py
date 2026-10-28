@@ -39,6 +39,7 @@ class HarnessTask:
 class HarnessResult:
     exit_code: int
     duration_s: float
+    command: str
     cost_usd: float | None = None
     tokens: int | None = None
     log_path: Path | None = None
@@ -51,6 +52,7 @@ class HarnessResult:
         return {
             "exit_code": self.exit_code,
             "duration_s": round(self.duration_s, 3),
+            "command": self.command,
             "cost_usd": self.cost_usd,
             "tokens": self.tokens,
             "log": str(self.log_path) if self.log_path else None,

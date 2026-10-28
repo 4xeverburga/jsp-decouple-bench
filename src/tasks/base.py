@@ -13,12 +13,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from src import log
 from src.errors import BenchError
 from src.harness.ports import HarnessPort, HarnessResult, HarnessTask
 from src.run import RunContext
 from src.run.atomic import write_json, write_text
 from src.run.results import utcnow
 from src.run.sample_checkout import diff, ensure_pinned
+
+logger = log.get("task")
 
 
 def compose_prompt(base_prompt: str, task_prompt: str) -> str:
@@ -42,6 +45,9 @@ class Task:
 
     def prepare(self, ctx: RunContext, harness: HarnessPort) -> HarnessResult:
         sample = ctx.sample
+        logger.info(
+            "pinning %s to %s", sample["slug"], sample["commit_sha"][:10]
+        )
         preconditions = ensure_pinned(
             ctx.sample_location, sample["commit_sha"], sample.get("entrypoint")
         )
@@ -50,6 +56,13 @@ class Task:
         prompt = compose_prompt(
             ctx.manifest["base_prompt"], ctx.manifest["prompt"]
         )
+        logger.info(
+            "prompt: %d chars (contract %d + ask %d), %d case(s) in scope",
+            len(prompt),
+            len(ctx.manifest["base_prompt"]),
+            len(ctx.manifest["prompt"]),
+            len(scope.get("cases") or []),
+        )
         filled = HarnessTask(
             prompt=prompt,
             cwd=Path(preconditions["location"]),
@@ -57,7 +70,9 @@ class Task:
         result = harness.run(filled, ctx.paths.root)
 
         # The diff comes from git, never from the harness's own claims.
+        logger.info("reading the worktree back (git diff vs the pin)")
         patch = diff(ctx.sample_location, sample["commit_sha"])
+        logger.info("diff: %d bytes", len(patch))
         harness_doc: dict[str, Any] = {
             "harness": harness.name,
             **result.to_dict(),

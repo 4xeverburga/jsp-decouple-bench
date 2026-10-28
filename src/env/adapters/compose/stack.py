@@ -12,8 +12,8 @@ cannot collide. Each run also gets its own compose project name.
 from __future__ import annotations
 
 import json
+import logging
 import os
-import subprocess
 import time
 from pathlib import Path
 from typing import Any
@@ -22,9 +22,13 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import urlopen
 
 import config
+from src import log
 from src import run as run_pkg
 from src.errors import GateError
+from src.run.process import ProcessRun, run_streamed
 from src.run.sample_checkout import show_file
+
+logger = log.get("stack")
 
 
 class ComposeStack:
@@ -81,29 +85,50 @@ class ComposeStack:
     def _run_cmd(
         self,
         cmd: list[str],
-        stdin: str | None = None,
-        check: bool = True,
-    ) -> subprocess.CompletedProcess:
-        proc = subprocess.run(
-            cmd,
-            cwd=str(self.location),
-            env=self._env(),
-            input=stdin,
-            capture_output=True,
-            text=True,
+        stdin_text: str | None,
+        check: bool,
+        echo: bool,
+    ) -> ProcessRun:
+        """Run one compose call, live at `echo`'s level.
+
+        A build is minutes of silence if its output is swallowed, so an
+        echoed call prints as it happens; the quiet calls (`ps`, `config`,
+        `exec`) stay at DEBUG to keep the operator's log readable. Every
+        call is bounded by the stack timeout, so a wedged daemon cannot
+        hang a gate forever.
+        """
+        logger.log(
+            logging.INFO if echo else logging.DEBUG,
+            "compose %s",
+            " ".join(cmd[4:]),
         )
-        if check and proc.returncode != 0:
+        run = run_streamed(
+            cmd,
+            cwd=self.location,
+            env=self._env(),
+            stdin_text=stdin_text,
+            timeout_s=self.timeout_s,
+            heartbeat_s=config.LOG_HEARTBEAT_S,
+            logger=logger,
+            sink=None,
+            echo=echo,
+        )
+        if check and run.exit_code != 0:
             raise GateError(
                 f"compose {' '.join(cmd[4:])} failed "
-                f"({proc.returncode}) in {self.project}: "
-                f"{(proc.stderr or proc.stdout).strip()[-2000:]}"
+                f"({run.exit_code}) in {self.project}: "
+                f"{(run.stderr or run.stdout).strip()[-2000:]}"
             )
-        return proc
+        return run
 
     def _run(
-        self, *args: str, stdin: str | None = None, check: bool = True
-    ) -> subprocess.CompletedProcess:
-        return self._run_cmd(self._cmd(*args), stdin, check)
+        self,
+        *args: str,
+        stdin_text: str | None,
+        check: bool,
+        echo: bool,
+    ) -> ProcessRun:
+        return self._run_cmd(self._cmd(*args), stdin_text, check, echo)
 
     # --- lifecycle -----------------------------------------------------------
     def _allocate(self) -> None:
@@ -124,15 +149,38 @@ class ComposeStack:
         # `--build` is not optional: the sample's image IS its code, so a
         # gate that skipped the build would grade the pinned commit instead
         # of whatever the agent left in the worktree.
-        self._run("up", "-d", "--build", "--remove-orphans")
+        logger.info(
+            "starting %s (http port %s, db port %s)",
+            self.project,
+            self._ports["http"],
+            self._ports["db"],
+        )
+        started = time.monotonic()
+        self._run(
+            "up",
+            "-d",
+            "--build",
+            "--remove-orphans",
+            stdin_text=None,
+            check=True,
+            echo=True,
+        )
         self.await_ready()
-        return self.base_url()
+        url = self.base_url()
+        logger.info(
+            "stack %s ready at %s (%.1fs)",
+            self.project,
+            url,
+            time.monotonic() - started,
+        )
+        return url
 
     def down(self, volumes: bool = True) -> None:
         args = ["down", "--remove-orphans"]
         if volumes:
             args.insert(1, "-v")
-        self._run(*args, check=False)
+        logger.info("stopping %s (volumes=%s)", self.project, volumes)
+        self._run(*args, stdin_text=None, check=False, echo=True)
 
     def reset(self) -> str:
         self.down(volumes=True)
@@ -145,13 +193,24 @@ class ComposeStack:
     # asserted: every container must be up-and-not-unhealthy or exited
     # cleanly, and the published URL must answer.
     def await_ready(self) -> None:
-        deadline = time.monotonic() + self.timeout_s
+        started = time.monotonic()
+        deadline = started + self.timeout_s
+        last_report = started
         while not self._settled():
-            if time.monotonic() >= deadline:
+            now = time.monotonic()
+            if now >= deadline:
                 raise GateError(
                     f"stack {self.project} did not become ready within "
                     f"{self.timeout_s}s: {self._summary()}"
                 )
+            if now - last_report >= config.LOG_HEARTBEAT_S:
+                logger.info(
+                    "waiting for %s (%ss): %s",
+                    self.project,
+                    int(now - started),
+                    self._summary(),
+                )
+                last_report = now
             time.sleep(config.STACK_POLL_INTERVAL_S)
 
     @staticmethod
@@ -221,7 +280,9 @@ class ComposeStack:
         if include_stopped:
             args.append("--all")
         args += ["--format", "json"]
-        out = self._run(*args, check=False).stdout.strip()
+        out = self._run(
+            *args, stdin_text=None, check=False, echo=False
+        ).stdout.strip()
         if not out:
             return []
         try:
@@ -239,9 +300,7 @@ class ComposeStack:
         # under the run directory so the rendered contract is auditable.
         self._allocate()
         commit_sha = self.ctx.sample["commit_sha"]
-        blob = show_file(
-            self.location, commit_sha, self.compose_file.name
-        )
+        blob = show_file(self.location, commit_sha, self.compose_file.name)
         rendered = self.ctx.paths.root / f"pinned-{self.compose_file.name}"
         rendered.write_text(blob)
         return self._render(rendered)
@@ -256,11 +315,22 @@ class ComposeStack:
         # Offline: `config` resolves substitution, override files,
         # `external:` and `name:` without a docker daemon.
         out = self._run_cmd(
-            self._cmd_for(compose_file, "config", "--format", "json")
+            self._cmd_for(compose_file, "config", "--format", "json"),
+            stdin_text=None,
+            check=True,
+            echo=False,
         ).stdout
         return json.loads(out)
 
     def exec_(
         self, service: str, argv: list[str], stdin: str | None = None
     ) -> str:
-        return self._run("exec", "-T", service, *argv, stdin=stdin).stdout
+        return self._run(
+            "exec",
+            "-T",
+            service,
+            *argv,
+            stdin_text=stdin,
+            check=True,
+            echo=False,
+        ).stdout

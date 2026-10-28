@@ -1,4 +1,4 @@
-"""src/harness/adapters/command.py — `command` harness: drive any agent CLI.
+"""src/harness/adapters/command.py — the only harness: drive any agent CLI.
 
 The prompt goes in on **stdin**, exactly as a user would hand it over.
 Nothing about the run is put in the environment: an agent that prints its
@@ -6,41 +6,41 @@ env must not discover that it is being measured. A copy of the prompt is
 kept at `<run>/harness-prompt.md` for the supervisor's audit trail, but no
 such path is handed to the agent.
 
+Which CLI, which model and which effort run is **the command itself** — the
+one in `.env`, or a per-run `--harness-cmd` — so no agent ever needs a class
+here. `name` is only the label the run is recorded under.
+
 The command runs with cwd = the sample checkout and edits it in place. The
 diff is read back afterwards from git, never from the harness's own claims.
-
-Options (CLI `--harness-cmd` wins over `BENCH_HARNESS_CMD`):
-    cmd        shell command to run (required)
-    timeout_s  default HARNESS_TIMEOUT_S
 """
 
 from __future__ import annotations
 
 import os
-import subprocess
-import time
 from pathlib import Path
-from typing import Any
 
 import config
+from src import log
 from src.errors import BenchError
 from src.harness.ports import HarnessResult, HarnessTask
+from src.run.process import run_streamed
+
+logger = log.get("harness")
 
 
 class CommandHarness:
-    name = "command"
+    """One command line, run as `bash -lc <cmd>` with the prompt on stdin."""
 
-    def __init__(self, options: dict[str, Any] | None = None):
-        self.options = options or {}
-        self.cmd = self.options.get("cmd") or config.HARNESS_CMD
-        if not self.cmd:
+    def __init__(self, name: str, cmd: str):
+        if not cmd:
             raise BenchError(
-                f"harness '{self.name}' needs a command: pass --harness-cmd "
-                f"or set BENCH_HARNESS_CMD"
+                "no agent command: pass --harness-cmd '...' or set "
+                "BENCH_HARNESS_CMD in .env. The prompt arrives on stdin, so "
+                'a CLI that takes it as an argument reads it with "$(cat)".'
             )
-        self.timeout_s = int(
-            self.options.get("timeout_s", config.HARNESS_TIMEOUT_S)
-        )
+        self.name = name
+        self.cmd = cmd
+        self.timeout_s = config.HARNESS_TIMEOUT_S
 
     @staticmethod
     def _clean_env() -> dict[str, str]:
@@ -59,35 +59,49 @@ class CommandHarness:
         log_dir = Path(log_dir)
         prompt = task.render()
         (log_dir / "harness-prompt.md").write_text(prompt)
-        log = log_dir / "harness.log"
+        log_file = log_dir / "harness.log"
 
-        started = time.monotonic()
-        try:
-            proc = subprocess.run(
+        logger.info("harness %r: %s", self.name, self.cmd)
+        logger.info("cwd %s (timeout %ss)", task.cwd, self.timeout_s)
+        with log_file.open("w", encoding="utf-8") as sink:
+            # The agent's own words, live: this is the only evidence that a
+            # 30-minute session is working rather than wedged.
+            sink.write(
+                f"$ {self.cmd}\ncwd: {task.cwd}\n"
+                "# stdout and stderr, interleaved as produced\n\n"
+            )
+            sink.flush()
+            run = run_streamed(
                 ["bash", "-lc", self.cmd],
-                cwd=str(task.cwd),
-                input=prompt,
-                text=True,
-                capture_output=True,
+                cwd=task.cwd,
                 env=self._clean_env(),
-                timeout=self.timeout_s,
+                stdin_text=prompt,
+                timeout_s=self.timeout_s,
+                heartbeat_s=config.LOG_HEARTBEAT_S,
+                logger=logger,
+                sink=sink,
+                echo=True,
             )
-            exit_code, stdout, stderr = (
-                proc.returncode,
-                proc.stdout,
-                proc.stderr,
+            sink.write(f"\nexit: {run.exit_code} ({run.duration_s:.1f}s)\n")
+        if run.exit_code == 0:
+            logger.info(
+                "harness %r exited 0 in %.1fs (log %s)",
+                self.name,
+                run.duration_s,
+                log_file,
             )
-        except subprocess.TimeoutExpired as exc:
-            exit_code = 124
-            stdout = exc.stdout if isinstance(exc.stdout, str) else ""
-            stderr = f"harness timed out after {self.timeout_s}s\n"
-
-        duration = time.monotonic() - started
-        log.write_text(
-            f"$ {self.cmd}\ncwd: {task.cwd}\nexit: {exit_code} "
-            f"({duration:.1f}s)\n\n--- stdout ---\n{stdout}\n"
-            f"--- stderr ---\n{stderr}"
-        )
+        else:
+            logger.error(
+                "harness %r exited %s%s in %.1fs (log %s)",
+                self.name,
+                run.exit_code,
+                " after timeout" if run.timed_out else "",
+                run.duration_s,
+                log_file,
+            )
         return HarnessResult(
-            exit_code=exit_code, duration_s=duration, log_path=log
+            exit_code=run.exit_code,
+            duration_s=run.duration_s,
+            command=self.cmd,
+            log_path=log_file,
         )

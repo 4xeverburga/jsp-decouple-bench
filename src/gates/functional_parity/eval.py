@@ -17,11 +17,14 @@ from pathlib import Path
 from typing import Any
 
 import config
+from src import log
 from src.gates.functional_parity import corpus
 from src.gates.functional_parity.artifacts import normalize
 from src.gates.functional_parity.delta import canonical, delta_table, summary
 from src.run.atomic import write_json
 from src.run.results import CaseResult, GateResult
+
+logger = log.get("gate.parity")
 
 
 class FunctionalParity:
@@ -122,6 +125,16 @@ class FunctionalParity:
         # The cross-gate interface: results are logged, the corpus stays
         # private.
         write_json(self.ctx.paths.case(name), record)
+        if record["verdict"] == "pass":
+            logger.info("%s: pass (%ss)", name, record["duration_s"])
+        else:
+            logger.error(
+                "%s: %s — %s (%ss)",
+                name,
+                record["verdict"],
+                record.get("detail", ""),
+                record["duration_s"],
+            )
         return CaseResult(
             case=name,
             verdict=record["verdict"],
@@ -145,7 +158,8 @@ class FunctionalParity:
         stack = self.ctx.stack()
         details: list[CaseResult] = []
         try:
-            for name in cases:
+            for index, name in enumerate(cases, start=1):
+                logger.info("case %d/%d: %s", index, len(cases), name)
                 details.append(self._case(name))
         finally:
             if not config.KEEP_STACK:

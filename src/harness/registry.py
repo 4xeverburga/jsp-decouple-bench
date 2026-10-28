@@ -1,33 +1,22 @@
-"""src/harness/registry.py — harness name → implementation.
+"""src/harness/registry.py — build the one harness.
 
-The harness is chosen per **run**, not per sample: comparing agents is the
-point, so it must not live in the manifest. The chosen name is recorded in
-`TASK_RUN.harness`.
+There is no adapter per agent, and no name→command table either: a harness
+**is the command you give it**, and the prompt arrives on stdin. Which CLI
+(opencode, claude, copilot, …), which model, and which effort variant are
+therefore argv — recorded verbatim in the run's `harness.json` — and never a
+Python class.
+
+`label` is free text that lands in `TASK_RUN.harness`: it names the run, it
+selects nothing.
 """
 
 from __future__ import annotations
 
-import importlib
-from typing import Any
-
-from src.errors import NotFoundError
+import config
+from src.harness.adapters.command import CommandHarness
 from src.harness.ports import HarnessPort
 
-CATALOG: dict[str, tuple[str, str]] = {
-    "command": ("src.harness.adapters.command", "CommandHarness"),
-    "claude-code": ("src.harness.adapters.presets", "ClaudeCodeHarness"),
-    "opencode": ("src.harness.adapters.presets", "OpenCodeHarness"),
-    "pi": ("src.harness.adapters.presets", "PiHarness"),
-}
 
-
-def names() -> list[str]:
-    return sorted(CATALOG)
-
-
-def resolve(name: str, options: dict[str, Any] | None = None) -> HarnessPort:
-    if name not in CATALOG:
-        raise NotFoundError(f"unknown harness '{name}'. known: {names()}")
-    module_name, class_name = CATALOG[name]
-    cls = getattr(importlib.import_module(module_name), class_name)
-    return cls(options or {})
+def resolve(label: str, cmd: str | None) -> HarnessPort:
+    """The per-run command wins; otherwise `.env`'s BENCH_HARNESS_CMD."""
+    return CommandHarness(label, cmd or config.HARNESS_CMD)

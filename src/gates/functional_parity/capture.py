@@ -12,6 +12,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from src import log
 from src.gates.functional_parity import corpus
 from src.gates.functional_parity.artifacts import normalize
 from src.gates.functional_parity.delta import delta_table
@@ -19,9 +20,12 @@ from src.run.atomic import write_json
 from src.run.results import utcnow
 from src.run.sample_checkout import ensure_pinned
 
+logger = log.get("capture")
+
 
 def capture(ctx: Any, case: str, keep_stack: bool = False) -> Path:
     sample = ctx.sample
+    logger.info("capturing %s/%s", sample["slug"], case)
     preconditions = ensure_pinned(
         ctx.sample_location, sample["commit_sha"], sample.get("entrypoint")
     )
@@ -36,6 +40,7 @@ def capture(ctx: Any, case: str, keep_stack: bool = False) -> Path:
         database = ctx.adapter("db")
         columns = [t["name"] for t in tables]
         before = database.dump_many(columns)
+        logger.info("running the flow at %s", ctx.base_url())
         artifacts = ctx.adapter("browser").capture_case(
             corpus.flow(sample["slug"], case),
             ctx.base_url(),
@@ -74,4 +79,5 @@ def capture(ctx: Any, case: str, keep_stack: bool = False) -> Path:
         shutil.copytree(
             ctx.paths.images, directory / "images", dirs_exist_ok=True
         )
+    logger.info("golden written to %s", directory / "expect.json")
     return directory / "expect.json"
