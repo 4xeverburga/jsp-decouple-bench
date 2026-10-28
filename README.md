@@ -93,7 +93,18 @@ produced by it, so rewriting it would quietly change what "matches" means.
 
 ## Not done yet
 
-- `make score` has never run end to end: it needs a solved tree and a build,
-  and the build is the expensive half.
 - The docs in `specs/` and `.agents/skills/` are from the previous
   implementation and still describe a CLI that no longer exists.
+
+## What a run costs
+
+The first build of a sample downloads its whole dependency set into an empty
+`~/.m2` — for mamute that is about seven minutes, because the Dockerfile runs
+Maven quiet and the layer is not cached until it completes once. After that
+the layer is reused and a two-case score is about ninety seconds. There is no
+`--mount=type=cache` on `/root/.m2`, so a change to `pom.xml` pays the
+download again.
+
+`--display log` keeps step output in the log; without it Inspect draws a TUI
+and a redirected run looks frozen.
+

@@ -60,12 +60,16 @@ def for_scoring(manifest_id: int) -> list[Sample]:
 def for_solving(manifest_id: int, run: str) -> list[Sample]:
     """One sample for the manifest: the agent works on the tree once."""
     chosen = load_manifest(manifest_id)
-    base = _metadata(chosen, pin(chosen["source"]))
+    commit = pin(chosen["source"])
     return [
         Sample(
-            id=f"{code_id(chosen['sample'], run)}:{chosen['name']}",
+            id=f"{code_id(chosen['source'], commit)}:{chosen['name']}",
             input=work_order(chosen),
             target="decoupled",
-            metadata=dict(base, manifest_id=manifest_id, run=run),
+            metadata=dict(
+                _metadata(chosen, commit),
+                manifest_id=manifest_id,
+                run=run,
+            ),
         )
     ]

@@ -38,16 +38,17 @@ solve:
 	BENCH_SANDBOX=src/bench/compose.solve.yaml \
 	uv run inspect eval inspect_bench.py@solve_task \
 		-T manifest_id=$(MANIFEST) -T run=$(RUN) -T agent='$(AGENT)' \
-		--model mockllm/model --log-dir $(LOGS)
+		--model mockllm/model --display log --log-dir $(LOGS)
 
 # Score a recorded tree. Builds the stack from it, so this is the slow half;
 # re-scoring the same tree against a corrected manifest needs no agent.
 score:
-	BENCH_CHECKOUT=out/solves/$(RUN)/tree \
+	BENCH_CHECKOUT=$(CURDIR)/out/solves/$(RUN)/tree \
 	BENCH_SANDBOX=src/bench/compose.build.yaml \
 	uv run inspect eval inspect_bench.py@slice_task \
 		-T manifest_id=$(MANIFEST) \
-		--model mockllm/model --max-samples 1 --log-dir $(LOGS)
+		--model mockllm/model --max-samples 1 --display log \
+		--log-dir $(LOGS)
 
 # Files only: the declared topology against the pin. No stack, seconds.
 # Must FAIL on an untouched tree.
@@ -55,7 +56,7 @@ topology:
 	BENCH_SANDBOX=src/bench/compose.prebuilt.yaml \
 	uv run inspect eval inspect_bench.py@topology_task \
 		-T manifest_id=$(MANIFEST) \
-		--model mockllm/model --log-dir $(LOGS)
+		--model mockllm/model --display log --log-dir $(LOGS)
 
 manifests:
 	uv run python -m src.bench
