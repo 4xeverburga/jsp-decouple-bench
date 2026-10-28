@@ -49,7 +49,8 @@ adapter registry resolves against.
 |---|---|---|
 | `sample_id` | INTEGER PK | surrogate |
 | `slug` | TEXT NOT NULL UNIQUE | bench-side identifier, used by `cases/<slug>/` — `mamute`, `online-study-system`, `openclinica` |
-| `project_id` | TEXT NOT NULL | upstream identifier (`owner/repo`) |
+| `project_id` | TEXT NOT NULL | original upstream identifier (`owner/repo`) |
+| `source` | TEXT NULL | `owner/repo` of the remote the bench's copy is built from |
 | `branch` | TEXT NOT NULL | branch the pinned commit lives on |
 | `commit_sha` | TEXT NOT NULL | **the** pinned commit — the environment *and* `compose.yaml` must exist in it |
 | `license` | TEXT NULL | |

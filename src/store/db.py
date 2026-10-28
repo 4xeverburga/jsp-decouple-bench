@@ -9,7 +9,7 @@ from pathlib import Path
 import config
 from src.errors import BenchError, NotFoundError
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def connect(path: Path | None = None) -> sqlite3.Connection:
@@ -100,12 +100,13 @@ def _seed(conn: sqlite3.Connection) -> None:
             # The natural key is (project_id, branch, commit_sha); a sample
             # that gets re-pinned keeps its id so old runs stay attached.
             cur = conn.execute(
-                "INSERT INTO sample(slug, project_id, branch, commit_sha, "
-                "license, description, entrypoint, target_url) "
-                "VALUES (?,?,?,?,?,?,?,?)",
+                "INSERT INTO sample(slug, project_id, source, branch, "
+                "commit_sha, license, description, entrypoint, target_url) "
+                "VALUES (?,?,?,?,?,?,?,?,?)",
                 (
                     sample["slug"],
                     sample["project_id"],
+                    sample["source"],
                     sample["branch"],
                     sample["commit_sha"],
                     sample.get("license"),
@@ -118,11 +119,12 @@ def _seed(conn: sqlite3.Connection) -> None:
         else:
             sample_id = row["sample_id"]
             conn.execute(
-                "UPDATE sample SET project_id = ?, branch = ?, commit_sha = ?,"
-                " license = ?, description = ?, entrypoint = ?, target_url = ?"
-                " WHERE sample_id = ?",
+                "UPDATE sample SET project_id = ?, source = ?, branch = ?,"
+                " commit_sha = ?, license = ?, description = ?,"
+                " entrypoint = ?, target_url = ? WHERE sample_id = ?",
                 (
                     sample["project_id"],
+                    sample["source"],
                     sample["branch"],
                     sample["commit_sha"],
                     sample.get("license"),

@@ -11,7 +11,7 @@ from src.errors import NotFoundError
 
 def _manifest(conn: sqlite3.Connection, manifest_id: int) -> dict[str, Any]:
     row = conn.execute(
-        "SELECT m.*, s.slug AS sample_slug, s.project_id, s.branch, "
+        "SELECT m.*, s.slug AS sample_slug, s.project_id, s.source, s.branch, "
         "s.commit_sha,"
         " s.license, s.description AS sample_description, s.entrypoint,"
         " s.target_url, t.name AS task_type"
@@ -36,6 +36,7 @@ def _manifest(conn: sqlite3.Connection, manifest_id: int) -> dict[str, Any]:
     data["sample"] = {
         "slug": data.pop("sample_slug"),
         "project_id": data["project_id"],
+        "source": data["source"],
         "branch": data["branch"],
         "commit_sha": data["commit_sha"],
         "license": data["license"],

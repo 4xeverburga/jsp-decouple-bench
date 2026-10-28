@@ -3,7 +3,7 @@
 
 -- Bump when this file changes shape; `make db-init` refuses to reuse a DB
 -- built from a different version (never silently migrations-by-luck).
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;
 
 PRAGMA foreign_keys = ON;
 
@@ -17,7 +17,9 @@ CREATE TABLE IF NOT EXISTS technology (
 CREATE TABLE IF NOT EXISTS sample (
     sample_id   INTEGER PRIMARY KEY,
     slug        TEXT NOT NULL UNIQUE,
+    -- project_id is the original upstream owner/repo; source is the copy we build from.
     project_id  TEXT NOT NULL,
+    source      TEXT,
     branch      TEXT NOT NULL,
     commit_sha  TEXT NOT NULL,
     license     TEXT,
