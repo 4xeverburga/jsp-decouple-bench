@@ -1,9 +1,8 @@
 # JSP-Decouple-Bench — an Inspect evaluation
 #
-# Two verbs, split because solving is expensive and scoring is cheap:
+# One command runs an agent and then every scorer assigned by its manifest:
 #
-#   make solve TASK=vote-flow AGENT='...'   -> prints the run id
-#   make score RUN=<run id> [MANIFEST=...]  -> the verdict
+#   make task MANIFEST=3 AGENT='...'
 #
 # The checkout and the stack's published URL come from the environment:
 #
@@ -22,41 +21,22 @@ RUN      := $(shell python3 -c 'import uuid;print(uuid.uuid4().hex)')
 LOGS     ?= out/evals
 AGENT    ?= true
 
-.PHONY: eval solve score topology manifests view check
+.PHONY: task manifests view check
 
-# The whole thing: let the agent work, then grade what it left. One run id
-# ties the two halves together.
-eval:
-	@$(MAKE) --no-print-directory solve MANIFEST=$(MANIFEST) \
-		AGENT='$(AGENT)' RUN=$(RUN)
-	@$(MAKE) --no-print-directory score MANIFEST=$(MANIFEST) RUN=$(RUN)
-
-# One slice, one agent, one tree. Prints the id before running so the solve
-# can be scored even if the run is interrupted.
-solve:
+# One manifest, one agent run, then its assigned scorers. Both Inspect
+# phases share this run id; scoring reads the tree captured by solving.
+task:
 	@echo "run: $(RUN)"
 	BENCH_SANDBOX=src/bench/compose.solve.yaml \
 	uv run inspect eval inspect_bench.py@solve_task \
 		-T manifest_id=$(MANIFEST) -T run=$(RUN) -T agent='$(AGENT)' \
 		--model mockllm/model --display plain --log-dir $(LOGS)
-
-# Score a recorded tree. Builds the stack from it, so this is the slow half;
-# re-scoring the same tree against a corrected manifest needs no agent.
-score:
-	BENCH_CHECKOUT=$(CURDIR)/out/solves/$(RUN)/tree \
-	BENCH_SANDBOX=src/bench/compose.build.yaml \
-	uv run inspect eval inspect_bench.py@slice_task \
+	@export BENCH_CHECKOUT=$(CURDIR)/out/solves/$(RUN)/tree; \
+	trap 'rm -f "$$BENCH_CHECKOUT/.bench-inspect-compose.yaml"' EXIT; \
+	uv run inspect eval inspect_bench.py@score_task \
 		-T manifest_id=$(MANIFEST) \
 		--model mockllm/model --max-samples 1 --display plain \
 		--log-dir $(LOGS)
-
-# Files only: the declared topology against the pin. No stack, seconds.
-# Must FAIL on an untouched tree.
-topology:
-	BENCH_SANDBOX=src/bench/compose.prebuilt.yaml \
-	uv run inspect eval inspect_bench.py@topology_task \
-		-T manifest_id=$(MANIFEST) \
-		--model mockllm/model --display plain --log-dir $(LOGS)
 
 manifests:
 	uv run python -m src.bench

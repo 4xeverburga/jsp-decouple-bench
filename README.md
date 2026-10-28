@@ -11,8 +11,8 @@ run lifecycle and the logs.
 
 | term | meaning |
 |---|---|
-| **source** | the code: project, branch, pinned commit — `seeds/sources.json` |
-| **manifest** | cases over one source, plus the work order — `seeds/manifests.json` |
+| **source** | code, pin, and runtime stack config — `seeds/sources.json` |
+| **manifest** | one logical task: source, work order, cases, and assigned scorers — `seeds/manifests.json` |
 | **sample** | one (source, case) pair; Inspect gives each its own stack |
 | **case** | one graded behaviour: a flow plus its frozen `expect.json` |
 
@@ -30,21 +30,15 @@ export BENCH_AGENT_IMAGE=<image the agent runs in>
 set -a; . "$BENCH_CHECKOUT/.env"; set +a
 ```
 
-Then one command:
+Run the manifest task. The agent runs first; every assigned scorer runs
+automatically afterward against the saved tree, with one run ID for both:
 
 ```bash
-make eval MANIFEST=3 AGENT='opencode run --auto --model opencode-go/deepseek-v4.1-flash#high "$(cat)"'
+make task MANIFEST=3 AGENT='opencode run --auto --model opencode-go/deepseek-v4.1-flash#high "$(cat)"'
 ```
 
-It solves, scores, and both halves share one run id. Separately — solving is
-expensive, scoring is cheap, so a tree can be graded again for free:
-
-```bash
-make solve   MANIFEST=3 AGENT='...'   # prints the run id, keeps the tree
-make score   RUN=<id> MANIFEST=3      # boots the stack from that tree, grades it
-make topology MANIFEST=3              # the shape gate: seconds, no stack
-make view                             # browse the logs
-```
+`make view` browses the Inspect logs; `make manifests` lists the available
+logical tasks.
 
 ## The agent
 
@@ -59,16 +53,22 @@ the same tools, would measure a model instead of an agent product. Those are
 different numbers and should never share a label. Until then
 `--model mockllm/model` is only there to satisfy the interface.
 
-## The two gates
+## Scorers
 
+- Each manifest lists its scorer IDs. The score task runs every assigned
+  scorer automatically after solving.
+- Scoring uses the selected source's Compose file and default service. The
+  adapter adds Inspect metadata in a temporary sidecar; it does not keep a
+  global app-specific stack file.
 - **functional_parity** — boots the stack, plays each case, compares browser
-  artifacts *and* database deltas. Passes only if every case passes; an
-  average would give half marks to a submission that decoupled nothing.
-- **network_isolation** — reads the declared topology against the pinned one,
-  no container, milliseconds. It must **fail** on an untouched tree: the
-  pristine app reads the database directly.
+  artifacts (including normalized DOM) *and* database deltas. It passes only
+  if every case passes.
+- **network_isolation** — compares the submitted topology with the pinned
+  contract. The whole-app manifest assigns it; it must fail on an untouched
+  tree because the pristine app reads the database directly.
 
-Healthy is parity green with isolation red.
+Only `decouple_slice` and `oneshot_decoupling` are task types; scorer IDs are
+independent of task type.
 
 ## Layout
 
@@ -77,14 +77,14 @@ inspect_bench.py          the tasks — the only file Inspect loads
 src/bench/
   seeds.py                sources, manifests, the work order
   samples.py              (source, case) pairs
-  compose.py              the stack's declared shape, pinned vs submitted
+  compose.py              source Compose setup and topology comparison
   cases.py                play a flow, read a golden
   db.py                   table snapshots through sandbox("db")
   delta.py, tabular.py    the delta algorithm and TSV parsing, copied verbatim
   artifacts.py            the normalizer (base URL, clocks, inline styles)
   scorers/                parity, topology, and the all-must-pass metric
   solves.py               a run id, its tree and its diff
-  compose.*.yaml          sandbox per verb: solve, build, prebuilt
+  compose.solve.yaml      isolated agent workspace
   corpus/<source>/<case>/ flow.py + expect.json
 ```
 

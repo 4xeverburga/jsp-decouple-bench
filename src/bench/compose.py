@@ -1,4 +1,4 @@
-"""Reading a stack's declared shape: the pin's, and the submission's.
+"""Preparing source Compose for Inspect and comparing declared topology.
 
 `compose config` resolves substitution, override files, `external:` and
 `name:` without starting anything, so this costs milliseconds and cannot be
@@ -10,8 +10,11 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import yaml
+
 from . import settings
 from .seeds import pin
+from .seeds import source as source_record
 
 
 def render(compose: Path) -> dict:
@@ -31,6 +34,33 @@ def render(compose: Path) -> dict:
         check=True,
     )
     return json.loads(run.stdout)
+
+
+def sandbox_compose(slug: str, checkout: str) -> Path:
+    """Prepare the source's Compose file for Inspect without changing it."""
+    record = source_record(slug)
+    stack = record.get("stack")
+    if not stack:
+        raise ValueError(f"source {slug!r} has no stack configuration")
+
+    compose_file = Path(checkout) / stack["compose_file"]
+    if not compose_file.is_file():
+        raise FileNotFoundError(
+            f"Compose file for source {slug!r} not found: {compose_file}"
+        )
+
+    config = yaml.safe_load(compose_file.read_text())
+    service = stack["default_service"]
+    services = config.get("services") or {}
+    if service not in services:
+        raise ValueError(
+            f"default service {service!r} is not defined in {compose_file}"
+        )
+    services[service]["x-default"] = True
+
+    generated = compose_file.with_name(".bench-inspect-compose.yaml")
+    generated.write_text(yaml.safe_dump(config, sort_keys=False))
+    return generated
 
 
 def networks(rendered: dict, service: str) -> set[str]:

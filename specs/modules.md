@@ -18,7 +18,6 @@ jsp-decouple-bench/
 │   ├── technologies.json
 │   ├── samples.json
 │   ├── task_types.json
-│   ├── gates.json
 │   └── manifests.json
 ├── out/                      # gitignored; ALL output
 │   └── runs/<run_id>/

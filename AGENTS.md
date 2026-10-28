@@ -8,10 +8,10 @@ this file is not for you.
 
 | thing | where |
 |---|---|
-| the code under test, and its pin | `seeds/sources.json` |
+| the code under test, its pin and stack entrypoint | `seeds/sources.json` |
 | the graded cases and the work order | `seeds/manifests.json` |
 | the answer key: flows and goldens | `src/bench/corpus/` |
-| how the stack must look | `src/bench/compose.py`, `src/bench/compose.*.yaml` |
+| the shared stack template and checks | `templates/compose.template.yaml`, `src/bench/compose.py` |
 | the verdicts | `src/bench/scorers/` |
 
 Inspect owns the sandbox, the run lifecycle, teardown and the logs. The bench
@@ -50,17 +50,17 @@ export APP_HTTP_PORT=8080 MAMUTE_PUBLIC_URL=$BENCH_BASE_URL
 export BENCH_AGENT_IMAGE=<image the agent runs in>
 set -a; . "$BENCH_CHECKOUT/.env"; set +a
 
-make eval MANIFEST=3 AGENT='<the agent command>'
+make task MANIFEST=3 AGENT='<the agent command>'
 ```
 
-`make solve` keeps `out/solves/<run id>/`: the tree, the diff and a record of
-what ran. `make score RUN=<id>` grades that tree again without the agent.
+The command runs the agent, then every scorer assigned to the manifest.
+`out/solves/<run id>/` keeps the tree, diff and a record of what ran.
 
 ## Before a score is quoted
 
-- parity green **and** isolation red on a no-op solve is the healthy pin. If
-  parity is red, the source or the environment is wrong and no score on it
-  means anything.
+- For a manifest assigning both scorers, parity green **and** isolation red
+   on a no-op run is the healthy pin. If parity is red, the source or the
+   environment is wrong and no score on it means anything.
 - read the trace: what the agent actually read, and whether any path left its
   checkout. A run that found the goldens is not a score, it is a leak.
-- a gate that returns `error` did not measure. Never average it with a pass.
+- a scorer that returns `error` did not measure. Never average it with a pass.

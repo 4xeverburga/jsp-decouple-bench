@@ -20,15 +20,21 @@ from inspect_ai.solver import TaskState
 
 from .. import db, settings
 from ..cases import golden, play
-from ..delta import canonical, delta_table
+from ..delta import canonical, delta_table, summary
 from .metrics import all_must_pass
 
 
 def _db_differences(
     slug: str, case: str, before: dict, after: dict
-) -> list[str]:
+) -> tuple[list[str], dict]:
+    """The tables that differ, and what they actually changed.
+
+    The delta is returned, not just its name: "db:Vote differs" is a label,
+    while "Vote inserted 0!=1" is the bug.
+    """
     tables = golden(slug, case)["db"]["tables"]
     differing: list[str] = []
+    detail: dict[str, dict] = {}
     for table, spec in tables.items():
         actual = delta_table(
             before[table],
@@ -38,27 +44,22 @@ def _db_differences(
         )
         if canonical(actual) != canonical(spec):
             differing.append(f"db:{table}")
-    return differing
+            detail[table] = actual
+    return differing, detail
 
 
-def _keep(
-    staged: str | None, slug: str, case: str, failed: bool
-) -> str | None:
-    """Promote a staged shot when the case failed; drop it when it passed.
+def _screenshot(staged: str | None, failed: bool) -> str | None:
+    """Keep a failure's picture; a pass drops only its own.
 
-    The path is per case, so only the latest failure kept — but a pass never
-    erases a failure's evidence, which is the property that matters.
+    The staged name carries a random suffix, so concurrent runs of the same
+    case cannot land on one path.
     """
     if not staged:
         return None
-    source = settings.ROOT / staged
-    if not failed:
-        source.unlink(missing_ok=True)
-        return None
-    target = settings.EVIDENCE / slug / f"{case}.png"
-    target.parent.mkdir(parents=True, exist_ok=True)
-    source.replace(target)
-    return str(target.relative_to(settings.ROOT))
+    if failed:
+        return staged
+    (settings.ROOT / staged).unlink(missing_ok=True)
+    return None
 
 
 @scorer(metrics=[all_must_pass()])
@@ -73,24 +74,27 @@ def parity(slug: str, db_service: str, database: str) -> scorer:
         after = await db.snapshot(db_service, database, tables)
 
         browser = artifacts["differing"]
-        rows = _db_differences(slug, case, before, after)
+        rows, detail = _db_differences(slug, case, before, after)
         differing = browser + rows
-        shot = _keep(artifacts["screenshot"], slug, case, bool(differing))
+        shot = _screenshot(artifacts["screenshot"], bool(differing))
+        expected = {
+            table: golden(slug, case)["db"]["tables"][table]
+            for table in detail
+        }
         return Score(
             value=INCORRECT if differing else CORRECT,
             answer=case,
             explanation=(
                 f"{case}=pass"
                 if not differing
-                else f"{case}=differs:{','.join(differing)}"
+                else f"{case}=differs:{','.join(differing)} "
+                f"[{summary({'tables': detail}, {'tables': expected})}]"
             ),
-            # The screenshot is the evidence a reader needs: without it a
-            # failure is a list of keys, and no one can say what it looked
-            # like.
             metadata={
                 "case": case,
                 "artifacts": browser,
                 "db": rows,
+                "db_delta": detail,
                 "screenshot": shot,
             },
         )

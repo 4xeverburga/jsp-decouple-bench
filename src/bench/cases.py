@@ -26,17 +26,17 @@ def golden(slug: str, case: str) -> dict:
     return json.loads((CORPUS / slug / case / "expect.json").read_text())
 
 
-def _screenshot(page, case: str) -> str | None:
+def _screenshot(page, slug: str, case: str) -> str | None:
     """Stage the page a case ended on, under out/evidence.
 
-    Staged, not placed: a later passing run of the same case must not
-    overwrite the picture a failing one left, so the scorer promotes the
-    file only if the case actually fails.
+    The name carries a random suffix so two runs of the same case — of the
+    same manifest, with different trees — never write the same file. The
+    scorer keeps the file only if the case actually fails.
 
     Best effort: a case that failed must report why it failed, not a second
     error from the camera.
     """
-    target = settings.EVIDENCE / f".{uuid4().hex}-{case}.png"
+    target = settings.EVIDENCE / slug / f"{case}-{uuid4().hex[:8]}.png"
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         page.screenshot(path=str(target), full_page=True)
@@ -77,9 +77,9 @@ def play(slug: str, case: str) -> dict:
             # failure can be DB-only with the page looking right — and that
             # is precisely the failure worth a picture. The scorer keeps
             # the file only if something differs.
-            shot = _screenshot(page, case)
+            shot = _screenshot(page, slug, case)
         except Exception:
-            _screenshot(page, case)
+            _screenshot(page, slug, case)
             raise
         finally:
             browser.close()

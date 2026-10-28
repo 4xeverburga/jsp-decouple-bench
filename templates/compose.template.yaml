@@ -39,6 +39,7 @@ networks:
 
 services:
   front:
+    x-default: true
     build:
       context: .                            # kept: image or dockerfile
     networks:

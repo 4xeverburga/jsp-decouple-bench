@@ -8,6 +8,10 @@
     "license": "Apache-2.0",
     "description": "Q&A (Stack Overflow clone). VRaptor 4, 49 JSPs, 78 tag files.",
     "entrypoint": "compose.yaml",
+    "stack": {
+      "compose_file": "compose.yaml",
+      "default_service": "front"
+    },
     "target_url": "http://localhost:8090",
     "technologies": [
       "java7",

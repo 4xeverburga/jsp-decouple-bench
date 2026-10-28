@@ -1,4 +1,5 @@
-"""Inspect entry file: `inspect eval inspect_bench.py@slice_task`.
+"""Inspect entry points: `solve_task` and `score_task`; users run both via
+`make task`.
 
 Inspect loads tasks from a *file* and finds them by parsing that file's AST
 for `@task` decorators, so the task definitions live here, at the repository
@@ -10,7 +11,7 @@ two task types differ only in their work order: `decouple_slice` names one
 feature boundary, `oneshot_decoupling` names the whole app, and both list the
 cases they are graded on, so one sample per case serves either.
 
-    inspect eval inspect_bench.py@topology_task -T manifest_id=3 \
+    inspect eval inspect_bench.py@score_task -T manifest_id=14 \
         --model mockllm/model
 """
 
@@ -18,7 +19,6 @@ import sys
 from pathlib import Path
 
 from inspect_ai import Task, task
-from inspect_ai.dataset import Sample
 from inspect_ai.solver import Generate, Solver, TaskState, solver
 from inspect_ai.util import sandbox
 
@@ -29,15 +29,32 @@ from src.bench import (  # noqa: E402
     settings,
     solves,
 )
+from src.bench.compose import sandbox_compose  # noqa: E402
 from src.bench.scorers.parity import parity  # noqa: E402
 from src.bench.scorers.topology import network_isolation  # noqa: E402
 from src.bench.seeds import manifest as load_manifest  # noqa: E402
-from src.bench.seeds import task_type, work_order  # noqa: E402
+from src.bench.seeds import task_type  # noqa: E402
 
 
 def _cases(chosen: dict) -> list[str]:
     """The cases this manifest is graded against, whatever its type."""
     return list(chosen["scope"]["cases"])
+
+
+def _scorers(chosen: dict) -> list:
+    options = chosen["bindings"]["db"]["options"]
+    builders = {
+        "functional_parity": lambda: parity(
+            chosen["source"],
+            options["service"],
+            options["database"],
+        ),
+        "network_isolation": lambda: network_isolation(
+            chosen["source"],
+            options["service"],
+        ),
+    }
+    return [builders[name]() for name in chosen["scorers"]]
 
 
 @solver
@@ -113,18 +130,14 @@ def solve_task(manifest_id: int, run: str, agent: str) -> Task:
 
 
 @task
-def slice_task(manifest_id: int) -> Task:
+def score_task(manifest_id: int) -> Task:
     """Grade a manifest: one sample per case, each on a fresh stack."""
     chosen = load_manifest(manifest_id)
     kind = task_type(chosen["task_type"])
     return Task(
         dataset=samples.for_scoring(manifest_id),
         solver=[submitted_tree()],
-        scorer=parity(
-            chosen["source"],
-            chosen["bindings"]["db"]["options"]["service"],
-            chosen["bindings"]["db"]["options"]["database"],
-        ),
+        scorer=_scorers(chosen),
         description=kind["description"],
         metadata={
             "manifest": chosen["name"],
@@ -132,31 +145,8 @@ def slice_task(manifest_id: int) -> Task:
             "sample": chosen["source"],
             "version": chosen["version"],
         },
-        sandbox=("docker", str(settings.sandbox())),
-    )
-
-
-@task
-def topology_task(manifest_id: int) -> Task:
-    """One gate on its own: it reads files, so it needs no stack."""
-    chosen = load_manifest(manifest_id)
-    return Task(
-        dataset=[
-            Sample(
-                input=work_order(chosen),
-                target="isolated",
-                metadata={"manifest_id": chosen["id"]},
-            )
-        ],
-        solver=[submitted_tree()],
-        scorer=network_isolation(
-            chosen["source"],
-            chosen["bindings"]["db"]["options"]["service"],
+        sandbox=(
+            "docker",
+            str(sandbox_compose(chosen["source"], settings.checkout())),
         ),
-        description="The stack's declared topology, read statically.",
-        metadata={
-            "manifest": chosen["name"],
-            "task_type": chosen["task_type"],
-            "sample": chosen["source"],
-        },
     )

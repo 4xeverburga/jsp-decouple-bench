@@ -15,7 +15,8 @@ ARTIFACTS = Path(__file__).with_name("artifacts.py")
 CORPUS = Path(__file__).with_name("corpus")
 
 # What a failing case leaves behind: a screenshot of the page it ended on.
-# Deterministic per case, so a re-run replaces it instead of piling up.
+# The name carries a random suffix, so two runs of the same case cannot land
+# on one file and a pass can never erase a failure's picture.
 EVIDENCE = ROOT / "out" / "evidence"
 
 

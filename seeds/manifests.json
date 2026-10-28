@@ -33,6 +33,7 @@
         "/answer/{question.id}"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "answer-flow",
     "id": 1,
     "source": "mamute"
@@ -68,6 +69,7 @@
         "/{question.id}-{sluggedTitle}"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "ask-flow",
     "id": 2,
     "source": "mamute"
@@ -108,6 +110,7 @@
         "/question/{question.id}/voto/positivo"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "vote-flow",
     "id": 3,
     "source": "mamute"
@@ -144,6 +147,7 @@
         "/question/watched/{question.id}"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "watch-flow",
     "id": 4,
     "source": "mamute"
@@ -179,6 +183,7 @@
         "/admin/addCourse"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "admin-course-flow",
     "id": 5,
     "source": "online-study-system"
@@ -216,6 +221,7 @@
         "/admin/removeStudent"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "admin-student-flow",
     "id": 6,
     "source": "online-study-system"
@@ -254,6 +260,7 @@
         "/student/saveExam"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "exam-flow",
     "id": 7,
     "source": "online-study-system"
@@ -289,6 +296,7 @@
         "/student/outCourse"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "out-course-flow",
     "id": 8,
     "source": "online-study-system"
@@ -324,6 +332,7 @@
         "/student/updateBalance"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "recharge-flow",
     "id": 9,
     "source": "online-study-system"
@@ -361,6 +370,7 @@
         "/student/selectedCourse"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "select-course-flow",
     "id": 10,
     "source": "online-study-system"
@@ -399,6 +409,7 @@
         "/student/prePeriod"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "study-flow",
     "id": 11,
     "source": "online-study-system"
@@ -436,6 +447,7 @@
         "/teacher/saveMark"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "teacher-mark-flow",
     "id": 12,
     "source": "online-study-system"
@@ -470,6 +482,7 @@
         "/ListStudySubjects"
       ]
     },
+    "scorers": ["functional_parity"],
     "name": "subject-flow",
     "id": 13,
     "source": "openclinica"
@@ -515,6 +528,7 @@
         "/question/watched/{question.id}"
       ]
     },
+    "scorers": ["functional_parity", "network_isolation"],
     "name": "whole-app",
     "id": 14,
     "source": "mamute"

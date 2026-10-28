@@ -1,7 +1,6 @@
-"""`uv run python -m src.bench` — the manifests, one per line.
+"""`uv run python -m src.bench` — manifests and scorer assignments.
 
-The id is the unit of work: `make solve MANIFEST=<id>` and
-`make score MANIFEST=<id>` both take it.
+The id is the unit of work: `make task MANIFEST=<id>` runs it.
 """
 
 from .seeds import manifests
@@ -10,10 +9,12 @@ from .seeds import manifests
 def main() -> None:
     for row in manifests():
         cases = len(row["scope"]["cases"])
+        scorers = ",".join(row["scorers"])
         print(
-            f"{row['id']:>3}  {row['source']:<20} {row['task_type']:<18} "
-            f"{row['name']:<24} {cases} case(s)"
+            f"{row['id']:>3}  {row['name']:<24} {row['task_type']:<18} "
+            f"{cases} case(s)"
         )
+        print(f"     scorers: {scorers}")
 
 
 if __name__ == "__main__":
