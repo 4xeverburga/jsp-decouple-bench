@@ -56,7 +56,7 @@ class FunctionalParity:
         sample = self.ctx.sample["slug"]
         started = time.monotonic()
         record: dict[str, Any] = {"case": name, "sample": sample}
-        failure_png = self.ctx.paths.images / f"{name}.png"
+        failure_png = self.ctx.paths.images_for(self.gate_id) / f"{name}.png"
         try:
             case = corpus.contract(sample, name)
             e2e = case.get("e2e") or {}

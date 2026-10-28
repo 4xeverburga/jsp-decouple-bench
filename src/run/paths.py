@@ -40,6 +40,15 @@ class RunPaths:
     def images(self) -> Path:
         return self.root / "images"
 
+    def images_for(self, gate_id: str) -> Path:
+        """Screenshots one gate kept — a directory per gate.
+
+        `images/` itself is where `case-capture` stages step shots; a gate
+        that keeps evidence writes below its own name so two gates can
+        never overwrite each other's case names.
+        """
+        return self.images / gate_id
+
     @property
     def traces(self) -> Path:
         return self.root / "traces.json"
