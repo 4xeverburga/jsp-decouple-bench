@@ -15,6 +15,7 @@
 # The manifest id is the unit of work: it names the sample, the slice, the
 # task type and the cases. Run `make manifests` to see them.
 MANIFEST ?= 3
+TASK_TYPE := $(shell uv run python -c 'from src.bench.seeds import manifest; print(manifest($(MANIFEST))["task_type"])')
 # `:=` so the id is generated once: with `?=` the shell call re-runs on
 # every reference and the printed id would not match the one recorded.
 RUN      := $(shell python3 -c 'import uuid;print(uuid.uuid4().hex)')
@@ -28,13 +29,14 @@ AGENT    ?= true
 task:
 	@echo "run: $(RUN)"
 	BENCH_SANDBOX=src/bench/compose.solve.yaml \
-	uv run inspect eval inspect_bench.py@solve_task \
-		-T manifest_id=$(MANIFEST) -T run=$(RUN) -T agent='$(AGENT)' \
+	uv run inspect eval inspect_bench.py@$(TASK_TYPE) \
+		-T manifest_id=$(MANIFEST) -T phase=solve -T run=$(RUN) \
+		-T agent='$(AGENT)' \
 		--model mockllm/model --display plain --log-dir $(LOGS)
 	@export BENCH_CHECKOUT=$(CURDIR)/out/solves/$(RUN)/tree; \
 	trap 'rm -f "$$BENCH_CHECKOUT/.bench-inspect-compose.yaml"' EXIT; \
-	uv run inspect eval inspect_bench.py@score_task \
-		-T manifest_id=$(MANIFEST) \
+	uv run inspect eval inspect_bench.py@$(TASK_TYPE) \
+		-T manifest_id=$(MANIFEST) -T phase=score \
 		--model mockllm/model --max-samples 1 --display plain \
 		--log-dir $(LOGS)
 

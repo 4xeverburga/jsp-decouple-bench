@@ -1,5 +1,6 @@
-"""Inspect entry points: `solve_task` and `score_task`; users run both via
-`make task`.
+"""Inspect task types: `decouple_slice` and `oneshot_decoupling`.
+
+`make task` runs the solve and score phases of one manifest.
 
 Inspect loads tasks from a *file* and finds them by parsing that file's AST
 for `@task` decorators, so the task definitions live here, at the repository
@@ -11,7 +12,8 @@ two task types differ only in their work order: `decouple_slice` names one
 feature boundary, `oneshot_decoupling` names the whole app, and both list the
 cases they are graded on, so one sample per case serves either.
 
-    inspect eval inspect_bench.py@score_task -T manifest_id=14 \
+    inspect eval inspect_bench.py@oneshot_decoupling \
+        -T manifest_id=14 -T phase=score \
         --model mockllm/model
 """
 
@@ -105,43 +107,76 @@ async def capture_solution(state: TaskState) -> None:
     )
 
 
-@task
-def solve_task(manifest_id: int, run: str, agent: str) -> Task:
-    """Let an agent work on one manifest; keep what it leaves behind."""
+def _manifest_task(
+    manifest_id: int,
+    phase: str,
+    run: str | None,
+    agent: str | None,
+    expected_type: str,
+) -> Task:
     chosen = load_manifest(manifest_id)
-    return Task(
-        dataset=samples.for_solving(manifest_id, run),
-        solver=[agent_command(agent)],
-        cleanup=capture_solution,
-        description=task_type(chosen["task_type"])["description"],
-        metadata={
-            "manifest": chosen["name"],
-            "task_type": chosen["task_type"],
-            "sample": chosen["source"],
-            "version": chosen["version"],
-        },
-        sandbox=("docker", str(settings.sandbox())),
+    if chosen["task_type"] != expected_type:
+        raise ValueError(
+            f"manifest {manifest_id} is {chosen['task_type']}, "
+            f"not {expected_type}"
+        )
+    kind = task_type(chosen["task_type"])
+    metadata = {
+        "manifest": chosen["name"],
+        "task_type": chosen["task_type"],
+        "sample": chosen["source"],
+        "version": chosen["version"],
+    }
+
+    if phase == "solve":
+        if run is None or agent is None:
+            raise ValueError("solve phase requires run and agent")
+        return Task(
+            dataset=samples.for_solving(manifest_id, run),
+            solver=[agent_command(agent)],
+            cleanup=capture_solution,
+            description=kind["description"],
+            metadata=metadata,
+            sandbox=("docker", str(settings.sandbox())),
+        )
+
+    if phase == "score":
+        return Task(
+            dataset=samples.for_scoring(manifest_id),
+            solver=[submitted_tree()],
+            scorer=_scorers(chosen),
+            description=kind["description"],
+            metadata=metadata,
+            sandbox=(
+                "docker",
+                str(sandbox_compose(chosen["source"], settings.checkout())),
+            ),
+        )
+
+    raise ValueError(f"unknown task phase: {phase}")
+
+
+@task
+def decouple_slice(
+    manifest_id: int,
+    phase: str,
+    run: str | None = None,
+    agent: str | None = None,
+) -> Task:
+    """Run the solve or score phase for a decouple_slice manifest."""
+    return _manifest_task(
+        manifest_id, phase, run, agent, "decouple_slice"
     )
 
 
 @task
-def score_task(manifest_id: int) -> Task:
-    """Grade a manifest: one sample per case, each on a fresh stack."""
-    chosen = load_manifest(manifest_id)
-    kind = task_type(chosen["task_type"])
-    return Task(
-        dataset=samples.for_scoring(manifest_id),
-        solver=[submitted_tree()],
-        scorer=_scorers(chosen),
-        description=kind["description"],
-        metadata={
-            "manifest": chosen["name"],
-            "task_type": kind["name"],
-            "sample": chosen["source"],
-            "version": chosen["version"],
-        },
-        sandbox=(
-            "docker",
-            str(sandbox_compose(chosen["source"], settings.checkout())),
-        ),
+def oneshot_decoupling(
+    manifest_id: int,
+    phase: str,
+    run: str | None = None,
+    agent: str | None = None,
+) -> Task:
+    """Run the solve or score phase for an oneshot_decoupling manifest."""
+    return _manifest_task(
+        manifest_id, phase, run, agent, "oneshot_decoupling"
     )
