@@ -9,7 +9,7 @@ from pathlib import Path
 import config
 from src.errors import BenchError, NotFoundError
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def connect(path: Path | None = None) -> sqlite3.Connection:
@@ -69,10 +69,11 @@ def _seed(conn: sqlite3.Connection) -> None:
 
     for ttype in _rows("task_types.json"):
         conn.execute(
-            "INSERT INTO task_type(name, description) VALUES (?,?) "
-            "ON CONFLICT(name) DO UPDATE SET "
-            "description = excluded.description",
-            (ttype["name"], ttype.get("description")),
+            "INSERT INTO task_type(name, description, base_prompt) "
+            "VALUES (?,?,?) ON CONFLICT(name) DO UPDATE SET "
+            "description = excluded.description, "
+            "base_prompt = excluded.base_prompt",
+            (ttype["name"], ttype.get("description"), ttype["base_prompt"]),
         )
 
     for gate in _rows("gates.json"):

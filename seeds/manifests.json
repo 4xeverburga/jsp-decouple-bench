@@ -460,5 +460,49 @@
       ]
     },
     "name": "subject-flow"
+  },
+  {
+    "sample": "mamute",
+    "task_type": "oneshot_decoupling",
+    "version": 1,
+    "prompt": "Take the whole app in one go. Every screen that the server renders today should get its data as JSON and be rendered in the browser, and the presentation side should stop owning the database. Afterwards, everything users can do today must still work.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "",
+          "database": "mamute_development"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "answer-flow__answer-appears",
+        "ask-flow__question-creation",
+        "vote-flow__downvote-decrements-count",
+        "vote-flow__upvote-increments-count",
+        "watch-flow__watch-adds-watcher"
+      ],
+      "routes": [
+        "/sign-up",
+        "/ask",
+        "/logout",
+        "/login",
+        "/{question.id}-{sluggedTitle}",
+        "/answer/{question.id}",
+        "/question/{question.id}/voto/negativo",
+        "/question/{question.id}/voto/positivo",
+        "/question/watched/{question.id}"
+      ]
+    },
+    "name": "whole-app"
   }
 ]

@@ -6,7 +6,8 @@ the thing that drives one.
 The agent must not know it is being evaluated. This module is where that
 rule is enforced, structurally:
 
-- the prompt is the manifest prompt **verbatim** — no routes, no case
+- the prompt is the composed work order — the task type's base prompt
+  followed by the manifest prompt — **verbatim**: no routes, no case
   names, no goldens, no "benchmark"/"evaluation" vocabulary;
 - everything else in `HarnessTask` is plumbing for the harness *process*
   and is never rendered into the text the agent reads;

@@ -13,11 +13,27 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from src.errors import BenchError
 from src.harness.ports import HarnessPort, HarnessResult, HarnessTask
 from src.run import RunContext
 from src.run.atomic import write_json, write_text
 from src.run.results import utcnow
 from src.run.sample_checkout import diff, ensure_pinned
+
+
+def compose_prompt(base_prompt: str, task_prompt: str) -> str:
+    """The work order the agent reads: the contract, then this ask.
+
+    The task type owns what the work means and what the stack already
+    provides; the manifest owns which sliver of the app it is about. One
+    base prompt per type, so it is written once instead of once per
+    manifest — and every run records the composed text it was given.
+    """
+    if not base_prompt.strip() or not task_prompt.strip():
+        raise BenchError(
+            "a task needs both a task-type base prompt and a manifest prompt"
+        )
+    return base_prompt.strip() + "\n\n" + task_prompt.strip()
 
 
 class Task:
@@ -31,8 +47,11 @@ class Task:
         )
         scope = ctx.scope
 
+        prompt = compose_prompt(
+            ctx.manifest["base_prompt"], ctx.manifest["prompt"]
+        )
         filled = HarnessTask(
-            prompt=ctx.manifest["prompt"],
+            prompt=prompt,
             cwd=Path(preconditions["location"]),
         )
         result = harness.run(filled, ctx.paths.root)
@@ -54,7 +73,9 @@ class Task:
                 "manifest_id": ctx.manifest["manifest_id"],
                 "manifest_version": ctx.manifest["version"],
                 "task_type": ctx.manifest["task_type"],
-                "prompt": ctx.manifest["prompt"],
+                "prompt": prompt,
+                "base_prompt": ctx.manifest["base_prompt"],
+                "ask": ctx.manifest["prompt"],
                 "sample": {**sample, "location": preconditions["location"]},
                 "technologies": ctx.manifest.get("sample_technologies", []),
                 "bindings": ctx.bindings,

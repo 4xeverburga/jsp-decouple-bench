@@ -14,7 +14,7 @@ def _manifest(conn: sqlite3.Connection, manifest_id: int) -> dict[str, Any]:
         "SELECT m.*, s.slug AS sample_slug, s.project_id, s.source, s.branch, "
         "s.commit_sha,"
         " s.license, s.description AS sample_description, s.entrypoint,"
-        " s.target_url, t.name AS task_type"
+        " s.target_url, t.name AS task_type, t.base_prompt"
         " FROM task_manifest m"
         " JOIN sample s ON s.sample_id = m.sample_id"
         " JOIN task_type t ON t.task_type_id = m.task_type_id"

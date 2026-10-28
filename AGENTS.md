@@ -10,7 +10,7 @@ not for you — you have no reason to be reading it.
 | thing | where |
 |---|---|
 | registry of samples, manifests, runs, gates | `bench.db` (`schema.sql`, `seeds/`) |
-| the prompts agents receive | `TASK_MANIFEST.prompt` (seeds) |
+| the prompts agents receive | `TASK_TYPE.base_prompt` + `TASK_MANIFEST.prompt` (seeds) |
 | the graded behaviour (the answer key) | `src/gates/functional_parity/cases/` |
 | the stack shape every sample commits | `templates/compose.template.yaml` |
 | how to start / drive / inspect a sample | `src/env/` |
@@ -34,7 +34,11 @@ make gate GATE_ID=functional_parity RUN_ID=<run_id>
    checkout of the sample and nothing else.
 2. **A prompt is a work order, not an exam.** It must read as something a
    colleague or a ticket would say. No "benchmark", "golden", "parity",
-   "case", "evaluation", no list of graded routes.
+   "case", "evaluation", no list of graded routes. What the agent reads is
+   composed of two data fields: the task type's `base_prompt` (what this
+   kind of work means and what it must not break — written once per type)
+   and the manifest's `prompt` (which sliver of the app this run is about).
+   Every run records both in `task.json`.
 3. **Never leak scope.** Routes, case names, expected DB deltas and the
    golden artifacts are what the agent is judged on; they are not inputs.
    `harness.ports.HarnessTask` holds only `prompt` and `cwd` so this is

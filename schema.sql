@@ -3,7 +3,7 @@
 
 -- Bump when this file changes shape; `make db-init` refuses to reuse a DB
 -- built from a different version (never silently migrations-by-luck).
-PRAGMA user_version = 2;
+PRAGMA user_version = 3;
 
 PRAGMA foreign_keys = ON;
 
@@ -38,7 +38,11 @@ CREATE TABLE IF NOT EXISTS sample_technology (
 CREATE TABLE IF NOT EXISTS task_type (
     task_type_id INTEGER PRIMARY KEY,
     name         TEXT NOT NULL UNIQUE,
-    description  TEXT
+    description  TEXT,
+    -- What this KIND of work means, written once per type and prepended to
+    -- every manifest prompt of that type: the objective, what the stack
+    -- already provides, and the invariants the work must keep.
+    base_prompt  TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS task_manifest (
