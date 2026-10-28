@@ -10,7 +10,7 @@ make case-capture MANIFEST_ID=<n> CASE=<c> SAMPLE_SANDBOX=<abs empty folder>  # 
 ```
 
 Re-pinning is seed data, not a verb: edit `sample.commit_sha` in
-`seeds/samples.json` and run `make db-init`, which is the only writer of
+`seeds/sources.json` and run `make db-init`, which is the only writer of
 `bench.db`.
 
 The harness is a command, not a name: `HARNESS_CMD` / `--harness-cmd` on

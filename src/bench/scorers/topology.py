@@ -21,8 +21,8 @@ from ..settings import FRONT_SERVICE
 from .metrics import all_must_pass
 
 
-def checks(sample: str, db_service: str) -> list[dict]:
-    contract, current = contract_and_submission(sample)
+def checks(slug: str, db_service: str) -> list[dict]:
+    contract, current = contract_and_submission(slug)
     allowed = set(contract.get("networks") or {})
     found: list[dict] = []
 
@@ -94,11 +94,11 @@ def checks(sample: str, db_service: str) -> list[dict]:
 
 
 @scorer(metrics=[all_must_pass()])
-def network_isolation(sample: str, db_service: str) -> scorer:
+def network_isolation(slug: str, db_service: str) -> scorer:
     """One verdict over every shape rule, with the checks kept in metadata."""
 
     async def score(state: TaskState, target: Target) -> Score:
-        found = await asyncio.to_thread(checks, sample, db_service)
+        found = await asyncio.to_thread(checks, slug, db_service)
         failed = [check for check in found if not check["pass"]]
         passed = len(found) - len(failed)
         return Score(

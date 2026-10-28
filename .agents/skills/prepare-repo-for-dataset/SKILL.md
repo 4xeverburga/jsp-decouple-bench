@@ -60,7 +60,7 @@ the pristine upstream state. A rewritten history destroys that.
   ```
   This tag preserves the original upstream provenance; it is not a harness
   or a runtime selector. Benchmark runs and captures use the sample's pinned
-  `commit_sha`, which is seed data in `seeds/samples.json` and reaches
+  `commit_sha`, which is seed data in `seeds/sources.json` and reaches
   `bench.db` only through `make db-init`. If the repo is a
   HEAD-only upstream mirror, this single commit IS the provenance anchor —
   treat it as immutable.
@@ -72,7 +72,7 @@ the pristine upstream state. A rewritten history destroys that.
   Local-only commits are invisible to anyone auditing the sample later.
 - **Do not point at the origin from inside the tree.** The history is the
   provenance: the `pristine` tag, the remote, and `SAMPLE.project_id` in
-  `seeds/samples.json`. The checkout an agent reads must say nothing about
+  `seeds/sources.json`. The checkout an agent reads must say nothing about
   where the code came from — no `UPSTREAM.md`, no upstream URL in README /
   AGENTS.md / `pom.xml` `<scm>`, no "mirror of" sentence, no release-war
   download, no update script that curls the project site. One link is
@@ -119,7 +119,7 @@ the pristine upstream state. A rewritten history destroys that.
   and `templates/README.md` may carry authoring instructions, but the
   `compose.yaml` you commit may not — keep the copied file reading like a
   normal application's compose file. Re-pin after scrubbing (`make
-  db-init` picks the new `commit_sha` up from `seeds/samples.json`); a
+  db-init` picks the new `commit_sha` up from `seeds/sources.json`); a
   scrub that is not in the pinned commit changes nothing for the agent.
 - **The pin must be the tip of its branch, and its history must be
   unreachable.** Provisioning clones **one commit deep** (`--depth 1
@@ -255,7 +255,7 @@ After the sample is wired into the registry and its cases are ready, pin the
 commit to evaluate and launch a task:
 
 ```bash
-# 1. set sample.commit_sha in seeds/samples.json, then:
+# 1. set sample.commit_sha in seeds/sources.json, then:
 make db-init
 # 2. run from a folder that exists only for this run (absolute, empty)
 make task MANIFEST_ID=<n> SAMPLE_SANDBOX=<abs empty folder> \

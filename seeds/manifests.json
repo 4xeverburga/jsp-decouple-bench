@@ -1,6 +1,5 @@
 [
   {
-    "sample": "mamute",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Users need to post an answer to a question. The answer form posts to a server-rendered page today; make it post to a JSON endpoint and update the page from the response. Everything users can do now must still work.",
@@ -34,10 +33,11 @@
         "/answer/{question.id}"
       ]
     },
-    "name": "answer-flow"
+    "name": "answer-flow",
+    "id": 1,
+    "source": "mamute"
   },
   {
-    "sample": "mamute",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Users need to ask a new question. The form posts to a server-rendered page today; make it post to a JSON endpoint and update the page from the response. Everything users can do now must still work.",
@@ -68,10 +68,11 @@
         "/{question.id}-{sluggedTitle}"
       ]
     },
-    "name": "ask-flow"
+    "name": "ask-flow",
+    "id": 2,
+    "source": "mamute"
   },
   {
-    "sample": "mamute",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Users need to upvote and downvote questions. The vote controls hit server-rendered endpoints today; make them use JSON endpoints and update the count in place. Everything users can do now must still work.",
@@ -107,10 +108,11 @@
         "/question/{question.id}/voto/positivo"
       ]
     },
-    "name": "vote-flow"
+    "name": "vote-flow",
+    "id": 3,
+    "source": "mamute"
   },
   {
-    "sample": "mamute",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Users need to watch and unwatch a question. The action hits a server-rendered endpoint today; make it use a JSON endpoint and update the page from the response. Everything users can do now must still work.",
@@ -142,10 +144,11 @@
         "/question/watched/{question.id}"
       ]
     },
-    "name": "watch-flow"
+    "name": "watch-flow",
+    "id": 4,
+    "source": "mamute"
   },
   {
-    "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Administrators need to add a course. The form posts to a server-rendered page today; make it post to a JSON endpoint and refresh the course list from the response. Everything admins can do now must still work.",
@@ -176,10 +179,11 @@
         "/admin/addCourse"
       ]
     },
-    "name": "admin-course-flow"
+    "name": "admin-course-flow",
+    "id": 5,
+    "source": "online-study-system"
   },
   {
-    "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Administrators need to add and remove students. Those actions post to server-rendered pages today; make them use JSON endpoints and update the student list in place. Everything admins can do now must still work.",
@@ -212,10 +216,11 @@
         "/admin/removeStudent"
       ]
     },
-    "name": "admin-student-flow"
+    "name": "admin-student-flow",
+    "id": 6,
+    "source": "online-study-system"
   },
   {
-    "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Students need to take an exam and save their answers. Saving posts to a server-rendered page today; make it use a JSON endpoint and update the page from the response. Everything students can do now must still work.",
@@ -249,10 +254,11 @@
         "/student/saveExam"
       ]
     },
-    "name": "exam-flow"
+    "name": "exam-flow",
+    "id": 7,
+    "source": "online-study-system"
   },
   {
-    "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Students need to drop a course. The action posts to a server-rendered page today; make it use a JSON endpoint and refresh the enrolled courses. Everything students can do now must still work.",
@@ -283,10 +289,11 @@
         "/student/outCourse"
       ]
     },
-    "name": "out-course-flow"
+    "name": "out-course-flow",
+    "id": 8,
+    "source": "online-study-system"
   },
   {
-    "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Students need to top up their balance. The form posts to a server-rendered page today; make it use a JSON endpoint and show the updated balance from the response. Everything students can do now must still work.",
@@ -317,10 +324,11 @@
         "/student/updateBalance"
       ]
     },
-    "name": "recharge-flow"
+    "name": "recharge-flow",
+    "id": 9,
+    "source": "online-study-system"
   },
   {
-    "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Students need to select a course, and the system must refuse the selection when their balance is too low. Both outcomes are rendered server-side today; make them JSON endpoints and update the page from the response. Everything students can do now must still work.",
@@ -353,10 +361,11 @@
         "/student/selectedCourse"
       ]
     },
-    "name": "select-course-flow"
+    "name": "select-course-flow",
+    "id": 10,
+    "source": "online-study-system"
   },
   {
-    "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Students need to move between study periods while a course is in progress. Those actions post to server-rendered pages today; make them use JSON endpoints and update the progress on the page. Everything students can do now must still work.",
@@ -390,10 +399,11 @@
         "/student/prePeriod"
       ]
     },
-    "name": "study-flow"
+    "name": "study-flow",
+    "id": 11,
+    "source": "online-study-system"
   },
   {
-    "sample": "online-study-system",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Teachers need to grade a student's course. The form posts to a server-rendered page today; make it use a JSON endpoint and refresh the marks from the response. Everything teachers can do now must still work.",
@@ -426,10 +436,11 @@
         "/teacher/saveMark"
       ]
     },
-    "name": "teacher-mark-flow"
+    "name": "teacher-mark-flow",
+    "id": 12,
+    "source": "online-study-system"
   },
   {
-    "sample": "openclinica",
     "task_type": "decouple_slice",
     "version": 1,
     "prompt": "Study staff need to add a subject to a study and see it in the subject list. The form posts to a server-rendered page today; make it post to a JSON endpoint and refresh the list from the response. Everything staff can do now must still work.",
@@ -459,10 +470,11 @@
         "/ListStudySubjects"
       ]
     },
-    "name": "subject-flow"
+    "name": "subject-flow",
+    "id": 13,
+    "source": "openclinica"
   },
   {
-    "sample": "mamute",
     "task_type": "oneshot_decoupling",
     "version": 1,
     "prompt": "Take the whole app in one go. Every screen that the server renders today should get its data as JSON and be rendered in the browser, and the presentation side should stop owning the database. Afterwards, everything users can do today must still work.",
@@ -503,6 +515,8 @@
         "/question/watched/{question.id}"
       ]
     },
-    "name": "whole-app"
+    "name": "whole-app",
+    "id": 14,
+    "source": "mamute"
   }
 ]

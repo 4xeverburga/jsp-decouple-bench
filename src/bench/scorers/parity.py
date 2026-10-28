@@ -9,8 +9,8 @@ flow caused. The second is what makes the gate falsifiable — a submission
 that moves the vote count in the DOM without writing the vote row passes the
 first and fails the second.
 
-The slice's verdict is the metric, not this score: `all_must_pass` reduces
-across samples, so a slice passes only if every case does.
+The manifest's verdict is the metric, not this score: `all_must_pass`
+reduces across samples, so a manifest passes only if every case does.
 """
 
 import asyncio
@@ -25,9 +25,9 @@ from .metrics import all_must_pass
 
 
 def _db_differences(
-    sample: str, case: str, before: dict, after: dict
+    slug: str, case: str, before: dict, after: dict
 ) -> list[str]:
-    tables = golden(sample, case)["db"]["tables"]
+    tables = golden(slug, case)["db"]["tables"]
     differing: list[str] = []
     for table, spec in tables.items():
         actual = delta_table(
@@ -42,18 +42,18 @@ def _db_differences(
 
 
 @scorer(metrics=[all_must_pass()])
-def parity(sample: str, db_service: str, database: str) -> scorer:
+def parity(slug: str, db_service: str, database: str) -> scorer:
     """Grade the case this sample names, artifacts and rows both."""
 
     async def score(state: TaskState, target: Target) -> Score:
         case = state.metadata["case"]
-        tables = list(golden(sample, case)["db"]["tables"])
+        tables = list(golden(slug, case)["db"]["tables"])
         before = await db.snapshot(db_service, database, tables)
-        artifacts = await asyncio.to_thread(play, sample, case)
+        artifacts = await asyncio.to_thread(play, slug, case)
         after = await db.snapshot(db_service, database, tables)
 
         differing = artifacts["differing"] + _db_differences(
-            sample, case, before, after
+            slug, case, before, after
         )
         return Score(
             value=INCORRECT if differing else CORRECT,

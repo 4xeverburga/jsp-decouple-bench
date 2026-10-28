@@ -1,39 +1,64 @@
 # JSP-Decouple-Bench — an Inspect evaluation
 #
-# The checkout under test and the URL its stack publishes come from the
-# environment Inspect runs in, so export them once per shell:
+# Two verbs, split because solving is expensive and scoring is cheap:
 #
-#   export BENCH_CHECKOUT=/abs/checkout                              # the tree
-#   export BENCH_BASE_URL=http://localhost:8080                      # published port
-#   export APP_HTTP_PORT=8080 MAMUTE_PUBLIC_URL=$BENCH_BASE_URL      # compose subst.
-#   export MAMUTE_FRONT_IMAGE=<prebuilt front image>                 # skip the build
-#   set -a; . "$BENCH_CHECKOUT/.env"; set +a                         # sample creds
+#   make solve TASK=vote-flow AGENT='...'   -> prints the run id
+#   make score RUN=<run id> [MANIFEST=...]  -> the verdict
 #
-#   make topology SAMPLE=mamute MANIFEST=vote-flow   # shape gate, no stack, seconds
-#   make slice    SAMPLE=mamute MANIFEST=vote-flow   # boots a stack per case
-#   make view                                        # browse the logs
-#   make check                                       # lint
+# The checkout and the stack's published URL come from the environment:
+#
+#   export BENCH_CHECKOUT=/abs/checkout
+#   export BENCH_BASE_URL=http://localhost:8080
+#   export APP_HTTP_PORT=8080 MAMUTE_PUBLIC_URL=$BENCH_BASE_URL
+#   export BENCH_AGENT_IMAGE=<toolbox image the agent runs in>
+#   set -a; . "$BENCH_CHECKOUT/.env"; set +a        # the sample's credentials
 
-SAMPLE   ?= mamute
-MANIFEST ?= vote-flow
+# The manifest id is the unit of work: it names the sample, the slice, the
+# task type and the cases. Run `make manifests` to see them.
+MANIFEST ?= 3
+# `:=` so the id is generated once: with `?=` the shell call re-runs on
+# every reference and the printed id would not match the one recorded.
+RUN      := $(shell python3 -c 'import uuid;print(uuid.uuid4().hex)')
 LOGS     ?= out/evals
+AGENT    ?= true
 
-.PHONY: topology slice view check
+.PHONY: eval solve score topology manifests view check
 
-# Reads files only: the declared topology against the pin. Must FAIL on an
-# untouched tree, because the pristine app reads the database directly.
-topology:
-	uv run inspect eval inspect_bench.py@topology_task \
-		-T sample=$(SAMPLE) -T manifest=$(MANIFEST) \
+# The whole thing: let the agent work, then grade what it left. One run id
+# ties the two halves together.
+eval:
+	@$(MAKE) --no-print-directory solve MANIFEST=$(MANIFEST) \
+		AGENT='$(AGENT)' RUN=$(RUN)
+	@$(MAKE) --no-print-directory score MANIFEST=$(MANIFEST) RUN=$(RUN)
+
+# One slice, one agent, one tree. Prints the id before running so the solve
+# can be scored even if the run is interrupted.
+solve:
+	@echo "run: $(RUN)"
+	BENCH_SANDBOX=src/bench/compose.solve.yaml \
+	uv run inspect eval inspect_bench.py@solve_task \
+		-T manifest_id=$(MANIFEST) -T run=$(RUN) -T agent='$(AGENT)' \
 		--model mockllm/model --log-dir $(LOGS)
 
-# One Sample per case, so Inspect boots a fresh stack for each — the goldens
-# were captured on a pristine database. Sequential, because every stack
-# publishes the same host port.
-slice:
+# Score a recorded tree. Builds the stack from it, so this is the slow half;
+# re-scoring the same tree against a corrected manifest needs no agent.
+score:
+	BENCH_CHECKOUT=out/solves/$(RUN)/tree \
+	BENCH_SANDBOX=src/bench/compose.build.yaml \
 	uv run inspect eval inspect_bench.py@slice_task \
-		-T sample=$(SAMPLE) -T manifest=$(MANIFEST) \
+		-T manifest_id=$(MANIFEST) \
 		--model mockllm/model --max-samples 1 --log-dir $(LOGS)
+
+# Files only: the declared topology against the pin. No stack, seconds.
+# Must FAIL on an untouched tree.
+topology:
+	BENCH_SANDBOX=src/bench/compose.prebuilt.yaml \
+	uv run inspect eval inspect_bench.py@topology_task \
+		-T manifest_id=$(MANIFEST) \
+		--model mockllm/model --log-dir $(LOGS)
+
+manifests:
+	uv run python -m src.bench
 
 view:
 	uv run inspect view --log-dir $(LOGS)

@@ -1,0 +1,22 @@
+# The solve sandbox: the checkout, writable, and nothing else.
+#
+# The agent runs inside this, so it never has the docker socket and never
+# sees the supervisor's home. Whatever image it needs is the caller's choice
+# (BENCH_AGENT_IMAGE) — the sandbox only guarantees where it may write.
+#
+# Writable host binds are refused by Inspect unless the project opts in:
+# that is what the escape hatch below is for, and it is deliberate here.
+x-inspect_docker_sandbox:
+  unsafe_allow_writable_host_mounts: true
+
+name: bench-solve
+
+services:
+  workspace:
+    x-default: true
+    image: ${BENCH_AGENT_IMAGE:?set BENCH_AGENT_IMAGE to the agent toolbox image}
+    init: true
+    command: tail -f /dev/null
+    volumes:
+      - ${BENCH_CHECKOUT:?set BENCH_CHECKOUT to the tree to solve in}:${BENCH_CHECKOUT}
+    working_dir: ${BENCH_CHECKOUT}

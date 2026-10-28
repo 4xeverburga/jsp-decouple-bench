@@ -13,10 +13,21 @@ ROOT = Path(__file__).resolve().parents[2]
 SEEDS = ROOT / "seeds"
 ARTIFACTS = Path(__file__).with_name("artifacts.py")
 CORPUS = Path(__file__).with_name("corpus")
-SANDBOX = Path(__file__).with_name("compose.yaml")
 
-CHECKOUT = os.environ["BENCH_CHECKOUT"]
-BASE_URL = os.environ["BENCH_BASE_URL"]
+
+# Read when asked, not at import: listing the manifests must not require
+# a checkout, a published URL or a sandbox.
+def checkout() -> str:
+    return os.environ["BENCH_CHECKOUT"]
+
+
+def base_url() -> str:
+    return os.environ["BENCH_BASE_URL"]
+
+
+def sandbox() -> Path:
+    return Path(os.environ["BENCH_SANDBOX"])
+
 
 FRONT_SERVICE = "front"
 

@@ -9,7 +9,8 @@ import importlib.util
 import json
 from pathlib import Path
 
-from .settings import ARTIFACTS, BASE_URL, CORPUS
+from . import settings
+from .settings import ARTIFACTS, CORPUS
 
 
 def load(path: Path, name: str):
@@ -20,18 +21,19 @@ def load(path: Path, name: str):
     return module
 
 
-def golden(sample: str, case: str) -> dict:
-    return json.loads((CORPUS / sample / case / "expect.json").read_text())
+def golden(slug: str, case: str) -> dict:
+    return json.loads((CORPUS / slug / case / "expect.json").read_text())
 
 
-def play(sample: str, case: str) -> dict:
+def play(slug: str, case: str) -> dict:
     """Run the case's flow against the running stack; report the artifacts."""
     from playwright.sync_api import sync_playwright
 
     normalize = load(ARTIFACTS, "bench_artifacts").normalize
-    case_dir = CORPUS / sample / case
+    case_dir = CORPUS / slug / case
     flow = load(case_dir / "flow.py", f"flow_{case.replace('-', '_')}")
-    expect = golden(sample, case)["artifacts"]
+    expect = golden(slug, case)["artifacts"]
+    base_url = settings.base_url()
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -42,12 +44,10 @@ def play(sample: str, case: str) -> dict:
         )
         page = context.new_page()
         try:
-            actual = normalize(flow.run(page, BASE_URL), BASE_URL)
+            actual = normalize(flow.run(page, base_url), base_url)
         finally:
             browser.close()
 
     return {
-        "differing": [
-            key for key in expect if actual.get(key) != expect[key]
-        ]
+        "differing": [key for key in expect if actual.get(key) != expect[key]]
     }

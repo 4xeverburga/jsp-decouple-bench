@@ -10,8 +10,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from . import settings
 from .seeds import pin
-from .settings import CHECKOUT
 
 
 def render(compose: Path) -> dict:
@@ -54,10 +54,11 @@ def escaped(mode: str) -> bool:
     return mode == "host" or mode.startswith("service:")
 
 
-def contract_and_submission(sample: str) -> tuple[dict, dict]:
+def contract_and_submission(slug: str) -> tuple[dict, dict]:
     """The pin's shape, and the tree's — never the tree's claim alone."""
+    pinned = f"{pin(slug)}:compose.yaml"
     blob = subprocess.run(
-        ["git", "-C", str(CHECKOUT), "show", f"{pin(sample)}:compose.yaml"],
+        ["git", "-C", settings.checkout(), "show", pinned],
         capture_output=True,
         text=True,
         check=True,
@@ -65,4 +66,4 @@ def contract_and_submission(sample: str) -> tuple[dict, dict]:
     scratch = Path(tempfile.mkdtemp())
     pinned = scratch / "compose.yaml"
     pinned.write_text(blob)
-    return render(pinned), render(Path(CHECKOUT) / "compose.yaml")
+    return render(pinned), render(Path(settings.checkout()) / "compose.yaml")

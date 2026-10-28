@@ -19,7 +19,7 @@ manifest wiring). `dataset-ready-check` rejects samples that deviate.
 
 **Prerequisite — `prepare-repo-for-dataset`:** the sample must already be
 history-protected, runnable on its legacy toolchain, and pinned
-(`sample.commit_sha` in `seeds/samples.json`). Authoring on an unprepared
+(`sample.commit_sha` in `seeds/sources.json`). Authoring on an unprepared
 repo bakes dependency drift into the goldens.
 
 ## Self-containment & per-sample env

@@ -115,7 +115,7 @@ A gate that cannot fail proves nothing.
   `git grep -iE 'golden|parity|baseline|benchmark|expect\.json'` is empty
   on the pinned commit.
 - **The checkout does not point at its own origin.** Provenance lives in
-  `SAMPLE.project_id`, in `seeds/samples.json` and in the remote history,
+  `SAMPLE.project_id`, in `seeds/sources.json` and in the remote history,
   never in the tree: `UPSTREAM.md` is absent, and
   `git grep -InE 'github\.com/<owner>|upstream|@<upstream-domain>'` is
   empty apart from `LICENSE`, code namespaces (`br.com.<owner>.*`) and
