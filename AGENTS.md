@@ -50,11 +50,17 @@ export APP_HTTP_PORT=8080 MAMUTE_PUBLIC_URL=$BENCH_BASE_URL
 export BENCH_AGENT_IMAGE=<image the agent runs in>
 set -a; . "$BENCH_CHECKOUT/.env"; set +a
 
-make task MANIFEST=3 AGENT='<the agent command>'
+uv run python main.py task --manifest 3 --agent '<the agent command>'
 ```
 
 The command runs the agent, then every scorer assigned to the manifest.
 `out/solves/<run id>/` keeps the tree, diff and a record of what ran.
+
+There is no Makefile, and nothing here is built, so `main.py` is the whole
+command line: `task`, `score`, `manifests`. It is also the file Inspect
+loads (`inspect eval main.py@<task type>`), which is why `--agent` reaches
+the sandbox as one argv element instead of passing through make's `$`
+expansion. `README.md` shows the two `inspect eval` calls it wraps.
 
 ## Before a score is quoted
 

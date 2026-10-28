@@ -16,7 +16,7 @@ run lifecycle and the logs.
 | **sample** | one (source, case) pair; Inspect gives each its own stack |
 | **case** | one graded behaviour: a flow plus its frozen `expect.json` |
 
-A manifest is addressed by its **id**; `make manifests` lists them all.
+A manifest is addressed by its **id**; `python main.py manifests` lists them all.
 
 ## Run it
 
@@ -34,11 +34,54 @@ Run the manifest task. The agent runs first; every assigned scorer runs
 automatically afterward against the saved tree, with one run ID for both:
 
 ```bash
-make task MANIFEST=3 AGENT='opencode run --auto --model opencode-go/deepseek-v4.1-flash#high "$(cat)"'
+uv run python main.py task --manifest 3 \
+  --agent 'opencode run --auto --model opencode-go/deepseek-v4.1-flash#high "$(cat)"'
 ```
 
-`make view` browses the Inspect logs; `make manifests` lists the available
-logical tasks.
+`main.py` is also the file Inspect loads (`inspect eval main.py@<task type>`),
+so `python main.py` is the whole command line:
+
+| verb | what it does |
+|---|---|
+| `task` | solve and score one manifest, on one run id |
+| `score` | only grade a tree a solve already kept (`--run <id>`) |
+| `manifests` | list the manifests, their task type and their cases |
+
+Nothing here is built, so there is no build system to drive it. Two
+`inspect eval` calls do the work; the driver holds only what they cannot
+hand each other — a run id, and the checkout derived from it. Logs are
+Inspect's own (`uv run inspect view --log-dir out/evals`), and linting is
+`uv run ruff check main.py src`.
+
+### The same run, by hand
+
+The exports above still apply; nothing else about the driver is required —
+it is two `inspect eval` calls. Pick any run id (the manifest's **task type**
+is the `@task` name, and `manifests` prints it):
+
+```bash
+RUN=$(python3 -c 'import uuid;print(uuid.uuid4().hex)')
+
+# solve: the agent, in the workspace built for it
+BENCH_SANDBOX=src/bench/compose.solve.yaml \
+uv run inspect eval main.py@decouple_slice \
+  -T manifest_id=3 -T phase=solve -T run=$RUN \
+  -T agent='opencode run --auto --model opencode-go/deepseek-v4.1-flash#high "$(cat)"' \
+  --model mockllm/model --display plain --log-dir out/evals
+
+# score: the tree it left, on the sample's own stack
+BENCH_CHECKOUT=$PWD/out/solves/$RUN/tree \
+uv run inspect eval main.py@decouple_slice \
+  -T manifest_id=3 -T phase=score --max-samples 1 \
+  --model mockllm/model --display plain --log-dir out/evals
+```
+
+Three things to keep straight, all of which the driver does for you: `$RUN`
+must be the same in both commands; `BENCH_CHECKOUT` must be *that* run's
+tree — Inspect does not check, so a stale path grades the previous tree in
+silence; and scoring leaves `out/solves/$RUN/tree/.bench-inspect-compose.yaml`
+behind, so remove it (`rm -f`) or a later capture sees a tree you did not
+produce.
 
 ## The agent
 
@@ -73,8 +116,9 @@ independent of task type.
 ## Layout
 
 ```
-inspect_bench.py          the tasks — the only file Inspect loads
+main.py                   the tasks, and the command line — Inspect loads this
 src/bench/
+  cli.py                  task, score, manifests — the run id they share
   seeds.py                sources, manifests, the work order
   samples.py              (source, case) pairs
   compose.py              source Compose setup and topology comparison

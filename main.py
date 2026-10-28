@@ -1,10 +1,11 @@
 """Inspect task types: `decouple_slice` and `oneshot_decoupling`.
 
-`make task` runs the solve and score phases of one manifest.
+`python main.py task` runs the solve and score phases of one manifest.
 
 Inspect loads tasks from a *file* and finds them by parsing that file's AST
 for `@task` decorators, so the task definitions live here, at the repository
-root, and nothing else does. The bench itself is `src/bench/`.
+root, and nothing else does. The bench itself is `src/bench/`, and the verbs
+that drive these tasks are `src/bench/cli.py`.
 
 Every task is addressed by a **manifest id** — the unit of work, naming a
 sample, a slice, a task type and the cases that slice is graded against. The
@@ -12,7 +13,7 @@ two task types differ only in their work order: `decouple_slice` names one
 feature boundary, `oneshot_decoupling` names the whole app, and both list the
 cases they are graded on, so one sample per case serves either.
 
-    inspect eval inspect_bench.py@oneshot_decoupling \
+    inspect eval main.py@oneshot_decoupling \
         -T manifest_id=14 -T phase=score \
         --model mockllm/model
 """
@@ -180,3 +181,9 @@ def oneshot_decoupling(
     return _manifest_task(
         manifest_id, phase, run, agent, "oneshot_decoupling"
     )
+
+
+if __name__ == "__main__":
+    from src.bench.cli import main
+
+    main()
