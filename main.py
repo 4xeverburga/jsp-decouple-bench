@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 
 import config
+from src import log
 from src.errors import BenchError, NotFoundError
 from src.gates import registry as gate_registry
 from src.gates.functional_parity.capture import capture
@@ -28,6 +29,8 @@ from src.run.atomic import write_json
 from src.store import db as store_db
 from src.store import repo
 from src.tasks import registry as task_registry
+
+logger = log.get("main")
 
 
 # --- helpers -----------------------------------------------------------------
@@ -126,9 +129,7 @@ def cmd_task_run(args) -> int:
     conn = store_db.connect()
     try:
         manifest = _manifest_for(conn, args)
-        harness = harness_registry.resolve(
-            args.harness, {"cmd": args.harness_cmd} if args.harness_cmd else {}
-        )
+        harness = harness_registry.resolve(args.harness, args.harness_cmd)
         run_id = new_run_id()
         paths = RunPaths.create(run_id)
         ctx = RunContext(
@@ -146,11 +147,29 @@ def cmd_task_run(args) -> int:
             args.environment,
         )
 
+        sample = manifest["sample"]
+        logger.info(
+            "run %s — %s/%s v%s (%s) harness=%r",
+            run_id,
+            sample["slug"],
+            manifest["name"],
+            manifest["version"],
+            manifest["task_type"],
+            harness.name,
+        )
+        logger.info("artifacts: %s", paths.root)
+
         started = time.monotonic()
         result = None
         try:
             result = task_registry.resolve(manifest["task_type"]).prepare(
                 ctx, harness
+            )
+            logger.info(
+                "run %s finished in %.1fs (harness exit %s)",
+                run_id,
+                time.monotonic() - started,
+                result.exit_code,
             )
         finally:
             cost = args.estimated_cost or (result.cost_usd if result else None)
@@ -174,9 +193,17 @@ def cmd_gate_run(args) -> int:
         conn.close()
 
     ctx = RunContext.load(args.run, manifest)
+    logger.info("gate %s on run %s", definition["gate_id"], args.run)
     result = gate_registry.resolve(ctx, definition).evaluate()
     payload = result.to_dict()
     write_json(ctx.paths.gate(definition["gate_id"]), payload)
+    logger.info(
+        "gate %s: %s (value %s) in %.1fs",
+        definition["gate_id"],
+        result.verdict,
+        result.value,
+        payload["duration_s"],
+    )
     print(json.dumps(payload, indent=2))
     return result.exit_code
 
@@ -275,11 +302,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     task_run.add_argument(
         "--harness",
-        default=config.DEFAULT_HARNESS,
-        help="agent harness: " + ", ".join(harness_registry.names()),
+        default=config.HARNESS_LABEL,
+        help="label recorded with the run, e.g. opencode-ds-flash-max "
+        "(free text: it selects nothing, the command does)",
     )
     task_run.add_argument(
-        "--harness-cmd", default=None, help="override the harness command line"
+        "--harness-cmd",
+        default=None,
+        help="the command that does the work, prompt on stdin "
+        "(overrides BENCH_HARNESS_CMD)",
     )
     task_run.add_argument(
         "--environment",
@@ -325,6 +356,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    log.setup(config.LOG_LEVEL)
     try:
         return args.func(args)
     except BenchError as exc:

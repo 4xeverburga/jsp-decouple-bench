@@ -20,12 +20,16 @@ not for you — you have no reason to be reading it.
 
 ```bash
 make task SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute \
-          HARNESS=claude-code                       # -> run_id
+          HARNESS=opencode                          # -> run_id
 make gate GATE_ID=functional_parity RUN_ID=<run_id>
 ```
 
-`HARNESS` selects the adapter (`command`, `claude-code`, `opencode`, `pi`);
-`HARNESS_CMD` / `--harness-cmd` sets or overrides the command line.
+There is no harness registry: `BENCH_HARNESS_CMD` in `.env` (or
+`HARNESS_CMD` / `--harness-cmd` for one run) **is** the harness, and the
+prompt arrives on stdin. `HARNESS=<label>` selects nothing — it only names
+the run, so put the model and its effort variant in the label when you
+intend to compare runs. The exact command line is in the run's
+`harness.json`.
 
 ## Hard rules
 

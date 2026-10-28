@@ -38,6 +38,12 @@ def _path(name: str) -> Path:
     return ROOT / _req(name)  # absolute values win over ROOT
 
 
+# --- logging -----------------------------------------------------------------
+# Progress goes to stderr; stdout stays the one machine-readable value a
+# command produces (a run_id). Nothing else may invent a level or a cadence.
+LOG_LEVEL = _req("BENCH_LOG_LEVEL")
+LOG_HEARTBEAT_S = int(_req("BENCH_HEARTBEAT_S"))
+
 # --- storage -----------------------------------------------------------------
 BENCH_DB = _path("BENCH_DB")
 SCHEMA_SQL = ROOT / "schema.sql"
@@ -78,16 +84,15 @@ BROWSER_ENGINE = _req("BENCH_BROWSER")
 HEADLESS = _flag("BENCH_HEADLESS")
 
 # --- agent harness -----------------------------------------------------------
-# Chosen per run (`make task HARNESS=claude-code`), not per sample: comparing
-# agents is the point. The name is recorded in TASK_RUN.harness.
-DEFAULT_HARNESS = _req("BENCH_HARNESS")
+# There is no harness registry: one adapter runs the command you give it, with
+# the prompt on stdin. `BENCH_HARNESS` is only the default *label* recorded in
+# TASK_RUN.harness (put the model and its effort in it), and
+# `BENCH_HARNESS_CMD` is the command itself — or pass `HARNESS_CMD` /
+# `--harness-cmd` for a single run.
+HARNESS_LABEL = _req("BENCH_HARNESS")
 HARNESS_CMD = _req("BENCH_HARNESS_CMD")
 HARNESS_TIMEOUT_S = int(_req("BENCH_HARNESS_TIMEOUT_S"))
-PRESET_CMDS = {
-    "claude-code": _req("BENCH_CMD_CLAUDE_CODE"),
-    "opencode": _req("BENCH_CMD_OPENCODE"),
-    "pi": _req("BENCH_CMD_PI"),
-}
+
 
 # --- trace_similarity oracle -------------------------------------------------
 # "none" keeps the gate at verdict="pending". A future oracle is a command

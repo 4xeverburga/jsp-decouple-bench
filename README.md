@@ -24,13 +24,32 @@ bounded is the **verification scope**: the cases the run is graded against.
 ```bash
 make db-init                                                  # build bench.db from schema + seeds
 
-make task MANIFEST_ID=3 SAMPLE_LOCATION=../mamute HARNESS=claude-code   # -> run_id
+make task MANIFEST_ID=3 SAMPLE_LOCATION=../mamute HARNESS=opencode      # -> run_id
 make gate GATE_ID=functional_parity RUN_ID=<run_id>                     # -> value
 ```
 
-`HARNESS` picks the agent adapter: `command` (any CLI, prompt on stdin;
-set `HARNESS_CMD`), or the `claude-code` / `opencode` /
-`pi` presets. `HARNESS_CMD='...'` overrides the command line.
+There is one harness, and it is **the command you give it**: the prompt
+arrives on stdin, so `opencode`, `claude`, `copilot`, the model and its
+effort are argv, never code.
+
+```bash
+BENCH_HARNESS_CMD=/usr/local/bin/opencode run --model opencode-go/deepseek-v4.1-flash#max "$(cat)"
+```
+
+That lives in `.env`; `HARNESS_CMD='...'` / `--harness-cmd '...'` overrides it
+for a single run. `HARNESS=<label>` selects nothing — it is the free text
+recorded in `TASK_RUN.harness`, so name it after the model and effort
+(`opencode-ds-flash-max`) when you intend to compare runs. The exact command
+that ran is in `out/runs/<run_id>/harness.json` either way.
+
+**Effort is the model's variant**: `--model provider/model#low|default|high|max`.
+Without a `#variant` you silently get the CLI's own default, which is why a
+run can look identical in the log while costing a fraction of the tokens.
+
+A CLI that takes the prompt as an argument reads it with `"$(cat)"`. Passed
+through `make` that must be written `"$$(cat)"`, because make otherwise
+expands `$(cat)` as a missing make variable and hands the agent an empty
+prompt.
 
 **The agent never sees this repository, and never learns it is being
 evaluated.** It gets a checkout and a one-paragraph work order — the
@@ -50,6 +69,29 @@ make samples      # registry: samples, pinned commits, entrypoints
 make manifests    # registry: manifests, case counts, adapter bindings
 make runs         # registry: runs
 ```
+
+## Watching a run
+
+Both commands report progress on **stderr** while they work, so a run that
+is still going never looks like a hung terminal; stdout carries only the
+result (a `run_id`, or a gate's JSON). The agent's own output is streamed
+line by line as it arrives, and mirrored into
+`out/runs/<run_id>/harness.log`:
+
+```
+01:17:12 INFO  bench.main     run acc83c12 — mamute/answer-flow v1 (decouple_slice) harness='opencode'
+01:17:12 INFO  bench.task     pinning mamute to ea25617cd8
+01:17:12 INFO  bench.harness  cwd ../mamute (timeout 3600s)
+01:17:20 INFO  bench.harness  › reading AnswerController.java
+01:17:29 INFO  bench.harness  still running (17s elapsed)
+02:03:41 INFO  bench.harness  harness 'opencode' exited 0 in 2789.0s
+```
+
+A stack that is still starting reports its container statuses every
+`BENCH_HEARTBEAT_S`, and so does a long-running child, so silence always
+means "nothing is happening", never "nothing to see". `BENCH_LOG_LEVEL=DEBUG`
+adds the quiet calls (`compose ps|config`, db dumps, `exec`). Both keys are
+required, like every other tunable in `.env`.
 
 ## Gates
 
@@ -92,12 +134,13 @@ becomes healthy and the gate reports `error` (never a fabricated score).
 bench.db                  # git-tracked registry: samples, technologies, manifests, runs, gates
 schema.sql                # its DDL (PRAGMA user_version guards drift)
 main.py  config.py        # the CLI and every tunable
+src/log.py   src/run/     # progress logging, run-scoped primitives (incl. the streaming runner)
 specs/                    # er.md, modules.md, behavior.md — the contract
 seeds/                    # rows loaded by `make db-init`
 src/tasks/                # one task implementation (scope comes from the manifest)
 src/gates/                # functional_parity (+ its case corpus), network_isolation, trace_similarity
 src/env/                  # environment adapters: start, drive, inspect a sample
-src/harness/              # agent harnesses: command, claude-code, opencode, pi
+src/harness/              # the one CLI harness; the command comes from .env
 out/runs/<run_id>/        # task.json, diff.patch, cases/*.json, gates/*.json (gitignored)
 ```
 
