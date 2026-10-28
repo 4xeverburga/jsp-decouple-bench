@@ -24,21 +24,18 @@ bounded is the **verification scope**: the cases the run is graded against.
 ```bash
 make db-init                                                  # build bench.db from schema + seeds
 
-make task MANIFEST_ID=3 SAMPLE_SANDBOX=/abs/tmp/run-<id> HARNESS=opencode  # -> run_id
+make task MANIFEST_ID=3 SAMPLE_SANDBOX=/abs/tmp/run-<id> \
+          HARNESS=opencode-ds-flash-max \
+          HARNESS_CMD='/opt/opencode run --auto --model opencode-go/deepseek-v4.1-flash#max "$$(cat)"'
 make gate GATE_ID=functional_parity RUN_ID=<run_id>                     # -> value
 ```
 
 There is one harness, and it is **the command you give it**: the prompt
 arrives on stdin, so `opencode`, `claude`, `copilot`, the model and its
-effort are argv, never code.
-
-```bash
-BENCH_HARNESS_CMD=/usr/local/bin/opencode run --model opencode-go/deepseek-v4.1-flash#max "$(cat)"
-```
-
-That lives in `.env`; `HARNESS_CMD='...'` / `--harness-cmd '...'` overrides it
-for a single run. `HARNESS=<label>` selects nothing — it is the free text
-recorded in `TASK_RUN.harness`, so name it after the model and effort
+effort are argv, never code. `HARNESS_CMD` and `HARNESS` are both required
+on every run — no agent command is kept in `.env`, so a stale one can never
+outlive it. `HARNESS=<label>` selects nothing — it is the free text recorded
+in `TASK_RUN.harness`, so name it after the model and effort
 (`opencode-ds-flash-max`) when you intend to compare runs. The exact command
 that ran is in `out/runs/<run_id>/harness.json` either way.
 

@@ -4,7 +4,7 @@ Two verbs, plus two support verbs. Nothing else is public.
 
 ```bash
 make db-init                                    # build bench.db from schema + seeds
-make task  MANIFEST_ID=<n> SAMPLE_SANDBOX=<abs empty folder> [HARNESS=<l>]  # → run_id
+make task  MANIFEST_ID=<n> SAMPLE_SANDBOX=<abs empty folder> HARNESS=<l> HARNESS_CMD='<cmd>'  # → run_id
 make gate  GATE_ID=<id> RUN_ID=<run_id> [GATE_VERSION=<n>]             # → value
 make case-capture MANIFEST_ID=<n> CASE=<c> SAMPLE_SANDBOX=<abs empty folder>  # golden
 ```
@@ -13,11 +13,11 @@ Re-pinning is seed data, not a verb: edit `sample.commit_sha` in
 `seeds/samples.json` and run `make db-init`, which is the only writer of
 `bench.db`.
 
-The harness is a command, not a name: `BENCH_HARNESS_CMD` in `.env`, or
-`HARNESS_CMD` / `--harness-cmd` for one run, with the prompt on stdin.
-`HARNESS` is only the label recorded with the run. Everything is also
-reachable directly via `python3 main.py …`, which is the stable
-interface; the Makefile is a convenience wrapper with no logic.
+The harness is a command, not a name: `HARNESS_CMD` / `--harness-cmd` on
+every run, with the prompt on stdin. `HARNESS` is only the label recorded
+with the run. Both are required: there is no default agent in `.env`.
+Everything is also reachable directly via `python3 main.py …`, which is the
+stable interface; the Makefile is a convenience wrapper with no logic.
 
 ## 1. `task` — start a run
 

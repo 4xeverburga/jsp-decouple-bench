@@ -19,17 +19,19 @@ not for you — you have no reason to be reading it.
 ## Running an agent
 
 ```bash
-make task MANIFEST_ID=3 \
-          SAMPLE_SANDBOX=/abs/tmp/run-<id> HARNESS=opencode     # -> run_id
+make task MANIFEST_ID=3 SAMPLE_SANDBOX=/abs/tmp/run-<id> \
+          HARNESS=opencode-ds-flash-max \
+          HARNESS_CMD='opencode run --auto --model opencode-go/deepseek-v4.1-flash#max "$$(cat)"'
 make gate GATE_ID=functional_parity RUN_ID=<run_id>
 ```
 
-There is no harness registry: `BENCH_HARNESS_CMD` in `.env` (or
-`HARNESS_CMD` / `--harness-cmd` for one run) **is** the harness, and the
-prompt arrives on stdin. `HARNESS=<label>` selects nothing — it only names
-the run, so put the model and its effort variant in the label when you
-intend to compare runs. The exact command line is in the run's
-`harness.json`.
+There is no harness registry: `HARNESS_CMD` **is** the harness, the prompt
+arrives on stdin, and it is required on every run — no agent command lives
+in `.env`, so a stale one cannot outlive the model it was written for.
+`HARNESS=<label>` selects nothing — it only names the run, so put the model
+and its effort variant in the label when you intend to compare runs. Both
+are recorded: the label in `TASK_RUN.harness`, the exact command line in the
+run's `harness.json`.
 
 ## Hard rules
 

@@ -145,7 +145,7 @@ class HarnessPort(Protocol):
 
 | adapter | meaning |
 |---|---|
-| `command` | the only one: any agent CLI, prompt on stdin, command from `BENCH_HARNESS_CMD` / `HARNESS_CMD` / `--harness-cmd` |
+| `command` | the only one: any agent CLI, prompt on stdin, command from `--harness-cmd` (`HARNESS_CMD=` through make) |
 
 Rules:
 

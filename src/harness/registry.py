@@ -12,11 +12,10 @@ selects nothing.
 
 from __future__ import annotations
 
-import config
 from src.harness.adapters.command import CommandHarness
 from src.harness.ports import HarnessPort
 
 
-def resolve(label: str, cmd: str | None) -> HarnessPort:
-    """The per-run command wins; otherwise `.env`'s BENCH_HARNESS_CMD."""
-    return CommandHarness(label, cmd or config.HARNESS_CMD)
+def resolve(label: str, cmd: str) -> HarnessPort:
+    """Build the harness this run asked for — both parts are required."""
+    return CommandHarness(label, cmd)

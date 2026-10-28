@@ -259,15 +259,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     task_run.add_argument(
         "--harness",
-        default=config.HARNESS_LABEL,
+        required=True,
         help="label recorded with the run, e.g. opencode-ds-flash-max "
         "(free text: it selects nothing, the command does)",
     )
     task_run.add_argument(
         "--harness-cmd",
-        default=None,
-        help="the command that does the work, prompt on stdin "
-        "(overrides BENCH_HARNESS_CMD)",
+        required=True,
+        help="the command that does the work, prompt on stdin, e.g. "
+        'opencode run --model provider/model#max "$(cat)"',
     )
     task_run.add_argument(
         "--environment",

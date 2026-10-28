@@ -6,8 +6,8 @@ env must not discover that it is being measured. A copy of the prompt is
 kept at `<run>/harness-prompt.md` for the supervisor's audit trail, but no
 such path is handed to the agent.
 
-Which CLI, which model and which effort run is **the command itself** — the
-one in `.env`, or a per-run `--harness-cmd` — so no agent ever needs a class
+Which CLI, which model and which effort run is **the command itself**, the
+one every run carries in `--harness-cmd`, so no agent ever needs a class
 here. `name` is only the label the run is recorded under.
 
 The command runs with cwd = the sample checkout and edits it in place. The
@@ -34,9 +34,9 @@ class CommandHarness:
     def __init__(self, name: str, cmd: str):
         if not cmd:
             raise BenchError(
-                "no agent command: pass --harness-cmd '...' or set "
-                "BENCH_HARNESS_CMD in .env. The prompt arrives on stdin, so "
-                'a CLI that takes it as an argument reads it with "$(cat)".'
+                "no agent command: pass --harness-cmd '...'. The prompt "
+                "arrives on stdin, so a CLI that takes it as an argument "
+                'reads it with "$(cat)".'
             )
         self.name = name
         self.cmd = cmd

@@ -87,13 +87,11 @@ BROWSER_ENGINE = _req("BENCH_BROWSER")
 HEADLESS = _flag("BENCH_HEADLESS")
 
 # --- agent harness -----------------------------------------------------------
-# There is no harness registry: one adapter runs the command you give it, with
-# the prompt on stdin. `BENCH_HARNESS` is only the default *label* recorded in
-# TASK_RUN.harness (put the model and its effort in it), and
-# `BENCH_HARNESS_CMD` is the command itself — or pass `HARNESS_CMD` /
-# `--harness-cmd` for a single run.
-HARNESS_LABEL = _req("BENCH_HARNESS")
-HARNESS_CMD = _req("BENCH_HARNESS_CMD")
+# There is no harness registry and no default agent: one adapter runs the
+# command the run was given, with the prompt on stdin. Both the label
+# (`--harness`, recorded in TASK_RUN.harness) and the command
+# (`--harness-cmd`) are required on every run, so a command kept in `.env`
+# can never outlive the model it was written for.
 HARNESS_TIMEOUT_S = int(_req("BENCH_HARNESS_TIMEOUT_S"))
 
 
