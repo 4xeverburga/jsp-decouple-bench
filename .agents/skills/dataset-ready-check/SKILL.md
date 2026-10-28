@@ -114,6 +114,13 @@ A gate that cannot fail proves nothing.
   outside `compose.yaml` port variables):
   `git grep -iE 'golden|parity|baseline|benchmark|expect\.json'` is empty
   on the pinned commit.
+- **The checkout does not point at its own origin.** Provenance lives in
+  `SAMPLE.project_id`, in `seeds/samples.json` and in the remote history,
+  never in the tree: `UPSTREAM.md` is absent, and
+  `git grep -InE 'github\.com/<owner>|upstream|@<upstream-domain>'` is
+  empty apart from `LICENSE`, code namespaces (`br.com.<owner>.*`) and
+  rendered product branding that the goldens already freeze. A sample
+  that names its upstream hands the agent the original project to read.
 - Every manifest `prompt` reads as a ticket: no routes, case names,
   expected DB deltas, or the words above. (`AGENTS.md` rules 2–3.)
 - Credentials are read from `.env`, never hardcoded in a flow or prompt.

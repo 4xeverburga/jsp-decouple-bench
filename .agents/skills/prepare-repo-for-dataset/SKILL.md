@@ -4,7 +4,8 @@ description: >
   Prepare a legacy project repo to become a benchmark dataset sample:
   protect the git history (never rewrite or force-push main, keep the
   original upstream commits reachable on the remote so provenance can be
-  traced) and leave the project runnable (old projects need old
+  traced) while keeping every pointer to that origin out of the tree the
+  agent reads, and leave the project runnable (old projects need old
   toolchains — don't modernize dependencies for convenience, keep the
   runbook verified). Use when asked to "prepare this repo for the
   dataset", "make this project a sample", or before starting any
@@ -69,9 +70,28 @@ the pristine upstream state. A rewritten history destroys that.
   dataset's documentation.
 - **Push everything before declaring done**: branches, `main`, and tags.
   Local-only commits are invisible to anyone auditing the sample later.
-- **Keep upstream references intact**: `UPSTREAM.md`, upstream URLs in
-  README/AGENTS.md, and any vendored `local-repo/` or pinned artifacts
-  stay in the repo — they are how a researcher re-derives the sample.
+- **Do not point at the origin from inside the tree.** The history is the
+  provenance: the `pristine` tag, the remote, and `SAMPLE.project_id` in
+  `seeds/samples.json`. The checkout an agent reads must say nothing about
+  where the code came from — no `UPSTREAM.md`, no upstream URL in README /
+  AGENTS.md / `pom.xml` `<scm>`, no "mirror of" sentence, no release-war
+  download, no update script that curls the project site. One link is
+  enough for an agent to fetch the original project and start reasoning
+  about today's code as somebody else's legacy app, which is exactly the
+  outside knowledge the eval exists to exclude.
+  ```bash
+  git grep -InE 'github\.com/<owner>|upstream|@<upstream-domain>' -- .
+  ```
+  must be empty. Three exemptions, and only these: `LICENSE` (the
+  attribution Apache-2.0 requires), code identity — Java packages and
+  Maven `groupId` like `br.com.<owner>.*` (renaming them breaks the build,
+  and a namespace is not a navigation aid), and rendered product branding
+  (footer link, `og:site_name`, mail templates), which lives in the graded
+  markup: scrubbing it means recapturing every golden of the sample, so
+  decide it deliberately and do it in one change.
+- **Keep the build inputs**: `local-repo/`, pinned vendored artifacts and
+  committed toolchain files stay in the repo — they are what makes the
+  sample build, not references to its origin.
 
 ## 2. Leave the project runnable
 
@@ -208,7 +228,11 @@ harness that launches a real agent requires its command via `HARNESS_CMD`.
 - [ ] `main` on the remote is untouched history (verify:
       `git log --oneline origin/main` matches local; no force-pushes).
 - [ ] Current work is on a feature branch, not directly on `main`.
-- [ ] `UPSTREAM.md` / upstream references present and accurate.
+- [ ] No upstream pointer in the tree: `UPSTREAM.md` absent, no upstream
+      URL, "mirror of" sentence, release download or update script
+      (`git grep -InE 'github\.com/<owner>|upstream|@<upstream-domain>'`
+      is empty apart from `LICENSE` and code namespaces); `LICENSE` and
+      the build inputs are still there.
 - [ ] Runbook in the sample's `AGENTS.md` re-verified end to end
       (build → boot → healthcheck) on the current tree.
 - [ ] No dependency versions changed (`git diff` on build manifests is

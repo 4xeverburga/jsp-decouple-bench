@@ -56,7 +56,10 @@ run's `harness.json`.
    **this** run (absolute path, absent or empty). The bench puts that run's
    single checkout in it and refuses a folder that already holds anything:
    nothing may sit beside the agent's tree, because a sibling is a place to
-   look for the answer. The commit comes from the registry
+   look for the answer. Its **parent** must hold nothing but sandboxes —
+   never `/tmp`, where every tool on the machine leaves files (build
+   output, commit messages, a `bench.db` backup). The commit comes from the
+   registry
    (`SAMPLE.source` + `SAMPLE.commit_sha`) through a bare mirror under
    `out/cache/<slug>.git` — never from a working copy. The clone is
    scrubbed before the agent starts: no remote, no branches, no tags, no
@@ -81,11 +84,18 @@ run's `harness.json`.
     ordered imports); `pyproject.toml` configures `ruff` to enforce it.
     The Python version and dependencies are pinned there too: change them
     in `pyproject.toml`, nowhere else.
+11. **Provenance stays out of the tree.** A sample's checkout must not
+    name or link its origin — no `UPSTREAM.md`, no upstream URL, no
+    "mirror of" sentence. Where it came from is `SAMPLE.project_id`, the
+    remote and its history. A checkout that points at its source gives an
+    agent outside knowledge the eval exists to exclude. `LICENSE` and
+    package/`groupId` namespaces are the only exemptions.
 
 ## Trust nothing until the self-check is green
 
 ```bash
-make task MANIFEST_ID=<n> SAMPLE_SANDBOX=/abs/tmp/run-<id> HARNESS=command HARNESS_CMD=true
+make task MANIFEST_ID=<n> SAMPLE_SANDBOX=$HOME/.bench-runs/run-<id> \
+          HARNESS=command HARNESS_CMD=true
 make gate GATE_ID=functional_parity RUN_ID=<run_id>     # must pass
 ```
 
@@ -121,3 +131,9 @@ A run has no verdict of its own: it is finished when the harness returns.
 Gates are independent measurements; combining them is the researcher's job.
 `trace_similarity` reports `pending` until its oracle exists and is never
 hand-scored.
+
+Before a score is quoted — and always before two models are compared — the
+run is audited with the `audit-agent-trace` skill: what the agent actually
+read, whether any path left its checkout, and whether it ever reasoned
+about being measured. `clean` is a claim about the trace; `unauditable` is
+not a pass.
