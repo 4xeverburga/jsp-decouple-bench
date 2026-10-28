@@ -5,7 +5,9 @@ corpus.
 
 value   = passed_cases / total_cases
 verdict = pass only if every case passes; error only if no case could be
-          measured at all (stack down, fixture corrupt).
+          measured at all (stack down, fixture corrupt). A flow that
+          asserts the graded behaviour and does not see it is a *fail*:
+          it measured the app and the app did the wrong thing.
 """
 
 from __future__ import annotations
@@ -100,6 +102,11 @@ class FunctionalParity:
                 detail="; ".join(problems),
                 artifacts=artifacts,
                 db=actual,
+            )
+        except AssertionError as exc:  # the graded behaviour was not met
+            record.update(
+                verdict="fail",
+                detail=str(exc) or "flow assertion failed",
             )
         except Exception as exc:  # a broken case must not hide the others
             record.update(

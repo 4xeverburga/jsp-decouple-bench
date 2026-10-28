@@ -79,18 +79,55 @@ def ensure_pinned(
 def diff(location: Path, base_commit: str) -> str:
     """Worktree diff against the pin (empty if the agent changed nothing).
 
+    Files the agent created are part of what the agent did, but `git diff`
+    ignores them until they are in the index. Mark them intent-to-add so
+    the patch carries new files too, then restore the index so the worktree
+    is left exactly as it was found.
+
     Legacy sources are not always valid UTF-8, and `--binary` splices raw
     bytes in, so the patch is decoded lossily: it is an audit artifact, not
     something to feed back into git.
     """
     location = Path(location).expanduser().resolve()
-    proc = subprocess.run(
-        ["git", "-C", str(location), "diff", "--binary", base_commit],
+    untracked = _untracked_paths(location)
+    if untracked:
+        _git(location, "add", "--intent-to-add", "--", *untracked)
+    try:
+        proc = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(location),
+                "diff",
+                "--binary",
+                base_commit,
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    finally:
+        if untracked:
+            _git(location, "reset", "--quiet", "--", *untracked)
+    if proc.returncode != 0:
+        raise PreconditionError(f"git diff failed: {proc.stderr.strip()}")
+    return proc.stdout
+
+
+def _untracked_paths(location: Path) -> list[str]:
+    """Paths git reports as untracked (empty when the tree is clean)."""
+    listing = subprocess.run(
+        ["git", "-C", str(location), "status", "--porcelain", "-z"],
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
     )
-    if proc.returncode != 0:
-        raise PreconditionError(f"git diff failed: {proc.stderr.strip()}")
-    return proc.stdout
+    if listing.returncode != 0:
+        raise PreconditionError(f"git status failed: {listing.stderr.strip()}")
+    return [
+        entry[3:]
+        for entry in listing.stdout.split("\0")
+        if entry.startswith("?? ")
+    ]

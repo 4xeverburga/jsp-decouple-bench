@@ -69,6 +69,10 @@ VIEWPORT = {
     "height": int(_req("BENCH_VIEWPORT_HEIGHT")),
 }
 
+# How long a flow waits for the app to render a result (the graded outcome,
+# a widget list). A wait that expires is a failed assertion, not a crash.
+CASE_TIMEOUT_MS = int(_req("BENCH_CASE_TIMEOUT_MS"))
+
 # --- browser -----------------------------------------------------------------
 BROWSER_ENGINE = _req("BENCH_BROWSER")
 HEADLESS = _flag("BENCH_HEADLESS")

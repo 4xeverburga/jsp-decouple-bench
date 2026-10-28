@@ -16,6 +16,10 @@ resets the DB between test dirs, so consecutive runs are identical.
 import os
 import re
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeout
+
+import config
+
 ARRANGE_EMAIL = "author@bench.test"
 ARRANGE_PASSWORD = "bench-author-pass"
 ARRANGE_NAME = "Bench Author"
@@ -41,6 +45,19 @@ ANSWER_APPEARED_JS = r"""() => {
   const count = heading ? heading.textContent.trim().split(/\s+/)[0] : null;
   return count === '1' || !!document.querySelector('.answer .post-text');
 }"""
+ANSWER_COUNT_JS = r"""() => {
+  const heading = document.querySelector('h2.page-title');
+  return heading ? heading.textContent.trim().split(/\s+/)[0] : '?';
+}"""
+
+
+def _state(page):
+    """Where the page is stuck, for the failure message."""
+    return "count=%s rendered=%d url=%s" % (
+        page.evaluate(ANSWER_COUNT_JS),
+        page.locator(".answer .post-text").count(),
+        page.url,
+    )
 
 
 def _normalize(html):
@@ -73,7 +90,9 @@ def _ask_question(page, base_url):
     # result -> pick it
     page.click(".select2-container")
     page.fill(".select2-input", QUESTION_TAGS)
-    page.wait_for_selector(".select2-result-selectable", timeout=5000)
+    page.wait_for_selector(
+        ".select2-result-selectable", timeout=config.CASE_TIMEOUT_MS
+    )
     page.click(".select2-result-selectable")
     # The 'watching' checkbox is checked by default; leave it as-is so the
     # arrange steps stay deterministic (Watcher rows are part of the DB delta).
@@ -94,8 +113,7 @@ def _login(page, base_url, email, password):
 
 
 def _answers_count(page):
-    heading = page.locator("h2.page-title").first
-    return heading.inner_text().strip().split()[0]
+    return page.evaluate(ANSWER_COUNT_JS)
 
 
 def run(page, base_url):
@@ -122,7 +140,15 @@ def run(page, base_url):
     # wait for the outcome (answer on the page, or the count updated)
     # rather than for a navigation that a decoupled form never performs.
     page.locator("form.answer-form input[type=submit]").click()
-    page.wait_for_function(ANSWER_APPEARED_JS, timeout=30000)
+    try:
+        page.wait_for_function(
+            ANSWER_APPEARED_JS, timeout=config.CASE_TIMEOUT_MS
+        )
+    except PlaywrightTimeout:
+        raise AssertionError(
+            "submitted the answer but it never appeared: after %d ms %s"
+            % (config.CASE_TIMEOUT_MS, _state(page))
+        ) from None
     page.wait_for_load_state("networkidle")
 
     # --- assert: the answer is rendered and the count went up ------------
