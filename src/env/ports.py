@@ -22,6 +22,14 @@ class StackPort(Protocol):
     def reset(self) -> str:
         """down -v && up; used between cases so ids are deterministic."""
 
+    def reap(self) -> int:
+        """Tear down anything this run's tree left running.
+
+        By location, not by project name: whatever `docker compose up` the
+        agent left in its own checkout has to go too. Returns the number of
+        projects removed; nothing running is not an error.
+        """
+
     def base_url(self) -> str: ...
 
     def ps(self) -> list[dict[str, Any]]: ...

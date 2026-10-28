@@ -24,6 +24,7 @@ from urllib.request import urlopen
 import config
 from src import log
 from src import run as run_pkg
+from src.env.adapters.compose import reap as compose_reap
 from src.errors import GateError
 from src.run.process import ProcessRun, run_streamed
 from src.run.sample_checkout import show_file
@@ -185,6 +186,16 @@ class ComposeStack:
     def reset(self) -> str:
         self.down(volumes=True)
         return self.up()
+
+    def reap(self) -> int:
+        """Take down every project this run's tree left behind.
+
+        `down` removes `self.project` only. An agent that ran
+        `docker compose up` in the checkout created a second project, named
+        after the directory instead, and that one holds the host ports just
+        as firmly — so teardown is by working directory, not by name.
+        """
+        return compose_reap.reap(self.location, logger)
 
     # --- readiness -----------------------------------------------------------
     # `compose up --wait` cannot be trusted: it exits 1 as soon as any service

@@ -158,6 +158,12 @@ class FunctionalParity:
         stack = self.ctx.stack()
         details: list[CaseResult] = []
         try:
+            # Start from the run's own tree, not from whatever it left up:
+            # `reset()` below only knows the bench's project name, so a
+            # stack the agent started in its checkout would keep the host
+            # ports and make the first case unmeasurable.
+            if not config.KEEP_STACK:
+                stack.reap()
             for index, name in enumerate(cases, start=1):
                 logger.info("case %d/%d: %s", index, len(cases), name)
                 details.append(self._case(name))

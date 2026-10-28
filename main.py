@@ -42,6 +42,20 @@ def _manifest(conn, manifest_id: int) -> dict:
     return repo.manifest_by_id(conn, manifest_id)
 
 
+def _reap(ctx: RunContext, keep: bool) -> None:
+    """Leave nothing running behind a finished task, gate or capture.
+
+    A run owns a folder, not a project name, so the stack adapter takes
+    down every project rooted in that folder: the bench's own `-p` project
+    and whatever `docker compose up` the agent ran in its checkout. Runs on
+    the way out of a failure too — a gate that died is exactly the run that
+    leaks a stack.
+    """
+    if keep or "stack" not in ctx.bindings:
+        return
+    ctx.stack().reap()
+
+
 # --- db ----------------------------------------------------------------------
 def cmd_db(args) -> int:
     if args.action == "init":
@@ -150,10 +164,10 @@ def cmd_task_run(args) -> int:
                 result.exit_code,
             )
         finally:
+            duration = time.monotonic() - started
             cost = args.estimated_cost or (result.cost_usd if result else None)
-            repo.finish_run(
-                conn, run_id, utcnow(), time.monotonic() - started, cost
-            )
+            repo.finish_run(conn, run_id, utcnow(), duration, cost)
+            _reap(ctx, config.KEEP_STACK)
     finally:
         conn.close()
 
@@ -172,7 +186,10 @@ def cmd_gate_run(args) -> int:
 
     ctx = RunContext.load(args.run, manifest)
     logger.info("gate %s on run %s", definition["gate_id"], args.run)
-    result = gate_registry.resolve(ctx, definition).evaluate()
+    try:
+        result = gate_registry.resolve(ctx, definition).evaluate()
+    finally:
+        _reap(ctx, config.KEEP_STACK)
     payload = result.to_dict()
     write_json(ctx.paths.gate(definition["gate_id"]), payload)
     logger.info(
@@ -210,10 +227,13 @@ def cmd_case_capture(args) -> int:
         manifest=manifest,
         sample_location=Path(args.sample_sandbox).expanduser(),
     )
-    print(
-        f"captured {manifest['sample']['slug']}/{args.case} -> "
-        f"{capture(ctx, args.case, keep_stack=args.keep_stack)}"
-    )
+    try:
+        print(
+            f"captured {manifest['sample']['slug']}/{args.case} -> "
+            f"{capture(ctx, args.case, keep_stack=args.keep_stack)}"
+        )
+    finally:
+        _reap(ctx, args.keep_stack)
     return 0
 
 

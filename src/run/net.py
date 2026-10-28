@@ -1,9 +1,15 @@
 """src/run/net.py — per-run host port allocation.
 
-Two concurrent runs must not fight over 8080. Every run reserves its own
-host ports from the configured range. The bind-then-close probe leaves a
-sub-millisecond TOCTOU window; `stack.up()` fails loudly if the port is
-taken, which is the correct outcome (never silently share a port).
+Every run takes its own host ports from the configured range, so two runs
+do not fight over 8080. The probe is bind-then-close and therefore reserves
+nothing: the window it leaves open is not sub-millisecond but as long as
+everything between allocation and the container publishing the port — a
+`compose up --build` can be minutes, and a sibling run can take the port in
+between.
+
+That is acceptable because a finished run reaps its own tree (`compose@1`'s
+`reap`), so leftovers do not accumulate, and because `stack.up()` fails
+loudly instead of sharing a port.
 """
 
 from __future__ import annotations
@@ -13,12 +19,24 @@ import socket
 import config
 
 
-def _free(port: int) -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+def _free_on(family: int, host: str, port: int) -> bool:
+    """Can this address be bound? Docker publishes IPv4 and IPv6 alike."""
+    with socket.socket(family, socket.SOCK_STREAM) as sock:
         try:
-            sock.bind(("127.0.0.1", port))
+            sock.bind((host, port))
         except OSError:
             return False
+        return True
+
+
+def _free(port: int) -> bool:
+    if not _free_on(socket.AF_INET, "0.0.0.0", port):
+        return False
+    if not socket.has_ipv6:
+        return True
+    try:
+        return _free_on(socket.AF_INET6, "::", port)
+    except OSError:  # IPv6 disabled in this kernel
         return True
 
 
