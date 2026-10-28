@@ -12,6 +12,7 @@ is a completed course that never appears on the selected-courses page.
 Credentials come from the harness-injected environment only
 (OSS_STUDENT_USER / OSS_STUDENT_PASSWORD) — never hardcoded here.
 """
+
 import os
 import re
 
@@ -57,7 +58,8 @@ def run(page, base_url):
     progress_before = page.input_value("input[name=progress]").strip()
     dom_before = _normalize(page.content())
     assert progress_before == "0", (
-        "expected seeded progress '0' on the study page, got %r" % progress_before
+        "expected seeded progress '0' on the study page, got %r"
+        % progress_before
     )
 
     for expected in (1, 2):

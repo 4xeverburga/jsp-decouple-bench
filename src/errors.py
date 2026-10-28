@@ -1,4 +1,5 @@
 """src/errors.py — the only exception types the CLI knows about."""
+
 from __future__ import annotations
 
 
@@ -7,14 +8,17 @@ class BenchError(Exception):
 
 
 class PreconditionError(BenchError):
-    """The world is not in the state a verb requires (dirty tree, wrong commit)."""
+    """The world is not in the state a verb requires.
+
+    E.g. a dirty tree or the wrong commit.
+    """
 
 
-class NotFound(BenchError):
+class NotFoundError(BenchError):
     """A row, a case, a manifest or a gate does not exist."""
 
 
-class UnknownAdapter(BenchError):
+class UnknownAdapterError(BenchError):
     """A manifest binds an adapter the registry cannot resolve."""
 
 

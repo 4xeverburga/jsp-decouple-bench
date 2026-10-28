@@ -12,6 +12,7 @@ snapshots before/after the answer for parity replay.
 The arrange user is deterministic (fixed email/password); the orchestrator
 resets the DB between test dirs, so consecutive runs are identical.
 """
+
 import os
 import re
 
@@ -58,7 +59,8 @@ def _ask_question(page, base_url):
     page.fill("input[name=title]", QUESTION_TITLE)
     page.fill("textarea[name=description]", QUESTION_BODY)
     # tagNames is a select2 v3 widget (the real input is hidden); drive the UI:
-    # focus -> type >= 3 chars (minimumInputLength) -> wait for the AJAX result -> pick it
+    # focus -> type >= 3 chars (minimumInputLength) -> wait for the AJAX
+    # result -> pick it
     page.click(".select2-container")
     page.fill(".select2-input", QUESTION_TAGS)
     page.wait_for_selector(".select2-result-selectable", timeout=5000)
@@ -110,18 +112,23 @@ def run(page, base_url):
     page.wait_for_load_state("networkidle")
 
     # --- assert: the answer is rendered and the count went up ------------
-    assert page.url.startswith(question_url.split("?")[0]) or "/answer/" not in page.url, (
-        "expected redirect back to the question page, stayed on %r" % page.url
-    )
+    assert (
+        page.url.startswith(question_url.split("?")[0])
+        or "/answer/" not in page.url
+    ), "expected redirect back to the question page, stayed on %r" % page.url
     answers_count_after = _answers_count(page)
-    answer_visible_after = page.locator(".answer .post-text").first.inner_text()
+    answer_visible_after = page.locator(
+        ".answer .post-text"
+    ).first.inner_text()
     dom_after = _normalize(page.content())
 
     assert answers_count_after == "1", (
-        "expected answers count '1' after answering, got %r" % answers_count_after
+        "expected answers count '1' after answering, got %r"
+        % answers_count_after
     )
     assert "REST endpoint" in answer_visible_after, (
-        "expected the answer body rendered on the page, got %r" % answer_visible_after[:200]
+        "expected the answer body rendered on the page, got %r"
+        % answer_visible_after[:200]
     )
 
     return {

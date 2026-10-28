@@ -7,6 +7,7 @@ value   = passed_cases / total_cases
 verdict = pass only if every case passes; error only if no case could be
           measured at all (stack down, fixture corrupt).
 """
+
 from __future__ import annotations
 
 import time
@@ -27,8 +28,13 @@ class FunctionalParity:
         self.definition = definition
         self._started = 0.0
 
-    def _result(self, verdict: str, value: float | None,
-                details: list[CaseResult], notes: list[str]) -> GateResult:
+    def _result(
+        self,
+        verdict: str,
+        value: float | None,
+        details: list[CaseResult],
+        notes: list[str],
+    ) -> GateResult:
         return GateResult(
             gate_id=self.gate_id,
             gate_version=self.definition["version"],
@@ -60,44 +66,61 @@ class FunctionalParity:
             base_url = self.ctx.base_url()
             columns = [t["name"] for t in tables]
             before = database.dump_many(columns)
-            artifacts = browser.run_case(corpus.flow(sample, name), base_url, e2e)
+            artifacts = browser.run_case(
+                corpus.flow(sample, name), base_url, e2e
+            )
             after = database.dump_many(columns)
 
-            actual = {"tables": {
-                t["name"]: delta_table(
-                    before.get(t["name"]) or [],
-                    after.get(t["name"]) or [],
-                    t.get("key_columns") or ["id"],
-                    t.get("ignore_columns") or [],
-                )
-                for t in tables
-            }}
+            actual = {
+                "tables": {
+                    t["name"]: delta_table(
+                        before.get(t["name"]) or [],
+                        after.get(t["name"]) or [],
+                        t.get("key_columns") or ["id"],
+                        t.get("ignore_columns") or [],
+                    )
+                    for t in tables
+                }
+            }
 
             problems: list[str] = []
             if canonical(actual) != canonical(expect.get("db")):
                 problems.append("db: " + summary(actual, expect.get("db")))
             expected_artifacts = expect.get("artifacts") or {}
             for key in e2e.get("artifacts") or []:
-                if canonical(artifacts.get(key)) != canonical(expected_artifacts.get(key)):
+                if canonical(artifacts.get(key)) != canonical(
+                    expected_artifacts.get(key)
+                ):
                     problems.append(f"artifact {key!r} differs")
 
-            record.update(verdict="fail" if problems else "pass",
-                          detail="; ".join(problems),
-                          artifacts=artifacts, db=actual)
+            record.update(
+                verdict="fail" if problems else "pass",
+                detail="; ".join(problems),
+                artifacts=artifacts,
+                db=actual,
+            )
         except Exception as exc:  # a broken case must not hide the others
-            record.update(verdict="error", detail=f"{type(exc).__name__}: {exc}")
+            record.update(
+                verdict="error", detail=f"{type(exc).__name__}: {exc}"
+            )
 
         record["duration_s"] = round(time.monotonic() - started, 3)
-        # The cross-gate interface: results are logged, the corpus stays private.
+        # The cross-gate interface: results are logged, the corpus stays
+        # private.
         write_json(self.ctx.paths.case(name), record)
-        return CaseResult(case=name, verdict=record["verdict"],
-                          detail=record.get("detail", ""))
+        return CaseResult(
+            case=name,
+            verdict=record["verdict"],
+            detail=record.get("detail", ""),
+        )
 
     def evaluate(self) -> GateResult:
         self._started = time.monotonic()
         cases = list(self.ctx.scope.get("cases") or [])
         if not cases:
-            return self._result("error", None, [], ["manifest scope lists no cases"])
+            return self._result(
+                "error", None, [], ["manifest scope lists no cases"]
+            )
 
         stack = self.ctx.stack()
         details: list[CaseResult] = []
@@ -113,4 +136,6 @@ class FunctionalParity:
             return self._result("pass", 1.0, details, [])
         if all(d.verdict == "error" for d in details):
             return self._result("error", None, details, [])
-        return self._result("fail", round(passed / len(details), 4), details, [])
+        return self._result(
+            "fail", round(passed / len(details), 4), details, []
+        )

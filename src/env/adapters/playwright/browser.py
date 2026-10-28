@@ -4,6 +4,7 @@ Takes a flow path plus the case's e2e contract; it knows nothing about
 where cases live. Locale, timezone and viewport come from the contract,
 falling back to config.py — never from the host.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -32,8 +33,10 @@ class _ScreenshotPage:
         self._step += 1
         slug = re.sub(r"\W+", "_", label)[:60] or "step"
         self._dir.mkdir(parents=True, exist_ok=True)
-        self._page.screenshot(path=str(self._dir / f"{self._step:02d}-{slug}.png"),
-                              full_page=True)
+        self._page.screenshot(
+            path=str(self._dir / f"{self._step:02d}-{slug}.png"),
+            full_page=True,
+        )
 
     def goto(self, url: str, **kw: Any) -> Any:
         result = self._page.goto(url, **kw)
@@ -54,7 +57,9 @@ class PlaywrightBrowser:
 
     def _ensure_credentials(self, e2e: dict[str, Any]) -> None:
         if not self._env_loaded:
-            config.load_env_file(Path(self.ctx.sample_location) / config.SAMPLE_ENV_FILE)
+            config.load_env_file(
+                Path(self.ctx.sample_location) / config.SAMPLE_ENV_FILE
+            )
             self._env_loaded = True
         spec = e2e.get("credentials") or ""
         if not spec.startswith("env:"):
@@ -67,14 +72,23 @@ class PlaywrightBrowser:
                 f"{config.SAMPLE_ENV_FILE} (never hardcode them in flow.py)"
             )
 
-    def _execute(self, flow_path: Path, base_url: str, e2e: dict[str, Any],
-                 images_dir: Path | None = None) -> dict[str, Any]:
-        from playwright.sync_api import sync_playwright  # local: db-init must not need it
+    def _execute(
+        self,
+        flow_path: Path,
+        base_url: str,
+        e2e: dict[str, Any],
+        images_dir: Path | None = None,
+    ) -> dict[str, Any]:
+        from playwright.sync_api import (
+            sync_playwright,  # local: db-init must not need it
+        )
 
         self._ensure_credentials(e2e)
 
         path = Path(flow_path)
-        spec = importlib.util.spec_from_file_location(f"case_{path.parent.name}", path)
+        spec = importlib.util.spec_from_file_location(
+            f"case_{path.parent.name}", path
+        )
         if spec is None or spec.loader is None:  # pragma: no cover
             raise CaseError(f"cannot import {path}")
         flow = importlib.util.module_from_spec(spec)
@@ -84,7 +98,8 @@ class PlaywrightBrowser:
 
         with sync_playwright() as playwright:
             browser = getattr(playwright, config.BROWSER_ENGINE).launch(
-                headless=config.HEADLESS)
+                headless=config.HEADLESS
+            )
             try:
                 context = browser.new_context(
                     viewport=e2e.get("viewport") or dict(config.VIEWPORT),
@@ -92,16 +107,26 @@ class PlaywrightBrowser:
                     timezone_id=e2e.get("timezone_id") or config.TIMEZONE_ID,
                 )
                 page = context.new_page()
-                target = _ScreenshotPage(page, images_dir) if images_dir else page
+                target = (
+                    _ScreenshotPage(page, images_dir) if images_dir else page
+                )
                 return flow.run(target, base_url)
             finally:
                 browser.close()
 
     # --- BrowserPort ---------------------------------------------------------
-    def run_case(self, flow_path: Path, base_url: str,
-                 e2e: dict[str, Any]) -> dict[str, Any]:
+    def run_case(
+        self, flow_path: Path, base_url: str, e2e: dict[str, Any]
+    ) -> dict[str, Any]:
         return self._execute(flow_path, base_url, e2e)
 
-    def capture_case(self, flow_path: Path, base_url: str, e2e: dict[str, Any],
-                     images_dir: Path) -> dict[str, Any]:
-        return self._execute(flow_path, base_url, e2e, images_dir=Path(images_dir))
+    def capture_case(
+        self,
+        flow_path: Path,
+        base_url: str,
+        e2e: dict[str, Any],
+        images_dir: Path,
+    ) -> dict[str, Any]:
+        return self._execute(
+            flow_path, base_url, e2e, images_dir=Path(images_dir)
+        )

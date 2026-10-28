@@ -9,6 +9,7 @@ bindings_json options:
     cmd              required — shell command reading SQL from stdin
     list_tables_sql  required — query listing table names in column 1
 """
+
 from __future__ import annotations
 
 import os
@@ -16,8 +17,8 @@ import subprocess
 from typing import Any
 
 import config
-from src.errors import GateError
 from src.env.adapters.tabular import parse_batch
+from src.errors import GateError
 
 
 class ShellDatabase:
@@ -27,17 +28,28 @@ class ShellDatabase:
         self.cmd = options.get("cmd")
         self.list_tables_sql = options.get("list_tables_sql")
         if not self.cmd or not self.list_tables_sql:
-            raise ValueError("shell@1 requires options.cmd and options.list_tables_sql")
+            raise ValueError(
+                "shell@1 requires options.cmd and options.list_tables_sql"
+            )
 
     def _query(self, sql: str) -> list[dict[str, Any]]:
         env = dict(os.environ)
-        env.update(config.load_env_file(
-            self.ctx.sample_location / config.SAMPLE_ENV_FILE))  # type: ignore[operator]
+        env.update(
+            config.load_env_file(
+                self.ctx.sample_location / config.SAMPLE_ENV_FILE
+            )
+        )  # type: ignore[operator]
         proc = subprocess.run(
-            ["bash", "-c", self.cmd], input=sql, capture_output=True, text=True, env=env
+            ["bash", "-c", self.cmd],
+            input=sql,
+            capture_output=True,
+            text=True,
+            env=env,
         )
         if proc.returncode != 0:
-            raise GateError(f"db command failed: {proc.stderr.strip()[-2000:]}")
+            raise GateError(
+                f"db command failed: {proc.stderr.strip()[-2000:]}"
+            )
         return parse_batch(proc.stdout)
 
     def list_tables(self) -> list[str]:

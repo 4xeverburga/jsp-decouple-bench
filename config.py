@@ -5,6 +5,7 @@ code: every value comes from `<repo>/.env` (template: `.env.example`) and a
 missing key is an error. The shell environment is deliberately not consulted,
 so a polluted terminal can never change a measurement.
 """
+
 from __future__ import annotations
 
 import os
@@ -23,7 +24,9 @@ _ENV = dotenv_values(ENV_FILE)
 def _req(name: str) -> str:
     value = _ENV.get(name)
     if value is None:
-        raise RuntimeError(f"{name} is not set in {ENV_FILE} (see .env.example)")
+        raise RuntimeError(
+            f"{name} is not set in {ENV_FILE} (see .env.example)"
+        )
     return value
 
 
@@ -59,8 +62,10 @@ PORT_RANGE_END = int(_req("BENCH_PORT_END"))
 # --- determinism (goldens are captured with these; change them deliberately) -
 LOCALE = _req("BENCH_LOCALE")
 TIMEZONE_ID = _req("BENCH_TIMEZONE_ID")
-VIEWPORT = {"width": int(_req("BENCH_VIEWPORT_WIDTH")),
-            "height": int(_req("BENCH_VIEWPORT_HEIGHT"))}
+VIEWPORT = {
+    "width": int(_req("BENCH_VIEWPORT_WIDTH")),
+    "height": int(_req("BENCH_VIEWPORT_HEIGHT")),
+}
 
 # --- browser -----------------------------------------------------------------
 BROWSER_ENGINE = _req("BENCH_BROWSER")
@@ -80,7 +85,8 @@ PRESET_CMDS = {
 
 # --- trace_similarity oracle -------------------------------------------------
 # "none" keeps the gate at verdict="pending". A future oracle is a command
-# that reads the trace document on stdin and prints {"value":0..1,...} on stdout.
+# that reads the trace document on stdin and prints {"value":0..1,...} on
+# stdout.
 TRACE_ORACLE = _req("BENCH_TRACE_ORACLE")
 TRACE_ORACLE_CMD = _req("BENCH_TRACE_ORACLE_CMD")
 

@@ -5,13 +5,14 @@ golden live together under `cases/`. Nothing outside this package knows
 these paths. Other gates consume a case's **result** from the run log
 (`out/runs/<run_id>/cases/<case>.json`), never the corpus itself.
 """
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
 from typing import Any
 
-from src.errors import NotFound
+from src.errors import NotFoundError
 
 ROOT = Path(__file__).resolve().parent / "cases"
 
@@ -27,7 +28,7 @@ def known(sample: str) -> list[str]:
 def _path(sample: str, case: str, filename: str, hint: str = "") -> Path:
     path = directory(sample, case) / filename
     if not path.is_file():
-        raise NotFound(f"no {filename} for {sample}/{case}{hint}")
+        raise NotFoundError(f"no {filename} for {sample}/{case}{hint}")
     return path
 
 
@@ -36,8 +37,11 @@ def contract(sample: str, case: str) -> dict[str, Any]:
 
 
 def golden(sample: str, case: str) -> dict[str, Any]:
-    return json.loads(_path(sample, case, "expect.json",
-                            " — run `make case-capture`").read_text())
+    return json.loads(
+        _path(
+            sample, case, "expect.json", " — run `make case-capture`"
+        ).read_text()
+    )
 
 
 def flow(sample: str, case: str) -> Path:

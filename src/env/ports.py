@@ -3,6 +3,7 @@
 Gates and tasks depend on these protocols only; the concrete adapter is
 selected per run from TASK_MANIFEST.bindings_json (by technology).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -31,7 +32,9 @@ class StackPort(Protocol):
     def declared(self) -> dict[str, Any]:
         """`docker compose config` normalised: services, networks, ports."""
 
-    def exec_(self, service: str, argv: list[str], stdin: str | None = None) -> str: ...
+    def exec_(
+        self, service: str, argv: list[str], stdin: str | None = None
+    ) -> str: ...
 
 
 @runtime_checkable
@@ -42,11 +45,17 @@ class BrowserPort(Protocol):
     corpus lives.
     """
 
-    def run_case(self, flow_path: Path, base_url: str,
-                 e2e: dict[str, Any]) -> dict[str, Any]: ...
+    def run_case(
+        self, flow_path: Path, base_url: str, e2e: dict[str, Any]
+    ) -> dict[str, Any]: ...
 
-    def capture_case(self, flow_path: Path, base_url: str, e2e: dict[str, Any],
-                     images_dir: Path) -> dict[str, Any]: ...
+    def capture_case(
+        self,
+        flow_path: Path,
+        base_url: str,
+        e2e: dict[str, Any],
+        images_dir: Path,
+    ) -> dict[str, Any]: ...
 
 
 @runtime_checkable
@@ -57,4 +66,6 @@ class DatabasePort(Protocol):
 
     def dump(self, table: str) -> list[dict[str, Any]]: ...
 
-    def dump_many(self, tables: list[str]) -> dict[str, list[dict[str, Any]]]: ...
+    def dump_many(
+        self, tables: list[str]
+    ) -> dict[str, list[dict[str, Any]]]: ...

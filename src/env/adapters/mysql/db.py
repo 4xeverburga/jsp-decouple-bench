@@ -10,6 +10,7 @@ bindings_json options:
     database      required — schema to dump
     list_tables_sql  default "SHOW TABLES"
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -27,7 +28,9 @@ class MysqlDatabase:
         self.user = options.get("user", "root")
         self.password = options.get("password", "")
         self.database = options.get("database")
-        self.list_tables_sql = options.get("list_tables_sql", self.DEFAULT_LIST_TABLES_SQL)
+        self.list_tables_sql = options.get(
+            "list_tables_sql", self.DEFAULT_LIST_TABLES_SQL
+        )
         if not self.database:
             raise ValueError("mysql@1 requires options.database")
 
@@ -39,7 +42,9 @@ class MysqlDatabase:
         return argv
 
     def _query(self, sql: str) -> list[dict[str, Any]]:
-        return parse_batch(self.ctx.stack().exec_(self.service, self._argv(), stdin=sql))
+        return parse_batch(
+            self.ctx.stack().exec_(self.service, self._argv(), stdin=sql)
+        )
 
     def list_tables(self) -> list[str]:
         rows = self._query(self.list_tables_sql)

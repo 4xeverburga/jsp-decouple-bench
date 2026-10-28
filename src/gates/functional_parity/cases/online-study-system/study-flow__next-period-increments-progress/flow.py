@@ -7,6 +7,7 @@ progress must go 0 -> 1 and the study page must show the new value.
 Credentials come from the harness-injected environment only
 (OSS_STUDENT_USER / OSS_STUDENT_PASSWORD) — never hardcoded here.
 """
+
 import os
 import re
 
@@ -48,10 +49,11 @@ def run(page, base_url):
     with page.expect_navigation(wait_until="load"):
         row.locator("button", has_text="学习").click()
     page.wait_for_load_state("networkidle")
-    assert "/student/startStudy" in page.url or "/student/study" in page.url or \
-        page.locator("input[name=progress]").count() > 0, (
-        "expected the study page, got %s" % page.url
-    )
+    assert (
+        "/student/startStudy" in page.url
+        or "/student/study" in page.url
+        or page.locator("input[name=progress]").count() > 0
+    ), "expected the study page, got %s" % page.url
 
     progress_before = page.input_value("input[name=progress]").strip()
     dom_before = _normalize(page.content())

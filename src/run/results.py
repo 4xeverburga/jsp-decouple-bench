@@ -1,5 +1,6 @@
 """src/run/results.py — the result documents. Gates build these; nothing
 else constructs gate JSON by hand."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

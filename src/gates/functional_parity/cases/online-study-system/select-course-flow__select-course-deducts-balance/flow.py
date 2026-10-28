@@ -1,4 +1,5 @@
-"""E2E flow: online-study-system/select-course-flow__select-course-deducts-balance
+"""E2E flow:
+online-study-system/select-course-flow__select-course-deducts-balance
 
 The seeded student 小明 (balance 80, already enrolled in courses 1 and 4)
 selects 养猪入门 (course 7, price 10) from the all-courses page.  The app
@@ -8,6 +9,7 @@ to the selected-courses page where the new row must be visible.
 Credentials come from the harness-injected environment only
 (OSS_STUDENT_USER / OSS_STUDENT_PASSWORD) — never hardcoded here.
 """
+
 import os
 import re
 
@@ -61,7 +63,9 @@ def run(page, base_url):
         "expected redirect to /student/selectedCourse, got %s" % page.url
     )
     dom_after = _normalize(page.content())
-    selected_row = page.locator("tr", has_text=COURSE_NAME).first.inner_text().strip()
+    selected_row = (
+        page.locator("tr", has_text=COURSE_NAME).first.inner_text().strip()
+    )
     assert COURSE_NAME in selected_row, (
         "course %r missing from the selected-courses page" % COURSE_NAME
     )

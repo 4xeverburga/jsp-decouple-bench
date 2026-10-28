@@ -7,6 +7,7 @@ A task fills the prompt, hands it to the **harness** (the agent, or the
 thing driving one), and records what came back. It never starts the stack
 and never edits the sample itself.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -46,18 +47,21 @@ class Task:
         }
         write_text(ctx.paths.diff_patch, patch)
         write_json(ctx.paths.harness, harness_doc)
-        write_json(ctx.paths.task_json, {
-            "run_id": ctx.run_id,
-            "manifest_id": ctx.manifest["manifest_id"],
-            "manifest_version": ctx.manifest["version"],
-            "task_type": ctx.manifest["task_type"],
-            "prompt": ctx.manifest["prompt"],
-            "sample": {**sample, "location": preconditions["location"]},
-            "technologies": ctx.manifest.get("sample_technologies", []),
-            "bindings": ctx.bindings,
-            "scope": scope,
-            "preconditions": preconditions,
-            "harness": harness_doc,
-            "started_at": utcnow(),
-        })
+        write_json(
+            ctx.paths.task_json,
+            {
+                "run_id": ctx.run_id,
+                "manifest_id": ctx.manifest["manifest_id"],
+                "manifest_version": ctx.manifest["version"],
+                "task_type": ctx.manifest["task_type"],
+                "prompt": ctx.manifest["prompt"],
+                "sample": {**sample, "location": preconditions["location"]},
+                "technologies": ctx.manifest.get("sample_technologies", []),
+                "bindings": ctx.bindings,
+                "scope": scope,
+                "preconditions": preconditions,
+                "harness": harness_doc,
+                "started_at": utcnow(),
+            },
+        )
         return result

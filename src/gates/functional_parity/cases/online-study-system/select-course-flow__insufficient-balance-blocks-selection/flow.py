@@ -1,4 +1,5 @@
-"""E2E flow: online-study-system/select-course-flow__insufficient-balance-blocks-selection
+"""E2E flow:
+online-study-system/select-course-flow__insufficient-balance-blocks-selection
 
 The seeded student 小红 (balance 0) tries to select 从零开始入门炒股
 (course 8, price 74).  The app must reject the selection with the
@@ -11,6 +12,7 @@ DB note: the expected delta is intentionally EMPTY — rejection is the
 behavior, and no row may change.  db_state therefore carries no signal for
 this test; the assertion lives in the DOM (error page rendered).
 """
+
 import os
 import re
 

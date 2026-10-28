@@ -18,6 +18,7 @@ Credentials come from the harness-injected environment only
 (OSS_STUDENT_USER / OSS_TEACHER_USER / OSS_TEACHER_PASSWORD) — never
 hardcoded here.
 """
+
 import os
 import re
 
@@ -69,8 +70,7 @@ def run(page, base_url):
         page.wait_for_load_state("networkidle")
         current = page.input_value("input[name=progress]").strip()
         assert current == str(expected), (
-            "expected progress %d during arrange, got %r"
-            % (expected, current)
+            "expected progress %d during arrange, got %r" % (expected, current)
         )
 
     _goto(page, base_url + "/student/selectedCourse")

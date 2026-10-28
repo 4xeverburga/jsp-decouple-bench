@@ -17,6 +17,7 @@ join row (Question.remove(Watcher) mutates an in-memory list), so the
 Watcher row itself persists — the watch (insert) direction is the one
 with an observable DB delta, hence this behavior.
 """
+
 import re
 
 ARRANGE_EMAIL = "watcher@bench.test"
@@ -57,7 +58,8 @@ def _ask_question(page, base_url):
     page.fill("input[name=title]", QUESTION_TITLE)
     page.fill("textarea[name=description]", QUESTION_BODY)
     # tagNames is a select2 v3 widget (the real input is hidden); drive the UI:
-    # focus -> type >= 3 chars (minimumInputLength) -> wait for the AJAX result -> pick it
+    # focus -> type >= 3 chars (minimumInputLength) -> wait for the AJAX
+    # result -> pick it
     page.click(".select2-container")
     page.fill(".select2-input", QUESTION_TAGS)
     page.wait_for_selector(".select2-result-selectable", timeout=5000)

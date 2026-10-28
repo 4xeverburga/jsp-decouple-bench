@@ -5,6 +5,7 @@ host ports from the configured range. The bind-then-close probe leaves a
 sub-millisecond TOCTOU window; `stack.up()` fails loudly if the port is
 taken, which is the correct outcome (never silently share a port).
 """
+
 from __future__ import annotations
 
 import socket

@@ -7,6 +7,7 @@ and redirect to the course list where the new row must be visible.
 Credentials come from the harness-injected environment only
 (OSS_ADMIN_USER / OSS_ADMIN_PASSWORD) — never hardcoded here.
 """
+
 import os
 import re
 
@@ -70,7 +71,9 @@ def run(page, base_url):
         "expected redirect to /admin/showCourse, got %s" % page.url
     )
     dom_after = _normalize(page.content())
-    new_course_row = page.locator("tr", has_text=COURSE_NAME).first.inner_text().strip()
+    new_course_row = (
+        page.locator("tr", has_text=COURSE_NAME).first.inner_text().strip()
+    )
     assert COURSE_NAME in new_course_row, (
         "course %r missing from the course list" % COURSE_NAME
     )

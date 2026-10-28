@@ -11,6 +11,7 @@ would make the flow depend on the current date and break determinism.
 Credentials come from the harness-injected environment only
 (OSS_ADMIN_USER / OSS_ADMIN_PASSWORD) — never hardcoded here.
 """
+
 import os
 import re
 
@@ -73,7 +74,9 @@ def run(page, base_url):
         "expected redirect to /admin/showStudent, got %s" % page.url
     )
     dom_after = _normalize(page.content())
-    new_student_row = page.locator("tr", has_text=STUDENT_NAME).first.inner_text().strip()
+    new_student_row = (
+        page.locator("tr", has_text=STUDENT_NAME).first.inner_text().strip()
+    )
     assert STUDENT_NAME in new_student_row, (
         "student %r missing from the student list" % STUDENT_NAME
     )

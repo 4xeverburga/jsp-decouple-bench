@@ -16,6 +16,7 @@ rule is enforced, structurally:
 The supervisor — a consumer of this bench — is the party that knows about
 grading. The agent just gets a work order in a repository.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

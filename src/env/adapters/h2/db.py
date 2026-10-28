@@ -11,6 +11,7 @@ still requires an explicit `cmd` (typically
 bench. Keeping the technology name in the binding makes the manifest say
 `h2`, which is what a reader needs to know.
 """
+
 from __future__ import annotations
 
 from src.env.adapters.shell.db import ShellDatabase

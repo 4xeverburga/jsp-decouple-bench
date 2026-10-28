@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """main.py — the stable interface.
 
-    python3 main.py db init [--force]
-    python3 main.py db samples|manifests|runs
-    python3 main.py task run --manifest N --sample-location PATH
-    python3 main.py gate run --gate G --run RUN_ID
-    python3 main.py case capture --sample S --case C --sample-location PATH
-    python3 main.py pin --sample S --sample-location PATH
+python3 main.py db init [--force]
+python3 main.py db samples|manifests|runs
+python3 main.py task run --manifest N --sample-location PATH
+python3 main.py gate run --gate G --run RUN_ID
+python3 main.py case capture --sample S --case C --sample-location PATH
+python3 main.py pin --sample S --sample-location PATH
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,7 +19,7 @@ import time
 from pathlib import Path
 
 import config
-from src.errors import BenchError, NotFound
+from src.errors import BenchError, NotFoundError
 from src.gates import registry as gate_registry
 from src.gates.functional_parity.capture import capture
 from src.harness import registry as harness_registry
@@ -39,7 +40,7 @@ def _resolve_manifest(conn, sample: str, task: str) -> dict:
         (sample, task),
     ).fetchone()
     if row is None:
-        raise NotFound(f"no manifest for sample='{sample}' task='{task}'")
+        raise NotFoundError(f"no manifest for sample='{sample}' task='{task}'")
     return repo.manifest_by_id(conn, row["manifest_id"])
 
 
@@ -52,8 +53,9 @@ def _manifest_for(conn, args) -> dict:
 
 
 def _git(location: Path, *args: str) -> str:
-    proc = subprocess.run(["git", "-C", str(location), *args],
-                          capture_output=True, text=True)
+    proc = subprocess.run(
+        ["git", "-C", str(location), *args], capture_output=True, text=True
+    )
     if proc.returncode != 0:
         raise BenchError(f"git {' '.join(args)} failed: {proc.stderr.strip()}")
     return proc.stdout.strip()
@@ -66,9 +68,17 @@ def cmd_db(args) -> int:
         conn = store_db.connect(path)
         try:
             counts = {
-                table: conn.execute(f"SELECT count(*) AS c FROM {table}").fetchone()["c"]
-                for table in ("technology", "sample", "task_type",
-                              "task_manifest", "task_run", "gate")
+                table: conn.execute(
+                    f"SELECT count(*) AS c FROM {table}"
+                ).fetchone()["c"]
+                for table in (
+                    "technology",
+                    "sample",
+                    "task_type",
+                    "task_manifest",
+                    "task_run",
+                    "gate",
+                )
             }
         finally:
             conn.close()
@@ -80,24 +90,32 @@ def cmd_db(args) -> int:
     try:
         if args.action == "samples":
             for s in repo.samples(conn):
-                print(f"{s['sample_id']:>3}  {s['slug']:<22} "
-                      f"{s['branch']}@{s['commit_sha'][:10]}  "
-                      f"{s['entrypoint'] or '-'}  {s['target_url'] or '-'}")
+                print(
+                    f"{s['sample_id']:>3}  {s['slug']:<22} "
+                    f"{s['branch']}@{s['commit_sha'][:10]}  "
+                    f"{s['entrypoint'] or '-'}  {s['target_url'] or '-'}"
+                )
         elif args.action == "manifests":
             for m in repo.manifests(conn):
                 adapters = ", ".join(
-                    f"{cap}={bind.get('adapter')}" for cap, bind in m["bindings"].items())
-                print(f"{m['manifest_id']:>3}  {m['sample']['slug']:<22} "
-                      f"{m['name']:<24} {m['task_type']:<20} v{m['version']}  "
-                      f"{len(m['scope'].get('cases') or [])} case(s)")
+                    f"{cap}={bind.get('adapter')}"
+                    for cap, bind in m["bindings"].items()
+                )
+                print(
+                    f"{m['manifest_id']:>3}  {m['sample']['slug']:<22} "
+                    f"{m['name']:<24} {m['task_type']:<20} v{m['version']}  "
+                    f"{len(m['scope'].get('cases') or [])} case(s)"
+                )
                 print(f"     adapters: {adapters}")
         elif args.action == "runs":
             rows = repo.runs(conn)
             if not rows:
                 print("no runs yet")
             for r in rows:
-                print(f"{r['run_id']}  {r['started_at']}  {r['sample']}/"
-                      f"{r['task']}  harness={r['harness']}")
+                print(
+                    f"{r['run_id']}  {r['started_at']}  {r['sample']}/"
+                    f"{r['task']}  harness={r['harness']}"
+                )
     finally:
         conn.close()
     return 0
@@ -109,7 +127,8 @@ def cmd_task_run(args) -> int:
     try:
         manifest = _manifest_for(conn, args)
         harness = harness_registry.resolve(
-            args.harness, {"cmd": args.harness_cmd} if args.harness_cmd else {})
+            args.harness, {"cmd": args.harness_cmd} if args.harness_cmd else {}
+        )
         run_id = new_run_id()
         paths = RunPaths.create(run_id)
         ctx = RunContext(
@@ -118,16 +137,26 @@ def cmd_task_run(args) -> int:
             manifest=manifest,
             sample_location=Path(args.sample_location).expanduser(),
         )
-        repo.insert_run(conn, run_id, manifest["manifest_id"], utcnow(),
-                        harness.name, args.environment)
+        repo.insert_run(
+            conn,
+            run_id,
+            manifest["manifest_id"],
+            utcnow(),
+            harness.name,
+            args.environment,
+        )
 
         started = time.monotonic()
         result = None
         try:
-            result = task_registry.resolve(manifest["task_type"]).prepare(ctx, harness)
+            result = task_registry.resolve(manifest["task_type"]).prepare(
+                ctx, harness
+            )
         finally:
             cost = args.estimated_cost or (result.cost_usd if result else None)
-            repo.finish_run(conn, run_id, utcnow(), time.monotonic() - started, cost)
+            repo.finish_run(
+                conn, run_id, utcnow(), time.monotonic() - started, cost
+            )
     finally:
         conn.close()
 
@@ -169,8 +198,10 @@ def cmd_case_capture(args) -> int:
         manifest=manifest,
         sample_location=Path(args.sample_location).expanduser(),
     )
-    print(f"captured {args.sample}/{args.case} -> "
-          f"{capture(ctx, args.case, keep_stack=args.keep_stack)}")
+    print(
+        f"captured {args.sample}/{args.case} -> "
+        f"{capture(ctx, args.case, keep_stack=args.keep_stack)}"
+    )
     return 0
 
 
@@ -180,7 +211,13 @@ def cmd_pin(args) -> int:
     commit = _git(location, "rev-parse", "HEAD")
     branch = _git(location, "rev-parse", "--abbrev-ref", "HEAD")
     if branch == "HEAD":
-        branch = _git(location, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
+        branch = _git(
+            location,
+            "rev-parse",
+            "--abbrev-ref",
+            "--symbolic-full-name",
+            "@{u}",
+        )
     conn = store_db.connect()
     try:
         updated = conn.execute(
@@ -191,46 +228,77 @@ def cmd_pin(args) -> int:
     finally:
         conn.close()
     if not updated:
-        raise NotFound(f"no sample with slug '{args.sample}'")
+        raise NotFoundError(f"no sample with slug '{args.sample}'")
     print(f"{args.sample} pinned to {branch}@{commit}")
     return 0
 
 
 # --- argument parsing --------------------------------------------------------
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="bench", description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        prog="bench",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = parser.add_subparsers(dest="verb", required=True)
 
     db = sub.add_parser("db", help="registry inspection / initialisation")
     db_sub = db.add_subparsers(dest="action", required=True)
-    db_init = db_sub.add_parser("init", help="create bench.db from schema.sql + seeds")
-    db_init.add_argument("--force", action="store_true", help="delete and rebuild")
+    db_init = db_sub.add_parser(
+        "init", help="create bench.db from schema.sql + seeds"
+    )
+    db_init.add_argument(
+        "--force", action="store_true", help="delete and rebuild"
+    )
     db_init.set_defaults(func=cmd_db)
     for action in ("samples", "manifests", "runs"):
-        db_sub.add_parser(action, help=f"list {action}").set_defaults(func=cmd_db)
+        db_sub.add_parser(action, help=f"list {action}").set_defaults(
+            func=cmd_db
+        )
 
     task = sub.add_parser("task", help="start a run")
     task_sub = task.add_subparsers(dest="action", required=True)
-    task_run = task_sub.add_parser("run", help="prepare a run, print its run_id")
+    task_run = task_sub.add_parser(
+        "run", help="prepare a run, print its run_id"
+    )
     task_run.add_argument("--manifest", type=int, help="manifest_id")
-    task_run.add_argument("--sample", help="sample slug (alternative to --manifest)")
-    task_run.add_argument("--task", help="feature boundary, e.g. vote-flow (with --sample)")
-    task_run.add_argument("--sample-location", required=True,
-                          help="where the sample checkout lives on this filesystem")
-    task_run.add_argument("--harness", default=config.DEFAULT_HARNESS,
-                          help="agent harness: " + ", ".join(harness_registry.names()))
-    task_run.add_argument("--harness-cmd", default=None,
-                          help="override the harness command line")
-    task_run.add_argument("--environment", default=None,
-                          help="free-text description of the machine/image")
-    task_run.add_argument("--estimated-cost", type=float, default=None,
-                          help="USD, if the harness reports it")
+    task_run.add_argument(
+        "--sample", help="sample slug (alternative to --manifest)"
+    )
+    task_run.add_argument(
+        "--task", help="feature boundary, e.g. vote-flow (with --sample)"
+    )
+    task_run.add_argument(
+        "--sample-location",
+        required=True,
+        help="where the sample checkout lives on this filesystem",
+    )
+    task_run.add_argument(
+        "--harness",
+        default=config.DEFAULT_HARNESS,
+        help="agent harness: " + ", ".join(harness_registry.names()),
+    )
+    task_run.add_argument(
+        "--harness-cmd", default=None, help="override the harness command line"
+    )
+    task_run.add_argument(
+        "--environment",
+        default=None,
+        help="free-text description of the machine/image",
+    )
+    task_run.add_argument(
+        "--estimated-cost",
+        type=float,
+        default=None,
+        help="USD, if the harness reports it",
+    )
     task_run.set_defaults(func=cmd_task_run)
 
     gate = sub.add_parser("gate", help="evaluate a run")
     gate_sub = gate.add_subparsers(dest="action", required=True)
-    gate_run = gate_sub.add_parser("run", help="evaluate and write gates/<id>.json")
+    gate_run = gate_sub.add_parser(
+        "run", help="evaluate and write gates/<id>.json"
+    )
     gate_run.add_argument("--gate", required=True)
     gate_run.add_argument("--run", required=True, dest="run")
     gate_run.add_argument("--gate-version", type=int, default=None)
@@ -238,7 +306,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     case = sub.add_parser("case", help="freeze a case's golden")
     case_sub = case.add_subparsers(dest="action", required=True)
-    case_capture = case_sub.add_parser("capture", help="capture expect.json + images")
+    case_capture = case_sub.add_parser(
+        "capture", help="capture expect.json + images"
+    )
     case_capture.add_argument("--sample", required=True)
     case_capture.add_argument("--case", required=True)
     case_capture.add_argument("--sample-location", required=True)

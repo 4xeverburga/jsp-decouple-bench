@@ -13,6 +13,7 @@ Options (CLI `--harness-cmd` wins over `BENCH_HARNESS_CMD`):
     cmd        shell command to run (required)
     timeout_s  default HARNESS_TIMEOUT_S
 """
+
 from __future__ import annotations
 
 import os
@@ -37,7 +38,9 @@ class CommandHarness:
                 f"harness '{self.name}' needs a command: pass --harness-cmd "
                 f"or set BENCH_HARNESS_CMD"
             )
-        self.timeout_s = int(self.options.get("timeout_s", config.HARNESS_TIMEOUT_S))
+        self.timeout_s = int(
+            self.options.get("timeout_s", config.HARNESS_TIMEOUT_S)
+        )
 
     @staticmethod
     def _clean_env() -> dict[str, str]:
@@ -46,8 +49,11 @@ class CommandHarness:
         The supervisor's shell may well have `BENCH_*` exported; inheriting it
         would tell an agent that runs `env` exactly what is going on.
         """
-        return {k: v for k, v in os.environ.items()
-                if not k.upper().startswith("BENCH_")}
+        return {
+            k: v
+            for k, v in os.environ.items()
+            if not k.upper().startswith("BENCH_")
+        }
 
     def run(self, task: HarnessTask, log_dir: Path) -> HarnessResult:
         log_dir = Path(log_dir)
@@ -59,10 +65,18 @@ class CommandHarness:
         try:
             proc = subprocess.run(
                 ["bash", "-lc", self.cmd],
-                cwd=str(task.cwd), input=prompt, text=True, capture_output=True,
-                env=self._clean_env(), timeout=self.timeout_s,
+                cwd=str(task.cwd),
+                input=prompt,
+                text=True,
+                capture_output=True,
+                env=self._clean_env(),
+                timeout=self.timeout_s,
             )
-            exit_code, stdout, stderr = proc.returncode, proc.stdout, proc.stderr
+            exit_code, stdout, stderr = (
+                proc.returncode,
+                proc.stdout,
+                proc.stderr,
+            )
         except subprocess.TimeoutExpired as exc:
             exit_code = 124
             stdout = exc.stdout if isinstance(exc.stdout, str) else ""
@@ -74,4 +88,6 @@ class CommandHarness:
             f"({duration:.1f}s)\n\n--- stdout ---\n{stdout}\n"
             f"--- stderr ---\n{stderr}"
         )
-        return HarnessResult(exit_code=exit_code, duration_s=duration, log_path=log)
+        return HarnessResult(
+            exit_code=exit_code, duration_s=duration, log_path=log
+        )

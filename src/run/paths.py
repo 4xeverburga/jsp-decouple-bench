@@ -1,5 +1,6 @@
 """src/run/paths.py — one directory per run, keyed by run_id. Nothing else
 in the artifacts tree is shared between runs."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

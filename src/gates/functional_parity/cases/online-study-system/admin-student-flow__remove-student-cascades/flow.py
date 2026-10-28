@@ -8,6 +8,7 @@ both enrollment rows, the student profile and the login account disappear.
 Credentials come from the harness-injected environment only
 (OSS_ADMIN_USER / OSS_ADMIN_PASSWORD) — never hardcoded here.
 """
+
 import os
 import re
 

@@ -5,6 +5,7 @@ emits one header line then tab-separated rows, with NULL rendered as the
 literal `NULL`. Keeping the parser in one place means mysql, postgres and
 the generic shell adapter produce byte-identical comparisons.
 """
+
 from __future__ import annotations
 
 NULL = "NULL"
@@ -21,9 +22,14 @@ def parse_batch(stdout: str) -> list[dict[str, str | None]]:
         row: dict[str, str | None] = {}
         for index, column in enumerate(columns):
             raw = values[index] if index < len(values) else NULL
-            row[column] = None if raw == NULL else (
-                raw.replace("\\n", "\n").replace("\\t", "\t").replace("\\\\", "\\")
+            row[column] = (
+                None
+                if raw == NULL
+                else (
+                    raw.replace("\\n", "\n")
+                    .replace("\\t", "\t")
+                    .replace("\\\\", "\\")
+                )
             )
         rows.append(row)
     return rows
-    

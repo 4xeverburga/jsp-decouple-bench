@@ -60,7 +60,9 @@ names to `Task`:
 
 ```python
 class Task:
-    def prepare(self, ctx: RunContext, harness: HarnessPort) -> HarnessResult: ...
+    def prepare(
+        self, ctx: RunContext, harness: HarnessPort
+    ) -> HarnessResult: ...
 ```
 
 `prepare` asserts the sample checkout, hands the prompt to the **harness**,
@@ -118,7 +120,7 @@ is the whole point: `mysql@1` serves `mamute` and `online-study-system`
 without either sample being mentioned in `src/`.
 
 `src/env/registry.py` resolves `"mysql@1"` → the adapter class, raises
-`UnknownAdapter` otherwise, and checks the adapter declares the capability
+`UnknownAdapterError` otherwise, and checks the adapter declares the capability
 the binding claims.
 
 ## `src/harness` — agent harnesses
@@ -129,12 +131,15 @@ receives the prompt and does the work.
 ```python
 @dataclass(frozen=True)
 class HarnessTask:
-    prompt: str      # TASK_MANIFEST.prompt — the whole of it
-    cwd: Path        # the sample checkout, already pinned
-    def render(self) -> str: ...   # exactly what the agent reads
+    prompt: str  # TASK_MANIFEST.prompt — the whole of it
+    cwd: Path  # the sample checkout, already pinned
+
+    def render(self) -> str: ...  # exactly what the agent reads
+
 
 class HarnessPort(Protocol):
     name: str
+
     def run(self, task: HarnessTask, log_dir: Path) -> HarnessResult: ...
 ```
 

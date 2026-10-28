@@ -9,6 +9,7 @@ bindings_json options:
     database  required
     list_tables_sql  default: the public schema's tables
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -18,7 +19,8 @@ from src.env.adapters.tabular import parse_batch
 
 class PostgresDatabase:
     DEFAULT_LIST_TABLES_SQL = (
-        "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename"
+        "SELECT tablename FROM pg_tables "
+        "WHERE schemaname='public' ORDER BY tablename"
     )
 
     def __init__(self, ctx: Any, options: dict[str, Any]):
@@ -27,16 +29,33 @@ class PostgresDatabase:
         self.service = options.get("service", "db")
         self.user = options.get("user", "postgres")
         self.database = options.get("database")
-        self.list_tables_sql = options.get("list_tables_sql", self.DEFAULT_LIST_TABLES_SQL)
+        self.list_tables_sql = options.get(
+            "list_tables_sql", self.DEFAULT_LIST_TABLES_SQL
+        )
         if not self.database:
             raise ValueError("postgres@1 requires options.database")
 
     def _argv(self) -> list[str]:
-        return ["psql", "-U", self.user, "-d", self.database,
-                "-X", "-A", "-F", "\t", "-P", "footer=off", "-P", "null=NULL"]
+        return [
+            "psql",
+            "-U",
+            self.user,
+            "-d",
+            self.database,
+            "-X",
+            "-A",
+            "-F",
+            "\t",
+            "-P",
+            "footer=off",
+            "-P",
+            "null=NULL",
+        ]
 
     def _query(self, sql: str) -> list[dict[str, Any]]:
-        return parse_batch(self.ctx.stack().exec_(self.service, self._argv(), stdin=sql))
+        return parse_batch(
+            self.ctx.stack().exec_(self.service, self._argv(), stdin=sql)
+        )
 
     def list_tables(self) -> list[str]:
         rows = self._query(self.list_tables_sql)

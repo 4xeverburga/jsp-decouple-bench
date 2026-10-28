@@ -4,6 +4,7 @@
 Provenance comes from `SAMPLE.commit_sha`; this module makes the worktree
 match it, or refuses to run. It never stashes, resets or force-checks-out.
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -15,7 +16,8 @@ from src.errors import PreconditionError
 def _git(location: Path, *args: str) -> str:
     proc = subprocess.run(
         ["git", "-C", str(location), *args],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     if proc.returncode != 0:
         raise PreconditionError(
@@ -24,8 +26,9 @@ def _git(location: Path, *args: str) -> str:
     return proc.stdout.strip()
 
 
-def ensure_pinned(location: Path, commit_sha: str,
-                  entrypoint: str | None = None) -> dict:
+def ensure_pinned(
+    location: Path, commit_sha: str, entrypoint: str | None = None
+) -> dict:
     location = Path(location).expanduser().resolve()
     if not location.is_dir():
         raise PreconditionError(f"sample location does not exist: {location}")
@@ -38,16 +41,21 @@ def ensure_pinned(location: Path, commit_sha: str,
     head = _git(location, "rev-parse", "HEAD")
     moved = False
     if head != commit_sha:
-        # Safe, non-destructive: no branch is moved, the pin is a detached HEAD.
+        # Safe, non-destructive: no branch moves, the pin is a detached HEAD.
         _git(location, "checkout", "--detach", commit_sha)
         head = _git(location, "rev-parse", "HEAD")
         moved = True
 
-    dirty = [line for line in _git(location, "status", "--porcelain").splitlines() if line]
+    dirty = [
+        line
+        for line in _git(location, "status", "--porcelain").splitlines()
+        if line
+    ]
     if dirty:
         raise PreconditionError(
             "sample worktree is dirty at the pinned commit; refusing to run "
-            f"({location}). Commit, revert or clone fresh. First entries: {dirty[:5]}"
+            f"({location}). Commit, revert or clone fresh. "
+            f"First entries: {dirty[:5]}"
         )
 
     if entrypoint and not (location / entrypoint).is_file():
@@ -71,7 +79,8 @@ def diff(location: Path, base_commit: str) -> str:
     location = Path(location).expanduser().resolve()
     proc = subprocess.run(
         ["git", "-C", str(location), "diff", "--binary", base_commit],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     if proc.returncode != 0:
         raise PreconditionError(f"git diff failed: {proc.stderr.strip()}")

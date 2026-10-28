@@ -1,7 +1,8 @@
 """E2E flow: online-study-system/exam-flow__save-exam-marks-has-exam
 
-The seeded student 小明 completes all 20 periods of course 1 (C语言从入门到放弃)
-by clicking 下一学时 twenty times, then takes the exam (考试) and submits the
+The seeded student 小明 completes all 20 periods of course 1
+(C语言从入门到放弃) by clicking 下一学时 twenty times, then takes the
+exam (考试) and submits the
 paper (提交试卷).  The enrollment row must end with progress = 20 (the course's
 full period count) and has_exam = 1.
 
@@ -11,6 +12,7 @@ long arrange is part of the behavior under test.
 Credentials come from the harness-injected environment only
 (OSS_STUDENT_USER / OSS_STUDENT_PASSWORD) — never hardcoded here.
 """
+
 import os
 import re
 
@@ -85,12 +87,10 @@ def run(page, base_url):
     page.wait_for_load_state("networkidle")
 
     # --- after: back on the selected-courses view, progress complete ------
-    progress_after = page.locator(
-        "tr", has_text=COURSE_NAME
-    ).first.inner_text().strip()
-    assert COURSE_NAME in progress_after, (
-        "course row missing after saveExam"
+    progress_after = (
+        page.locator("tr", has_text=COURSE_NAME).first.inner_text().strip()
     )
+    assert COURSE_NAME in progress_after, "course row missing after saveExam"
     dom_after = _normalize(page.content())
 
     return {

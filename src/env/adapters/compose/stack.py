@@ -8,6 +8,7 @@ Host ports come from the run, never from the sample: the sample publishes
 adapter exports both before every compose call, so two concurrent runs
 cannot collide. Each run also gets its own compose project name.
 """
+
 from __future__ import annotations
 
 import json
@@ -30,17 +31,25 @@ class ComposeStack:
         entrypoint = ctx.sample.get("entrypoint") or config.COMPOSE_FILE_NAME
         self.compose_file = self.location / entrypoint
         self.project = (config.COMPOSE_PROJECT_PREFIX + ctx.run_id)[:63]
-        self.timeout_s = int(options.get("timeout_s", config.STACK_UP_TIMEOUT_S))
+        self.timeout_s = int(
+            options.get("timeout_s", config.STACK_UP_TIMEOUT_S)
+        )
         self._ports: dict[str, int] = {}
-        self._file_env = config.load_env_file(self.location / config.SAMPLE_ENV_FILE)
+        self._file_env = config.load_env_file(
+            self.location / config.SAMPLE_ENV_FILE
+        )
 
     # --- process plumbing ----------------------------------------------------
     def _cmd(self, *args: str) -> list[str]:
         return [
-            config.DOCKER, config.COMPOSE,
-            "-p", self.project,
-            "-f", str(self.compose_file),
-            "--project-directory", str(self.location),
+            config.DOCKER,
+            config.COMPOSE,
+            "-p",
+            self.project,
+            "-f",
+            str(self.compose_file),
+            "--project-directory",
+            str(self.location),
             *args,
         ]
 
@@ -52,16 +61,22 @@ class ComposeStack:
             env["BENCH_DB_PORT"] = str(self._ports["db"])
         return env
 
-    def _run(self, *args: str, stdin: str | None = None,
-             check: bool = True) -> subprocess.CompletedProcess:
+    def _run(
+        self, *args: str, stdin: str | None = None, check: bool = True
+    ) -> subprocess.CompletedProcess:
         proc = subprocess.run(
-            self._cmd(*args), cwd=str(self.location), env=self._env(),
-            input=stdin, capture_output=True, text=True,
+            self._cmd(*args),
+            cwd=str(self.location),
+            env=self._env(),
+            input=stdin,
+            capture_output=True,
+            text=True,
         )
         if check and proc.returncode != 0:
             raise GateError(
                 f"compose {' '.join(args)} failed ({proc.returncode}) in "
-                f"{self.project}: {(proc.stderr or proc.stdout).strip()[-2000:]}"
+                f"{self.project}: "
+                f"{(proc.stderr or proc.stdout).strip()[-2000:]}"
             )
         return proc
 
@@ -70,7 +85,9 @@ class ComposeStack:
             [config.DOCKER, *args], capture_output=True, text=True
         )
         if proc.returncode != 0:
-            raise GateError(f"docker {' '.join(args)} failed: {proc.stderr.strip()}")
+            raise GateError(
+                f"docker {' '.join(args)} failed: {proc.stderr.strip()}"
+            )
         return proc.stdout
 
     # --- lifecycle -----------------------------------------------------------
@@ -84,12 +101,17 @@ class ComposeStack:
         if not self.compose_file.is_file():
             raise GateError(
                 f"sample {self.ctx.sample['slug']} declares entrypoint "
-                f"'{self.compose_file.name}' but the pinned commit has no such file "
+                f"'{self.compose_file.name}' but the pinned commit has no "
+                "such file "
                 f"({self.compose_file}). Add it to the sample and re-pin."
             )
         self._allocate()
         self._run(
-            "up", "-d", "--wait", "--wait-timeout", str(self.timeout_s),
+            "up",
+            "-d",
+            "--wait",
+            "--wait-timeout",
+            str(self.timeout_s),
             "--remove-orphans",
         )
         return self.base_url()
@@ -109,7 +131,11 @@ class ComposeStack:
         http_port = self._ports.get("http")
         target = self.ctx.sample.get("target_url")
         if not target:
-            target = f"http://localhost:{http_port}" if http_port else "http://localhost:80"
+            target = (
+                f"http://localhost:{http_port}"
+                if http_port
+                else "http://localhost:80"
+            )
         if not http_port:
             return target
         parsed = urlparse(target)
@@ -124,7 +150,9 @@ class ComposeStack:
             parsed = json.loads(out)
             return parsed if isinstance(parsed, list) else [parsed]
         except json.JSONDecodeError:
-            return [json.loads(line) for line in out.splitlines() if line.strip()]
+            return [
+                json.loads(line) for line in out.splitlines() if line.strip()
+            ]
 
     def inspect(self) -> list[dict[str, Any]]:
         ids = [row["ID"] for row in self.ps() if row.get("ID")]
@@ -136,5 +164,7 @@ class ComposeStack:
         out = self._run("config", "--format", "json").stdout
         return json.loads(out)
 
-    def exec_(self, service: str, argv: list[str], stdin: str | None = None) -> str:
+    def exec_(
+        self, service: str, argv: list[str], stdin: str | None = None
+    ) -> str:
         return self._run("exec", "-T", service, *argv, stdin=stdin).stdout

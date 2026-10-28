@@ -15,6 +15,7 @@ timeout. The orchestrator resets the DB between test dirs
 (environments/openclinica/scripts/reset-pristine.sh), so consecutive runs
 are identical.
 """
+
 import os
 import re
 

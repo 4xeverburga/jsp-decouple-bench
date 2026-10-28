@@ -11,6 +11,7 @@ configured, the verdict is `pending` and `value` is null.
 Oracle contract (when it lands): a command reading the trace document on
 stdin and printing `{"value": <0..1>, "notes": [...]}` on stdout.
 """
+
 from __future__ import annotations
 
 import json
@@ -30,8 +31,13 @@ class TraceSimilarity:
         self.definition = definition
         self._started = 0.0
 
-    def _result(self, verdict: str, value: float | None,
-                details: list[CaseResult], notes: list[str]) -> GateResult:
+    def _result(
+        self,
+        verdict: str,
+        value: float | None,
+        details: list[CaseResult],
+        notes: list[str],
+    ) -> GateResult:
         return GateResult(
             gate_id=self.gate_id,
             gate_version=self.definition["version"],
@@ -51,33 +57,52 @@ class TraceSimilarity:
 
         if not traces.is_file():
             return self._result(
-                "pending", None, [],
-                [f"no trace capture for this run ({traces} absent); "
-                 "the trace adapter is not implemented yet"],
+                "pending",
+                None,
+                [],
+                [
+                    f"no trace capture for this run ({traces} absent); "
+                    "the trace adapter is not implemented yet"
+                ],
             )
 
         if config.TRACE_ORACLE == "none" or not config.TRACE_ORACLE_CMD:
             return self._result(
-                "pending", None, [],
-                ["traces present but no oracle configured "
-                 "(set BENCH_TRACE_ORACLE / BENCH_TRACE_ORACLE_CMD)"],
+                "pending",
+                None,
+                [],
+                [
+                    "traces present but no oracle configured "
+                    "(set BENCH_TRACE_ORACLE / BENCH_TRACE_ORACLE_CMD)"
+                ],
             )
 
         proc = subprocess.run(
             ["bash", "-c", config.TRACE_ORACLE_CMD],
-            input=traces.read_text(), capture_output=True, text=True,
+            input=traces.read_text(),
+            capture_output=True,
+            text=True,
         )
         if proc.returncode != 0:
             return self._result(
-                "error", None, [],
-                [f"oracle failed ({proc.returncode}): {proc.stderr.strip()[-1000:]}"],
+                "error",
+                None,
+                [],
+                [
+                    f"oracle failed ({proc.returncode}): "
+                    f"{proc.stderr.strip()[-1000:]}"
+                ],
             )
         try:
             payload = json.loads(proc.stdout)
             value = float(payload["value"])
         except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
-            return self._result("error", None, [],
-                                [f"oracle output is not {{'value': float}}: {exc}"])
+            return self._result(
+                "error",
+                None,
+                [],
+                [f"oracle output is not {{'value': float}}: {exc}"],
+            )
 
         threshold = self.definition["threshold"]
         if self.definition["direction"] == "maximize":
@@ -87,7 +112,12 @@ class TraceSimilarity:
         return self._result(
             "pass" if passed else "fail",
             value,
-            [CaseResult(case="oracle", verdict="pass" if passed else "fail",
-                        detail=f"value={value} threshold={threshold}")],
+            [
+                CaseResult(
+                    case="oracle",
+                    verdict="pass" if passed else "fail",
+                    detail=f"value={value} threshold={threshold}",
+                )
+            ],
             list(payload.get("notes") or []),
         )

@@ -14,6 +14,7 @@ has no drop widget).
 Credentials come from the harness-injected environment only
 (OSS_STUDENT_USER / OSS_STUDENT_PASSWORD) — never hardcoded here.
 """
+
 import os
 import re
 

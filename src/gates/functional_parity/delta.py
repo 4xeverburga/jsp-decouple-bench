@@ -4,6 +4,7 @@ Ported verbatim in behaviour from the pre-rewrite capture tooling: the
 `expected_delta.json` files were produced by exactly this algorithm, so the
 comparison stays meaningful.
 """
+
 from __future__ import annotations
 
 import json
@@ -18,8 +19,12 @@ def _sort(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(rows, key=lambda row: canonical(row))
 
 
-def delta_table(before: list[dict[str, Any]], after: list[dict[str, Any]],
-                key_columns: list[str], ignore_columns: list[str]) -> dict[str, Any]:
+def delta_table(
+    before: list[dict[str, Any]],
+    after: list[dict[str, Any]],
+    key_columns: list[str],
+    ignore_columns: list[str],
+) -> dict[str, Any]:
     ignored = set(ignore_columns or [])
     strip = lambda row: {c: v for c, v in row.items() if c not in ignored}  # noqa: E731
     key_of = lambda row: canonical([row.get(c) for c in key_columns])  # noqa: E731
@@ -39,10 +44,12 @@ def delta_table(before: list[dict[str, Any]], after: list[dict[str, Any]],
                 if column not in ignored and previous.get(column) != value
             }
             if changes:
-                updated.append({
-                    "key": {c: row.get(c) for c in key_columns},
-                    "changes": changes,
-                })
+                updated.append(
+                    {
+                        "key": {c: row.get(c) for c in key_columns},
+                        "changes": changes,
+                    }
+                )
     for key, row in before_by_key.items():
         if key not in after_by_key:
             deleted.append(strip(row))
