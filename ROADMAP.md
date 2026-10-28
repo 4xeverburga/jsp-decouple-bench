@@ -1,13 +1,13 @@
 # ROADMAP — JSP-Decouple-Bench
 
 **Resume here.** Branch `refactor/harness-ports-and-adapters`, last commit
-`84608ea`, worktree clean, not pushed. Everything below is either *done*
+`a036e67`, pushed, worktree clean. Everything below is either *done*
 (verified), *next* (ordered, with commands), or *considered* (with a cost).
 
-Size today: **2 432 lines of harness code** + **1 653 lines of case
-scripts** (`flow.py` × 17, data not logic). Breakdown: `main.py` 269,
-`src/env` 561, `src/gates` 575, `src/run` 355, `src/store` 252,
-`src/harness` 238, `src/tasks` 80.
+Size today: **3 207 lines of harness code** + **1 739 lines of case
+scripts** (`flow.py` × 17, data not logic). Breakdown: `main.py`+`config.py`
+479, `src/env` 811, `src/gates` 801 (cases excluded), `src/run` 449,
+`src/store` 326, `src/harness` 233, `src/tasks` 108.
 
 ---
 
@@ -19,45 +19,115 @@ blind to being measured.
 
 | thing | state |
 |---|---|
-| `bench.db` (7 tables + `v_run`, `PRAGMA user_version` guard) | 3 samples, 13 manifests, 3 gates, 0 runs |
+| `bench.db` (7 tables + `v_run`, `PRAGMA user_version` = 3) | 3 samples, 14 manifests, 3 gates, 18 runs |
 | `src/gates/functional_parity/cases/` | 17 cases (case.json + expect.json + flow.py + images) |
-| gates | `functional_parity` ✔, `network_isolation` ✔, `trace_similarity` **pending** |
+| task types | 2, each with a `base_prompt` prepended to every ask of that type |
+| gates | `functional_parity` ✔, `network_isolation` ✔ (grades the pinned compose), `trace_similarity` **pending** |
 | environment adapters (`src/env`) | compose, playwright, mysql, postgres, h2, shell |
 | agent harnesses (`src/harness`) | command, claude-code, opencode, pi |
 | docs | README, AGENTS (supervisor), specs/{er,modules,behavior}, test-slice skill |
 
 Verified by running it, not by reading it:
 
-- `make db-init` → 3 / 13 / 3, and the drift guard refuses a stale schema.
+- `make db-init` → 3 / 14 / 3, and the drift guard refuses a stale schema.
 - `make task` → run id, `task.json`, `harness.json`, `diff.patch`, `TASK_RUN` row.
 - dirty sample → `PreconditionError`, no partial run trusted.
-- `HARNESS=command` with an env-dumping agent → prompt byte-identical to the
-  manifest prompt, **zero `BENCH_*` variables**, `PATH` intact.
+- `HARNESS=command` with an env-dumping agent → the composed work order
+  (base prompt + ask) reaches the agent verbatim, **zero `BENCH_*`
+  variables**, `PATH` intact.
+- a no-op run on `mamute/answer-flow` → `functional_parity` **pass**,
+  `value 1.0`, empty `diff.patch`; repeated five times, including after the
+  schema rebuild.
+- the first graded agent run (opencode, 36 min, real edits) → **fail**, for
+  an AJAX handler that returned early before sending anything: the gate was
+  right, the submission was inert.
 - gates on a sample with no compose → `error` / `value: null` / exit 2
   (never a fabricated score); `trace_similarity` → `pending` / exit 3.
 
-**Not yet proven: a green `functional_parity` on an untouched tree (no-op agent).** That is
-step 1 below and the only number that means anything so far.
+The no-op run is the number everything else rests on, and it is green. Two
+lessons came out of the first real score and are decided in §5: a flow
+assertion is a **fail**, not an `error`; and a failed case leaves a
+screenshot at `out/runs/<id>/images/<gate>/<case>.png`.
 
-## 2. Tomorrow, in order
+## 2. Next, in order
 
-### 2.1 The self-check (do this first)
+### 2.1 Parallel-safe runs: one git worktree per run
 
-Both samples now commit their stack at the pin (`git show
-<sha>:compose.yaml` renders), so nothing needs to be committed to run the
-self-check. What blocks it is the dirty worktree an agent run left behind —
-the harness refuses to start from a dirty checkout. When migrating a
+Today the harness works inside `SAMPLE_LOCATION` itself. Consequences: an
+agent dirties the sample repo, the next run refuses to start (AGENTS rule
+5), two agents cannot be compared in parallel, and a gate run against a
+tree someone else is editing measures the wrong thing. The UUID, the
+per-run ports and the atomic writes already make everything *else*
+parallel-safe (D10); the sample tree is the last shared mutable object.
+
+Proposal: one `git worktree` per run.
+
+```bash
+git -C ../mamute worktree add --detach \
+    out/runs/<run_id>/sample <commit_sha>
+# agent runs with cwd = that worktree; diff, gates and screenshots read it
+git -C ../mamute worktree remove --force out/runs/<run_id>/sample
+```
+
+A worktree rather than a clone because it shares the object database (no
+copy, instant), `git diff <sha>` behaves identically, `git status` inside it
+is that run's alone, and the sample repo stays clean — `make task` no longer
+needs a vanilla tree to start from.
+
+Settled by this: `SAMPLE_LOCATION` keeps meaning "the repo holding the pin";
+the per-run worktree becomes `ctx.sample_location` for the task and every
+gate, and `task.json` records both.
+
+Not settled yet, and each one decides an edge:
+
+- **Untracked-but-needed files.** A fresh worktree only has committed
+  files. `mamute` commits `.env`; a sample whose `.env` is untracked would
+  start credential-less. Either require the file at the pin or copy it in.
+- **Cold build cache.** `target/`, `node_modules/` and the generated assets
+  are gitignored, so every run pays a full compile. Accept it, or seed the
+  worktree from a warm template.
+- **Re-grading an old run.** Today `make gate RUN_ID=…` works because the
+  tree is still there. With the worktree removed after the run, an old run
+  can only be re-graded by replaying `diff.patch` (§2.8) or by keeping the
+  worktree until the run is pruned.
+- **Cleanup.** A crashed run leaves a registered worktree; add `make prune`
+  and a `KEEP_WORKTREE=1` knob, mirroring `KEEP_STACK`.
+
+Cost: ~50 lines — `src/run` gains worktree create/remove, `RunContext`
+carries both paths.
+
+### 2.2 The remaining flows still wait for a navigation
+
+16 of the 17 `flow.py` scripts wrap their graded action in
+`expect_navigation(...)` — that is the *pristine* transport, not the
+behaviour. The task asks for a JSON call that updates the page, which by
+design performs no navigation, so a correct submission is graded as broken.
+
+`answer-flow` is the template: wait for the outcome, turn that timeout into
+an assertion carrying diagnostics, and assert count → presence → content.
+Apply it to `ask-flow`, both `vote-flow` cases, `watch-flow`, and the
+`online-study-system` and `openclinica` flows. The post-state is identical,
+so goldens should not move — if one does, that flow was asserting the
+transport.
+
+### 2.3 The self-check (re-run after every change)
+
+Every sample commits its stack at the pin (`git show <sha>:compose.yaml`
+renders), so nothing needs to be committed to run the self-check. What gets
+in the way is the dirty worktree an agent run leaves behind — the harness
+refuses to start from a dirty checkout until §2.1 lands. When migrating a
 sample's `compose.yaml` to `templates/compose.template.yaml` (two networks,
 `front` on both at the pin), re-pin before capturing.
 
+Run it for every manifest of the sample before calling the sample ready:
+
 ```bash
-# the agent run left the tree dirty; restore it to the pin first, the
-# harness refuses to start from a dirty checkout
+# until §2.1 lands the agent run leaves the tree dirty; restore it first
 cd ../mamute && git checkout -- . && git clean -fd && cd -
 
-RUN=$(make task SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute HARNESS=command HARNESS_CMD=true | tail -1)
+RUN=$(make task SAMPLE=mamute TASK=answer-flow SAMPLE_LOCATION=../mamute HARNESS=command HARNESS_CMD=true | tail -1)
 make gate GATE_ID=functional_parity RUN_ID=$RUN   # must be pass, value 1.0
-make gate GATE_ID=network_isolation RUN_ID=$RUN   # must FAIL (pin is monolithic)
+make gate GATE_ID=network_isolation RUN_ID=$RUN   # must FAIL (the pin keeps front on both networks)
 ```
 
 If `functional_parity` fails on a no-op run, the **sample or the environment
@@ -66,14 +136,14 @@ is wrong**, not the agent — fix that before recording any agent score. If
 and has no task left in it: re-pin to the monolithic shape
 (`templates/README.md`).
 
-### 2.2 `openclinica`
+### 2.4 `openclinica`
 
 No compose file (its old env was podman-driven). Either author
 `openclinica/compose.yaml` (postgres + liquibase + tomcat) and switch the
 manifest's `db` binding from `shell@1` to `postgres@1`, or keep it out of
 the sample set for now. Right now it is a sample that cannot be scored.
 
-### 2.3 Trace capture, then `trace_similarity`
+### 2.5 Trace capture, then `trace_similarity`
 
 The gate is spec'd and stubbed. What is missing is the producer: an adapter
 that captures OTel spans into `out/runs/<run_id>/traces.json`. The gate
@@ -86,7 +156,7 @@ configured via `OTEL_*` in `.env`, any collector declared in the compose
 file. None of the three samples has it yet, so the pristine trace base
 cannot be captured for them.
 
-### 2.3b Coverage command and slice retrofit
+### 2.6 Coverage command and slice retrofit
 
 Skill `test-slice` now requires each slice to fully cover at least one
 controller (manifest `scope.covers`). Two gaps:
@@ -98,11 +168,15 @@ controller (manifest `scope.covers`). Two gaps:
   authored before the rule and must be measured, then backfilled with
   extra cases or re-scoped.
 
-### 2.4 First real agent run
+### 2.7 Run the remaining slices
+
+One real run has been scored (opencode on `mamute/answer-flow`, §1). The
+rest are waiting on §2.2 — until a flow stops demanding a navigation, its
+verdict says more about the flow than about the agent.
 
 ```bash
-make task SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute \
-          HARNESS=claude-code        # or opencode / pi / command
+RUN=$(make task SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute \
+             HARNESS=claude-code | tail -1)     # or opencode / pi
 make gate GATE_ID=functional_parity RUN_ID=$RUN
 ```
 
@@ -110,6 +184,35 @@ Check `harness.json` (exit code, cost) and `diff.patch` (the agent actually
 worked) before believing the gate. A `diff_empty: true` means the harness
 never ran or produced nothing — a gate failure then says nothing about the
 agent's ability.
+
+### 2.8 Housekeeping (small, each unblocks something)
+
+- **Flows still carry literal timeouts.** 17 `timeout=` literals across the
+  case scripts, and `openclinica/.../flow.py:37` is
+  `def _goto(page, url, timeout=60000)` — a default parameter, which rule 9
+  forbids outright. `BENCH_CASE_TIMEOUT_MS` exists; a page-level knob and a
+  per-sample re-verify are still missing.
+- **A recorded patch cannot be replayed.** `diff()` decodes with
+  `errors="replace"`, so a non-UTF-8 source (`mamute`'s `showQuestion.jsp`)
+  becomes `�` and `git apply` rejects the patch. Write the bytes instead:
+  replaying a submission is what makes re-grading or re-screenshotting an
+  old run possible at all.
+- **The sample's runbook is stale at the pin.** `mamute/AGENTS.md` still
+  documents the pre-bench workflow (podman MySQL, `mvn exec:java`, branch
+  `main`, a hardcoded `/home/ever/...` path) and never mentions
+  `compose.yaml`; an agent that follows it is sent to the wrong stack. Fix
+  it in the sample repo, then re-pin.
+- **`answer-flow`'s ask is still v1.** The base prompt now demands
+  verification and an unchanged markup, but the ask does not name the
+  observable outcome (the answer appears and the count goes with it; an
+  invalid answer still shows its error). Add a v2 and keep v1 comparable.
+- **`src/env/adapters/compose/stack.py` is the only file failing
+  `ruff format --check`.**
+- **Registry rows can outlive their artifacts.** `bench.db` lists 18 runs
+  while `out/runs/` holds one (the newest); gating a pruned run fails with
+  "has no task.json", which reads like corruption. Prune the rows together
+  with the directories, or say so plainly and offer a re-grade from
+  `diff.patch` (which needs the point above).
 
 ## 3. Ideas to shrink the code
 
@@ -142,10 +245,9 @@ Ranked by value, since two of these would have caught bugs we already hit.
      `evaluat`, `baseline`, `case`) — this is the one that keeps D16 true;
    - asserts `HarnessTask` still has exactly `{prompt, cwd}`.
    Would have caught the manifest-PK collapse and the `BENCH_*` inheritance.
-2. **Per-run sample clone** (~40 lines). Today the harness works inside
-   `SAMPLE_LOCATION`, so an agent dirties it and a second run refuses. A
-   `make task` that clones the pin into `out/runs/<run_id>/sample` makes
-   parallel agent comparison possible. This is the biggest functional gap.
+2. ~~Per-run sample clone~~ → promoted to §2.1, as a **worktree** rather
+   than a clone: same isolation, no copy of the object database, and
+   `git diff <sha>` keeps working inside it.
 3. **`make run`** (~15 lines in the Makefile). `task` + the three gates +
    one summary line, so a run is one command instead of four.
 4. **A prompt review pass** — not code. Read the 13 prompts as a developer
@@ -166,26 +268,30 @@ Ranked by value, since two of these would have caught bugs we already hit.
 | D7 | `make` is a thin `key=value` wrapper; `main.py` is the stable interface. |
 | D8 | Only the three specified gates exist. No ordering, no composite score. |
 | D9 | `bench.db` tracked; `.env` untracked; `config.py` owns every tunable. |
-| D10 | Parallel runs safe by construction (`uuid4`, atomic writes, per-run ports). |
+| D10 | Parallel runs safe by construction (`uuid4`, atomic writes, per-run ports). *(The sample tree was the exception — §2.1, D20.)* |
 | D11 | `compose.yaml` lives in the sample and is part of the pinned commit. |
 | D12 | Edge-case samples stay in scope — if it runs locally, it is a sample. |
 | D13 | `TASK_MANIFEST` is identified by `(sample, name, version)`; `task_type` is only the *kind* of work. |
 | D14 | The case corpus lives **inside** `functional_parity`; other gates read a case's **logged result** (`out/runs/<id>/cases/<case>.json`), never the corpus. |
 | D15 | `src/harness` = agent harnesses; `src/env` = the sample's runtime. |
 | D16 | The agent never learns it is being evaluated: `HarnessTask` = `{prompt, cwd}`, prompt verbatim, no `BENCH_*` in the spawned environment. |
-| D17 | The supervisor owns isolation and provisioning; the bench only refuses to start from a dirty or unpinned tree. |
+| D17 | The supervisor owns isolation and provisioning; the bench only refuses to start from a dirty or unpinned tree. *(Superseded by D20 for the sample tree.)* |
+| D18 | A prompt is two data layers: `TASK_TYPE.base_prompt` says what this kind of work means and what it must not break; `TASK_MANIFEST.prompt` says which sliver. Both are recorded per run. |
+| D19 | A decoupling must be invisible: the rendered markup is unchanged (same elements, classes and text), so a user or a browser automation sees the same page. A redesign is a failure, not a bonus. |
+| D20 | *Proposed, not implemented.* One run = one git worktree of the pin; the sample repo is where the pin lives, never the agent's scratch space. |
 
 ## 6. Known gaps
 
 | Gap | Consequence | Where it is fixed |
 |---|---|---|
-| No green no-op run yet | no score is trustworthy yet | §2.1 |
-| `openclinica` has no compose | one sample cannot be scored | §2.2 |
-| `trace_similarity` has no producer | gate always `pending` | §2.3 |
+| 16 of 17 flows wait for a navigation | a correct in-place implementation is graded as broken | §2.2 |
+| One run = one dirty checkout | serialises agent comparisons, blocks re-runs | §2.1 |
+| `openclinica` has no compose | one sample cannot be scored | §2.4 |
+| `trace_similarity` has no producer | gate always `pending` | §2.5 |
 | Egress is not measured | `network_isolation` reads shape only | runner-side policy, not a gate |
 | No automated checks | regressions are found by running | §4.1 |
-| One run = one dirty checkout | serialises agent comparisons | §4.2 |
-| No `oneshot_decoupling` manifest | the task type exists but is unused | a seed row (scope must list every case — nothing widens it by discovery) |
+| Patches are not replayable | an old submission cannot be re-graded | §2.8 |
+| Registry rows outlive run dirs | gating a pruned run looks like corruption | §2.8 |
 
 ## 7. Layout, as built
 
