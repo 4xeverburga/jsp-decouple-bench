@@ -10,7 +10,7 @@ PYTHON ?= python3
 
 MANIFEST_ID     ?=
 SAMPLE_LOCATION ?=
-HARNESS         ?= pristine
+HARNESS         ?= command
 HARNESS_CMD     ?=
 GATE_ID         ?=
 GATE_VERSION    ?=
@@ -23,9 +23,9 @@ CASE            ?=
 
 help:
 	@echo "make db-init                                    build bench.db from schema.sql + seeds"
-	@echo "make task  MANIFEST_ID=1 SAMPLE_LOCATION=../mamute [HARNESS=pristine]"
+	@echo "make task  MANIFEST_ID=1 SAMPLE_LOCATION=../mamute [HARNESS=claude-code]"
 	@echo "         or  SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute"
-	@echo "         HARNESS: pristine | claude-code | opencode | pi | command"
+	@echo "         HARNESS: command | claude-code | opencode | pi"
 	@echo "         HARNESS_CMD='my-agent ...' overrides the command line"
 	@echo "make gate  GATE_ID=functional_parity RUN_ID=<run_id> [GATE_VERSION=1]"
 	@echo "make case-capture SAMPLE=mamute CASE=<case> SAMPLE_LOCATION=../mamute"

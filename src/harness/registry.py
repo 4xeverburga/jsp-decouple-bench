@@ -13,7 +13,6 @@ from src.errors import NotFound
 from src.harness.ports import HarnessPort
 
 CATALOG: dict[str, tuple[str, str]] = {
-    "pristine": ("src.harness.adapters.pristine", "PristineHarness"),
     "command": ("src.harness.adapters.command", "CommandHarness"),
     "claude-code": ("src.harness.adapters.presets", "ClaudeCodeHarness"),
     "opencode": ("src.harness.adapters.presets", "OpenCodeHarness"),

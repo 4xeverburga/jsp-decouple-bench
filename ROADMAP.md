@@ -23,7 +23,7 @@ blind to being measured.
 | `src/gates/functional_parity/cases/` | 17 cases (case.json + expect.json + flow.py + images) |
 | gates | `functional_parity` ✔, `network_isolation` ✔, `trace_similarity` **pending** |
 | environment adapters (`src/env`) | compose, playwright, mysql, postgres, h2, shell |
-| agent harnesses (`src/harness`) | pristine, command, claude-code, opencode, pi |
+| agent harnesses (`src/harness`) | command, claude-code, opencode, pi |
 | docs | README, AGENTS (supervisor), specs/{er,modules,behavior}, test-slice skill |
 
 Verified by running it, not by reading it:
@@ -36,7 +36,7 @@ Verified by running it, not by reading it:
 - gates on a sample with no compose → `error` / `value: null` / exit 2
   (never a fabricated score); `trace_similarity` → `pending` / exit 3.
 
-**Not yet proven: a green `functional_parity` on a pristine run.** That is
+**Not yet proven: a green `functional_parity` on an untouched tree (no-op agent).** That is
 step 1 below and the only number that means anything so far.
 
 ## 2. Tomorrow, in order
@@ -54,12 +54,12 @@ cd ../Online_Study_System && git add -A && git commit -m "bench: add compose sta
 make pin SAMPLE=mamute              SAMPLE_LOCATION=../mamute
 make pin SAMPLE=online-study-system SAMPLE_LOCATION=../Online_Study_System
 
-RUN=$(make task SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute HARNESS=pristine | tail -1)
+RUN=$(make task SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute HARNESS=command HARNESS_CMD=true | tail -1)
 make gate GATE_ID=functional_parity RUN_ID=$RUN   # must be pass, value 1.0
 make gate GATE_ID=network_isolation RUN_ID=$RUN   # must be pass
 ```
 
-If `functional_parity` fails on `pristine`, the **sample or the environment
+If `functional_parity` fails on a no-op run, the **sample or the environment
 is wrong**, not the agent — fix that before recording any agent score.
 
 ### 2.2 `openclinica`
@@ -157,7 +157,7 @@ Ranked by value, since two of these would have caught bugs we already hit.
 
 | Gap | Consequence | Where it is fixed |
 |---|---|---|
-| No green `pristine` run yet | no score is trustworthy yet | §2.1 |
+| No green no-op run yet | no score is trustworthy yet | §2.1 |
 | `openclinica` has no compose | one sample cannot be scored | §2.2 |
 | `trace_similarity` has no producer | gate always `pending` | §2.3 |
 | Egress is not measured | `network_isolation` reads shape only | runner-side policy, not a gate |
@@ -176,7 +176,7 @@ src/store/     sqlite connection + repositories
 src/tasks/     one Task: assert pin, hand prompt to harness, record
 src/gates/     functional_parity (+ its corpus, capture, delta), network_isolation, trace_similarity
 src/env/       StackPort/BrowserPort/DatabasePort + technology adapters
-src/harness/   HarnessTask/HarnessResult/HarnessPort + pristine/command/presets
+src/harness/   HarnessTask/HarnessResult/HarnessPort + command/presets
 out/runs/<run_id>/  task.json, harness.json, harness.log, harness-prompt.md,
                     diff.patch, cases/*.json, gates/*.json
 ```

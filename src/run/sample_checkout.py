@@ -67,7 +67,7 @@ def ensure_pinned(location: Path, commit_sha: str,
 
 
 def diff(location: Path, base_commit: str) -> str:
-    """Worktree diff against the pin (empty for a pristine run)."""
+    """Worktree diff against the pin (empty if the agent changed nothing)."""
     location = Path(location).expanduser().resolve()
     proc = subprocess.run(
         ["git", "-C", str(location), "diff", "--binary", base_commit],

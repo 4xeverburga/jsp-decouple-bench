@@ -125,7 +125,7 @@ comparable across runs:
 | `manifest_id` | INTEGER NOT NULL FK→`TASK_MANIFEST` | |
 | `started_at` | TEXT NOT NULL | ISO-8601 UTC |
 | `finished_at` | TEXT NULL | NULL while running |
-| `harness` | TEXT NOT NULL | `pristine`, `claude-code`, `codex`, … free text, the agentic system that produced the diff |
+| `harness` | TEXT NOT NULL | `command`, `claude-code`, `codex`, … free text, the agentic system that produced the diff |
 | `environment` | TEXT NULL | free-text description of the machine/image |
 | `estimated_cost_usd` | REAL NULL | |
 | `run_duration_s` | REAL NULL | |

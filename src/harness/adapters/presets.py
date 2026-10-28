@@ -14,28 +14,23 @@ from src.harness.adapters.command import CommandHarness
 
 
 class _Preset(CommandHarness):
-    DEFAULT_CMD = ""
-
     def __init__(self, options: dict[str, Any] | None = None):
         options = dict(options or {})
         if not options.get("cmd"):
-            options["cmd"] = config.HARNESS_CMD or self.DEFAULT_CMD
+            options["cmd"] = config.HARNESS_CMD or config.PRESET_CMDS[self.name]
         super().__init__(options)
 
 
 class ClaudeCodeHarness(_Preset):
     """`claude -p`: print mode, prompt on stdin."""
     name = "claude-code"
-    DEFAULT_CMD = "claude -p"
 
 
 class OpenCodeHarness(_Preset):
     """`opencode run <message>`: the message is an argument."""
     name = "opencode"
-    DEFAULT_CMD = 'opencode run "$(cat)"'
 
 
 class PiHarness(_Preset):
     """`pi`: prompt on stdin."""
     name = "pi"
-    DEFAULT_CMD = "pi"

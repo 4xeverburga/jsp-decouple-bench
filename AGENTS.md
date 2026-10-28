@@ -23,8 +23,8 @@ make task SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute \
 make gate GATE_ID=functional_parity RUN_ID=<run_id>
 ```
 
-`HARNESS` selects the adapter (`pristine`, `command`, `claude-code`,
-`opencode`, `pi`); `--harness-cmd` overrides the command line.
+`HARNESS` selects the adapter (`command`, `claude-code`, `opencode`, `pi`);
+`HARNESS_CMD` / `--harness-cmd` sets or overrides the command line.
 
 ## Hard rules
 
@@ -51,15 +51,25 @@ make gate GATE_ID=functional_parity RUN_ID=<run_id>
 8. **Do not weaken the stack's declared shape.** `network_isolation` fails
    if the app joins `host` networking, adds networks, or publishes ports
    the sample's `compose.yaml` does not declare.
+9. **No defaults, no optional parameters.** No function may declare a
+   default value or an optional parameter, and no code may carry a fallback
+   literal for a tunable (`os.environ.get(k, "x")`, `or "x"`). Every
+   tunable lives in `.env` (template: `.env.example`), is read once in
+   `config.py`, and a missing key is an error. Callers pass every argument
+   explicitly.
+10. **PEP 8.** All Python follows PEP 8 (79 columns, `snake_case`,
+    ordered imports); `pyproject.toml` configures `ruff` to enforce it.
+    The Python version and dependencies are pinned there too: change them
+    in `pyproject.toml`, nowhere else.
 
 ## Trust nothing until the self-check is green
 
 ```bash
-make task SAMPLE=<s> TASK=<t> SAMPLE_LOCATION=../<s> HARNESS=pristine
+make task SAMPLE=<s> TASK=<t> SAMPLE_LOCATION=../<s> HARNESS=command HARNESS_CMD=true
 make gate GATE_ID=functional_parity RUN_ID=<run_id>     # must pass
 ```
 
-`pristine` runs no agent and leaves the tree untouched, so `functional_parity`
+A no-op command (`true`) leaves the tree untouched, so `functional_parity`
 must reproduce every golden exactly. If that fails, the sample or the
 environment is wrong and **no agent score on it means anything**.
 
@@ -84,6 +94,7 @@ Each writes `out/runs/<run_id>/gates/<gate_id>.json`:
 - `value`: normalised to `[0,1]`, or `null` when the gate could not measure.
 - A gate never averages: `pass` requires every sub-check to pass.
 
-A run passes when `functional_parity` **and** `network_isolation` pass.
-`trace_similarity` reports `pending` until its oracle exists; it is not a
-pass criterion and is never hand-scored.
+A run has no verdict of its own: it is finished when the harness returns.
+Gates are independent measurements; combining them is the researcher's job.
+`trace_similarity` reports `pending` until its oracle exists and is never
+hand-scored.

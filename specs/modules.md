@@ -140,7 +140,6 @@ class HarnessPort(Protocol):
 
 | adapter | meaning |
 |---|---|
-| `pristine` | no agent; the self-check (empty diff, goldens must still pass) |
 | `command` | any agent CLI: the prompt arrives on stdin |
 | `claude-code`, `opencode`, `pi` | presets over `command` |
 

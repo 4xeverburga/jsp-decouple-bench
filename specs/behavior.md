@@ -4,13 +4,13 @@ Two verbs, plus three support verbs. Nothing else is public.
 
 ```bash
 make db-init                                    # build bench.db from schema + seeds
-make task  MANIFEST_ID=<n> SAMPLE_LOCATION=<path> [HARNESS=pristine]   # → run_id
+make task  MANIFEST_ID=<n> SAMPLE_LOCATION=<path> [HARNESS=claude-code]   # → run_id
 make gate  GATE_ID=<id> RUN_ID=<run_id> [GATE_VERSION=<n>]             # → value
 make case-capture SAMPLE=<s> CASE=<c> SAMPLE_LOCATION=<path>           # freeze golden
 make pin   SAMPLE=<s> SAMPLE_LOCATION=<path>                           # re-pin commit
 ```
 
-`HARNESS` defaults to `pristine` (no agent). Everything is also
+`HARNESS` defaults to `command`, which needs `HARNESS_CMD`. Everything is also
 reachable directly via `python3 main.py …`, which is the stable
 interface; the Makefile is a convenience wrapper with no logic.
 
@@ -32,19 +32,19 @@ Steps:
    - `SAMPLE.entrypoint` must exist in the checkout, else abort.
 3. Allocate `run_id = uuid4().hex`, create `out/runs/<run_id>/`.
 4. Insert `TASK_RUN` (`started_at`, `harness`, `environment`).
-5. Resolve the harness (`--harness`, default `pristine`) and run it with
+5. Resolve the harness (`--harness`, default `command`) and run it with
    the **filled prompt**: the manifest prompt verbatim, in the sample
    checkout. The agent is told nothing else — see §5.
 6. Capture `diff.patch` = `git diff` of the worktree against the pin
-   (empty for `pristine`, meaningful for an agent that worked).
+   (empty if the agent changed nothing).
 7. Write `out/runs/<run_id>/task.json` and `harness.json`
    (`{harness, exit_code, duration_s, cost_usd, tokens, log,
    diff_bytes, diff_empty}` plus the manifest snapshot and preconditions).
 8. Print the `run_id` on stdout and nothing else. Exit 0.
 
-The runner does **not** start the stack. Whether the run is "done" is
-decided by the gates. A non-zero harness exit is recorded, not raised:
-the gates judge the tree that came back.
+The runner does **not** start the stack. The run is finished when the
+harness returns; gates are independent and never decide that. A non-zero
+harness exit is recorded, not raised.
 
 ## 2. `gate` — evaluate a run
 

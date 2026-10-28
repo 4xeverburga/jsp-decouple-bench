@@ -28,8 +28,8 @@ make task MANIFEST_ID=3 SAMPLE_LOCATION=../mamute HARNESS=claude-code   # -> run
 make gate GATE_ID=functional_parity RUN_ID=<run_id>                     # -> value
 ```
 
-`HARNESS` picks the agent adapter: `pristine` (no agent — the self-check),
-`command` (any CLI, prompt on stdin), or the `claude-code` / `opencode` /
+`HARNESS` picks the agent adapter: `command` (any CLI, prompt on stdin;
+set `HARNESS_CMD`), or the `claude-code` / `opencode` /
 `pi` presets. `HARNESS_CMD='...'` overrides the command line.
 
 **The agent never sees this repository, and never learns it is being
@@ -73,14 +73,15 @@ the `value`, the `verdict`, and the threshold/direction that were applied:
 
 `verdict` ∈ `pass | fail | error | pending`. Exit codes: 0 / 1 / 2 / 3.
 
-## How an agent is scored
+## Runs and gates
 
 1. The runner prepares a run from a manifest (prompt + adapter bindings +
-   case scope) and prints a `run_id`.
-2. The agent works in the sample checkout at the pinned commit.
-3. Gates are evaluated against that checkout and write one JSON each.
-   A decoupled run passes `functional_parity` **and** `network_isolation`;
-   `trace_similarity` stays `pending` until it is specified.
+   case scope), the harness works in the sample checkout at the pinned
+   commit, and the run is **finished** when the harness returns. A run has
+   no pass/fail and no pending state.
+2. Gates are independent measurements of a finished run's tree; each writes
+   one JSON. Which gates to run, how to combine them and what counts as
+   "good" is up to whoever consumes the bench.
 
 A tree that does not build cannot pass `functional_parity`: the stack never
 becomes healthy and the gate reports `error` (never a fabricated score).
@@ -96,7 +97,7 @@ seeds/                    # rows loaded by `make db-init`
 src/tasks/                # one task implementation (scope comes from the manifest)
 src/gates/                # functional_parity (+ its case corpus), network_isolation, trace_similarity
 src/env/                  # environment adapters: start, drive, inspect a sample
-src/harness/              # agent harnesses: pristine, command, claude-code, opencode, pi
+src/harness/              # agent harnesses: command, claude-code, opencode, pi
 out/runs/<run_id>/        # task.json, diff.patch, cases/*.json, gates/*.json (gitignored)
 ```
 
