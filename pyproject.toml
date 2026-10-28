@@ -2,14 +2,14 @@
 name = "jsp-decouple-bench"
 version = "1.0.0"
 description = "Falsifiable benchmark for decoupling legacy JSP frontends with REST APIs"
-requires-python = "==3.11.*"
+requires-python = "==3.13.*"
 dependencies = [
     "playwright==1.63.0",
     "python-dotenv==1.2.4",
 ]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py313"
 line-length = 79
 
 [tool.ruff.lint]
