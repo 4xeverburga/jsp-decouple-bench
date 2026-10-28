@@ -43,8 +43,15 @@ work can make it pass.
 
 ```bash
 cp templates/compose.template.yaml ../<sample>/compose.yaml
-# adapt the ADAPT lines, then commit it at the pin before capturing
+# adapt the lines marked "kept", then commit it at the pin before capturing
 ```
+
+The copied file is read by whoever gets the checkout, so the authoring
+guidance lives here, not in the YAML: `compose.template.yaml` carries no
+`ADAPT` markers, no mention of gates, pins or goldens, and no sentence
+that tells the reader what the work is. Anything you want to say to
+yourself goes in this README (and §1 of `prepare-repo-for-dataset` has the
+grep that keeps it that way).
 
 `prepare-repo-for-dataset` §2 covers the authoring side;
 `dataset-ready-check` §1–3 verifies conformance and falsifiability.

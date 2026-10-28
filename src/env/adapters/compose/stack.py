@@ -4,7 +4,7 @@ Technology-neutral: it only needs the sample commit to contain a compose
 file (`SAMPLE.entrypoint`). Everything sample-specific is in that file.
 
 Host ports come from the run, never from the sample: the sample publishes
-`${BENCH_HTTP_PORT:-<default>}` / `${BENCH_DB_PORT:-<default>}` and this
+`${APP_HTTP_PORT:-<default>}` / `${APP_DB_PORT:-<default>}` and this
 adapter exports both before every compose call, so two concurrent runs
 cannot collide. Each run also gets its own compose project name.
 """
@@ -30,6 +30,17 @@ from src.run.process import ProcessRun, run_streamed
 from src.run.sample_checkout import show_file
 
 logger = log.get("stack")
+
+# What a sample publishes from. The names are the application's, not the
+# harness's: the checkout is the agent's to read, so nothing in it may name
+# the thing that started it.
+HTTP_PORT_ENV = "APP_HTTP_PORT"
+DB_PORT_ENV = "APP_DB_PORT"
+
+# Pre-rename spelling, still honoured so samples pinned before the rename
+# keep working. Drop this pair once every sample is re-pinned.
+LEGACY_HTTP_PORT_ENV = "BENCH_HTTP_PORT"
+LEGACY_DB_PORT_ENV = "BENCH_DB_PORT"
 
 
 class ComposeStack:
@@ -66,8 +77,12 @@ class ComposeStack:
         env = dict(os.environ)
         env.update(self._file_env)
         if self._ports:
-            env["BENCH_HTTP_PORT"] = str(self._ports["http"])
-            env["BENCH_DB_PORT"] = str(self._ports["db"])
+            http = str(self._ports["http"])
+            db = str(self._ports["db"])
+            env[HTTP_PORT_ENV] = http
+            env[DB_PORT_ENV] = db
+            env[LEGACY_HTTP_PORT_ENV] = http
+            env[LEGACY_DB_PORT_ENV] = db
         return env
 
     def _cmd_for(self, compose_file: Path, *args: str) -> list[str]:

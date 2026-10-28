@@ -65,8 +65,8 @@ STACK_POLL_INTERVAL_S = int(_req("STACK_POLL_INTERVAL_S"))
 STACK_PROBE_TIMEOUT_S = int(_req("STACK_PROBE_TIMEOUT_S"))
 KEEP_STACK = _flag("KEEP_STACK")
 
-# Host ports are allocated per run, so two runs never collide. Samples must
-# publish `${BENCH_HTTP_PORT:-<default>}` / `${BENCH_DB_PORT:-<default>}`.
+# Host ports are allocated per run, so two runs never collide. A sample must
+# publish `${APP_HTTP_PORT:-<default>}` / `${APP_DB_PORT:-<default>}`.
 PORT_RANGE_START = int(_req("BENCH_PORT_START"))
 PORT_RANGE_END = int(_req("BENCH_PORT_END"))
 

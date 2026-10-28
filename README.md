@@ -149,9 +149,10 @@ out/runs/<run_id>/        # task.json, diff.patch, cases/*.json, gates/*.json (g
 
 Samples carry their own environment: **`compose.yaml` lives in the sample
 repo**, not here, and is part of the pinned commit. The harness exports
-`BENCH_HTTP_PORT` / `BENCH_DB_PORT` per run and gives each run its own
-compose project (`bench-<run_id>`), so concurrent runs never collide on
-files or ports.
+`APP_HTTP_PORT` / `APP_DB_PORT` per run (`BENCH_HTTP_PORT` / `BENCH_DB_PORT`
+is still exported for samples pinned before the rename) and gives each run
+its own compose project (`bench-<run_id>`), so concurrent runs never
+collide on files or ports.
 
 Adapters are chosen **by technology**, not by sample — `mysql@1` serves
 every MySQL sample. Which adapter a run uses is data: the manifest's

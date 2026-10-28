@@ -1,38 +1,37 @@
 # templates/compose.template.yaml — the canonical stack shape.
 #
-# Copy this into a sample as `compose.yaml`, keep the service and network
-# names, and adapt only the lines marked ADAPT. Commit it at the pin
-# BEFORE any golden is captured.
+# Copy this into an application as `compose.yaml`, keep the service and
+# network names, and adapt only the lines marked "kept". Commit it before
+# any behaviour is recorded.
 #
 # This is ONE repository and ONE application. The file does not describe
 # two projects: it describes a deployment in which the data side can be
 # isolated from the presentation side. Making that separation true in the
-# code is the task the sample poses; the frontend can be refactored later
-# without the data side moving.
+# code is the work; the presentation side can be refactored later without
+# the data side moving.
 #
 #   front   presentation. The only service that publishes a host port.
-#           Serves what the goldens were captured from.
-#   back    data side. Owns every path to the database. Not present at
-#           the pin — it appears when the work is done, built from the
-#           same context as `front`.
+#   back    data side. Owns every path to the database. It does not exist
+#           yet: it is extracted from `front` when the two halves are
+#           separated, and it is built from the same build context.
 #   db      the database. Never published.
 #
 #   api     front <-> back
 #   data    back <-> db
 #
-# AT THE PIN `front` IS ATTACHED TO BOTH NETWORKS, ON PURPOSE. The
-# pristine app is server-rendered and talks to the database directly, so
-# the isolation assertion is false at the pin and can only become true
-# once the work is done. Do not "tidy" this away: a pin whose front is
-# already off `data` makes the gate vacuous and grades nothing.
+# `front` sits on both networks, because the application is server-rendered
+# today and reads the database directly. The split into `front` + `back` is
+# a change to the code, not to the topology described here.
 #
-# What the gate reads from THIS FILE (at the pinned commit, never from
-# the agent's worktree):
+# What the shape promises, whatever the sample:
 #   - every container is attached only to `api` and/or `data`
 #   - `db` is attached to `data` only
-#   - `front` is NOT attached to `data`          <- the task
+#   - `front` is NOT attached to `data`          <- the work
 #   - only `front` publishes a host port
 #   - no `network_mode:` at all (neither `host` nor `service:`)
+#
+# Host ports come from the environment, so a checkout can run on any free
+# port without editing this file.
 
 networks:
   api: {}
@@ -41,35 +40,33 @@ networks:
 services:
   front:
     build:
-      context: .                            # ADAPT: image or dockerfile
+      context: .                            # kept: image or dockerfile
     networks:
       - api
-      - data                                # ADAPT: the task removes this
+      - data
     ports:
-      - "${BENCH_HTTP_PORT:-8080}:8080"     # ADAPT: inner port
-    # ADAPT: keep the sample's healthcheck, depends_on and environment.
-    # The gate waits for every container to settle and for the published
-    # URL to answer, so a missing healthcheck makes the run racy.
+      - "${APP_HTTP_PORT:-8080}:8080"       # kept: inner port
+    # Keep the application's healthcheck, depends_on and environment: the
+    # stack is polled for readiness, so a missing healthcheck makes startup
+    # a race.
 
   db:
-    image: mysql:5.7                        # ADAPT: engine and version
+    image: mysql:5.7                        # kept: engine and version
     networks:
       - data
-    # NO `ports:`. The harness reads the schema by running the client
-    # inside this container (`docker compose exec`, env adapter
-    # `mysql@1` / `postgres@1` / `h2@1`), so the database is never
-    # reachable from the host and needs nothing published.
-    # ADAPT: keep the sample's volume, environment and healthcheck.
+    # No `ports:`. The database is never reached from the host: it is read
+    # by running a client inside the container that owns it.
+    # Keep the application's volume, environment and healthcheck.
 
-# Not declared here, because an empty service breaks `compose config`:
+# A service needs an image or a build context, so `back` cannot be declared
+# empty here. Add it when the data side is extracted:
 #
 #   back:
 #     build:
-#       context: .                           # SAME context — one app
+#       context: .                          # same context — one app
 #     networks:
 #       - api
 #       - data
 #
-# Create it when the data side is extracted. It must not publish a port,
-# and it must be built from the same context as `front`: two repositories
-# would make the task a rewrite instead of a decoupling.
+# It must not publish a port, and it must be built from the same context as
+# `front`: two build contexts would make this a rewrite instead of a split.

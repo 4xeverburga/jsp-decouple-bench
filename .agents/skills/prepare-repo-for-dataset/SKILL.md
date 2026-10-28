@@ -92,6 +92,52 @@ the pristine upstream state. A rewritten history destroys that.
 - **Keep the build inputs**: `local-repo/`, pinned vendored artifacts and
   committed toolchain files stay in the repo — they are what makes the
   sample build, not references to its origin.
+- **Nothing in the tree may name the bench.** Provenance is one kind of
+  tell; vocabulary is the other. The checkout is read by an agent that
+  must not know it is being measured, so any phrase that describes the
+  harness, the grading or the work itself is a leak even when it names no
+  origin. Scrub, in this order of severity:
+  - **the task**: comments like `# the task: remove this`, `# dropping
+    data from front is the task`, `ADAPT` markers, "what the gate reads
+    from this file". They hand over the answer and the grading, not just
+    the fact of an eval;
+  - **the harness**: "eval environment", "sample", "harness exports
+    it", "the bench repo", "make pin", "golden", "graded";
+  - **variable names**: a sample publishes its host port from a neutral
+    name (`APP_HTTP_PORT`, `APP_DB_PORT`), never one named after the
+    thing that exports it — `BENCH_HTTP_PORT` in a `compose.yaml` tells a
+    reader a runner sets it per run;
+  - **credentials**: a tracked synthetic password may not contain
+    `bench` either (`.env` is read as a file, not through a runner).
+  ```bash
+  git grep -InE 'BENCH_|eval (environment|sample)|the bench|bench (repo|\
+  convention|password)|harness|golden|graded|decoupl|the task' -- .
+  ```
+  must be empty apart from upstream code that happens to use the words
+  (`evaluate`, `Task`, vendored `benchmark/` dirs). Remember the template
+  and every copied file land in this tree: `templates/compose.template.yaml`
+  and `templates/README.md` may carry authoring instructions, but the
+  `compose.yaml` you commit may not — keep the copied file reading like a
+  normal application's compose file. Re-pin after scrubbing (`make
+  db-init` picks the new `commit_sha` up from `seeds/samples.json`); a
+  scrub that is not in the pinned commit changes nothing for the agent.
+- **The pin must be the tip of its branch, and its history must be
+  unreachable.** Provisioning clones **one commit deep** (`--depth 1
+  --branch <branch>`) into the run's sandbox, so the checkout has no
+  remote, no refs, no reflog **and no parent objects**. A detached HEAD
+  is not enough on its own: every commit object names its parent, and a
+  full clone keeps the ancestors on disk, so `git log` still walks the
+  whole history — including the commit that says it is an eval sample.
+  Consequence for authoring: put the pin at a branch tip (push a branch
+  that points at it), because a shallow clone cuts at a ref.
+  ```bash
+  # in the run's checkout: 1 commit, shallow, and the parent is gone
+  git rev-list --count HEAD                 # 1
+  git rev-parse --is-shallow-repository     # true
+  git cat-file -e <parent-of-HEAD>          # fails: bad object
+  ```
+  `provision()` refuses a clone that is not shallow, so a mistake here
+  fails loudly instead of scoring a tainted run.
 
 ## 2. Leave the project runnable
 
@@ -143,7 +189,8 @@ of whatever the app happens to look like.
   and the gate is vacuous. `dataset-ready-check` §2 verifies this.
 - **Only `front` publishes a host port.** The harness reads the database
   with `compose exec`, so every extra published port is surface with no
-  purpose.
+  purpose. Publish it from `APP_HTTP_PORT` (a neutral name — see §1 on
+  vocabulary), never from a name that mentions the runner.
 - **No `network_mode:`**, neither `host` nor `service:`.
 - **Add services, never networks.** A collector or sidecar joins `api` or
   `data`; a new top-level network is a contract change and belongs in the
@@ -196,10 +243,13 @@ lands. `dataset-ready-check` §7 verifies it.
 
 ## 4. How benchmark runs execute an agent
 
-The agent adapter is selected per run with `HARNESS` (`command`,
-`claude-code`, `opencode`, or `pi`). The runner uses the sample's
-`commit_sha`, checks out that commit detached when needed, and refuses to
-start if the sample worktree is dirty. It does not stash or discard changes.
+The agent adapter is selected per run by the command the run is given
+(`HARNESS_CMD`, prompt on stdin); `HARNESS` is only the label the run is
+recorded under. The runner clones **one commit deep** from the local mirror
+(`git clone --no-local --depth 1 --branch <branch>`) into the sandbox the
+run owns, then detaches, scrubs refs/reflog and refuses to start if the
+result is not shallow or still reaches a parent commit. It does not stash
+or discard changes.
 
 After the sample is wired into the registry and its cases are ready, pin the
 commit to evaluate and launch a task:
@@ -233,6 +283,14 @@ harness that launches a real agent requires its command via `HARNESS_CMD`.
       (`git grep -InE 'github\.com/<owner>|upstream|@<upstream-domain>'`
       is empty apart from `LICENSE` and code namespaces); `LICENSE` and
       the build inputs are still there.
+- [ ] No bench vocabulary in the tree: the grep in §1 for `BENCH_`,
+      `eval environment`, `the bench`, `harness`, `golden`, `graded`,
+      `the task` and `ADAPT` is empty apart from upstream code, the
+      published port uses `APP_HTTP_PORT`, and no comment describes the
+      grading or the work to be done.
+- [ ] The pin is a branch tip, and a fresh provision of it is one commit:
+      `git rev-list --count HEAD` is `1` in the run's checkout and
+      `git rev-parse --is-shallow-repository` is `true`.
 - [ ] Runbook in the sample's `AGENTS.md` re-verified end to end
       (build → boot → healthcheck) on the current tree.
 - [ ] No dependency versions changed (`git diff` on build manifests is
@@ -270,4 +328,15 @@ harness that launches a real agent requires its command via `HARNESS_CMD`.
   gate could no longer tell a working agent from one that did nothing.
 - Committing generated artifacts that belong in `.gitignore`, or
   gitignoring things the runbook needs (e.g. tracked `.env` with
-  synthetic bench credentials — see `authoring-bench-tests`).
+  synthetic credentials — see `authoring-bench-tests`).
+- Believing a detached HEAD hides history. It hides the *names* (remote,
+  branches, tags, reflog); the commit objects and their parents are still
+  there, and one `git log` prints the commit message that says "eval
+  sample". Only a shallow clone removes the ancestry.
+- Shipping the template's authoring markers into the sample. `ADAPT`
+  comments, "the gate reads this file", "the task: remove this" are
+  written for whoever prepares the sample and are a giveaway to whoever
+  reads it. Scrub them from the copied file, keep them in
+  `templates/README.md`.
+- Naming a sample's variables after the runner (`BENCH_HTTP_PORT`). A
+  port name is documentation: it says who sets it and why.

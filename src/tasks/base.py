@@ -56,6 +56,7 @@ class Task:
             SamplePin(
                 slug=sample["slug"],
                 source=sample["source"],
+                branch=sample["branch"],
                 commit_sha=sample["commit_sha"],
                 entrypoint=sample.get("entrypoint"),
             ),

@@ -12,9 +12,10 @@ run needs no network and no credentials, and no other sample's history is
 anywhere near the sandbox.
 
 After the clone the repository is scrubbed to a detached HEAD: no remote,
-no branches, no tags, no reflog. What survives is what a developer would
-have if the project had simply been downloaded at that commit — the files,
-and a `.git` that knows one commit.
+no branches, no tags, no reflog, and no ancestry. The clone is one commit
+deep, so the parent objects were never downloaded either — deleting refs
+alone would have removed only the *names*, leaving `HEAD`'s history fully
+walkable. What survives is the files, and a `.git` that knows one commit.
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ class SamplePin:
 
     slug: str
     source: str
+    branch: str
     commit_sha: str
     entrypoint: str | None
 
@@ -103,16 +105,37 @@ def provision(
 
     mirror = _mirror(pin, cache_dir)
 
-    # `--no-hardlinks` so the run's object database is its own copy: the
-    # mirror is never a window into the agent's tree, nor it into ours.
+    # `--depth 1` is what makes the scrub below real. A full clone carries
+    # the sample's entire object database, and a commit object names its
+    # parent, so removing refs would leave the ancestry walkable.
+    # `--no-local` because git ignores `--depth` for a local source
+    # otherwise, and `--branch` because a shallow clone needs a ref to cut
+    # at: the pin is expected to be that branch's tip.
     _git_outside_repo(
         "clone",
-        "--no-hardlinks",
+        "--no-local",
+        "--depth",
+        "1",
+        "--branch",
+        pin.branch,
         "--no-checkout",
         "--quiet",
         str(mirror),
         str(sandbox),
     )
+    has_pin = (
+        _git_proc(
+            sandbox, "cat-file", "-e", pin.commit_sha + "^{commit}"
+        ).returncode
+        == 0
+    )
+    if not has_pin:
+        raise PreconditionError(
+            f"pin {pin.commit_sha[:10]} is not the tip of '{pin.branch}' in "
+            f"{pin.source}. A run clones one commit, so the pin has to be "
+            "that branch's tip: push a branch that points at it, then "
+            "`make db-init`."
+        )
 
     _git(sandbox, "checkout", "--detach", "--quiet", pin.commit_sha)
     _scrub(sandbox)
@@ -220,6 +243,19 @@ def _verify(destination: Path, commit_sha: str) -> None:
     if remotes:
         raise PreconditionError(
             f"provisioned checkout still names a remote: {remotes}"
+        )
+
+    # A detached HEAD still has parents. Without these two assertions the
+    # scrub looks clean while `git log` walks the sample's whole history.
+    if _git(destination, "rev-parse", "--is-shallow-repository") != "true":
+        raise PreconditionError(
+            "provisioned checkout is not shallow: it carries the sample's "
+            "history and its parent commits can be read"
+        )
+    commits = _git(destination, "rev-list", "--count", "HEAD")
+    if commits != "1":
+        raise PreconditionError(
+            f"provisioned checkout reaches {commits} commits, expected 1"
         )
 
     dirty = [
