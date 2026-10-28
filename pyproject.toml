@@ -4,6 +4,7 @@ version = "1.0.0"
 description = "Falsifiable benchmark for decoupling legacy JSP frontends with REST APIs"
 requires-python = "==3.13.*"
 dependencies = [
+    "inspect-ai==0.3.286",
     "playwright==1.63.0",
     "python-dotenv==1.2.4",
 ]
@@ -15,3 +16,8 @@ line-length = 79
 [tool.ruff.lint]
 # E/W = pycodestyle (PEP 8), F = pyflakes, N = pep8-naming, I = import order
 select = ["E", "W", "F", "N", "I"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.3",
+]

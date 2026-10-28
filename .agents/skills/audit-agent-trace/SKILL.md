@@ -80,7 +80,7 @@ it holds no solution — but record it; combine it with a scrubbed-tag query
 RUN=out/runs/<run_id>
 sed -n '1,2p'   "$RUN/harness.log"    # command + sandbox
 cat             "$RUN/harness.json"   # exit_code, diff_bytes, log_path
-.venv/bin/python - "$RUN/task.json" <<'PY'
+uv run python - "$RUN/task.json" <<'PY'
 import json
 import sys
 

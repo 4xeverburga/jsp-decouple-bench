@@ -1,0 +1,76 @@
+# The sample stack as an Inspect sandbox.
+#
+# Same services, networks, healthchecks and env contract as the sample's own
+# compose.yaml; the only difference is that `front` names an image that
+# already exists instead of building one. That is deliberate: the sample's
+# build re-downloads its Maven dependencies every time (the buildx cache is
+# empty and the image tag is per run), which takes longer than any readiness
+# budget. A port run should grade behaviour, not wait for Central.
+#
+# `x-default: true` marks the app as the default sandbox, so Inspect does not
+# fall back to whichever service it happens to read first.
+
+name: mamute-inspect
+
+networks:
+  api: {}
+  data: {}
+
+services:
+  front:
+    x-default: true
+    image: ${MAMUTE_FRONT_IMAGE:?set MAMUTE_FRONT_IMAGE to a built front image}
+    networks:
+      - api
+      - data
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_HTTP_PORT:?set APP_HTTP_PORT}:8080"
+    volumes:
+      - ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}/entrypoint.sh:/workspace/entrypoint.sh:ro
+    environment:
+      MAMUTE_ADMIN_USER: ${MAMUTE_ADMIN_USER:?set from the sample .env}
+      MAMUTE_ADMIN_PASSWORD: ${MAMUTE_ADMIN_PASSWORD:?set from the sample .env}
+      MAMUTE_PUBLIC_URL: ${MAMUTE_PUBLIC_URL:?set from the sample .env}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8080/"]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+      start_period: 240s
+
+  db:
+    image: mysql:5.7
+    networks:
+      - data
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "true"
+    # An ANONYMOUS volume on purpose: a named one outlives the sandbox, so a
+    # later run would start against rows the previous one left behind and the
+    # goldens — captured on a pristine database — would no longer match.
+    volumes:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # One-shot: rotates the first-boot seeded moderator to the .env admin
+  # credentials. Exits 0, so a fresh volume still ends up with a login the
+  # flows know.
+  bootstrap:
+    image: mysql:5.7
+    networks:
+      - data
+    depends_on:
+      front:
+        condition: service_healthy
+    volumes:
+      - ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}/bootstrap.sh:/bootstrap.sh:ro
+    entrypoint: ["bash", "/bootstrap.sh"]
+    environment:
+      MAMUTE_ADMIN_USER: ${MAMUTE_ADMIN_USER:?set from the sample .env}
+      MAMUTE_ADMIN_PASSWORD: ${MAMUTE_ADMIN_PASSWORD:?set from the sample .env}

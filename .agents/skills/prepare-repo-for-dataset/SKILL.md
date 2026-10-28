@@ -278,18 +278,16 @@ earlier runs. Two runs were scored this way — one walked the sample's own
 git ancestry, the next found a replay harness in the supervisor's `/tmp`
 scratch and copied it.
 
-Sandbox the command instead: `scripts/agent-sandbox.sh` runs the agent in a
-mount namespace where the checkout is the only directory that exists,
-`/tmp` is empty, `$HOME` is a per-run directory, and only the checkout and
-that state directory are writable. Point `HARNESS_CMD` at it; README has
-the credential-setup recipe. This is a command, not an adapter — the
-harness boundary does not change.
+Sandbox it at the layer that provisions the stack, not with a wrapper around
+the agent. In the ported bench (`inspect_port/`) Inspect boots the compose
+project and the agent runs inside that sandbox, which also removes the
+docker socket from the agent's reach: the daemon is on the evaluator's side,
+so `docker run -v /:/host` is not available to it.
 
-Two holes to audit rather than assume. The docker socket is mounted so the
-agent can start the stack, and the daemon can mount the host into a
-container of the agent's choosing. And a mount namespace hides files, not
-the network: localhost services stay reachable. `audit-agent-trace` looks
-for both.
+The old approach — a bwrap mount namespace around `HARNESS_CMD` — was
+deleted with the port rather than kept in parallel. What still needs
+auditing is the network: a sandbox hides files, not reachable services.
+`audit-agent-trace` looks for that.
 
 ## Checklist (all must be true before authoring starts)
 
