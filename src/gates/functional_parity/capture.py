@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from src.gates.functional_parity import corpus
+from src.gates.functional_parity.artifacts import normalize
 from src.gates.functional_parity.delta import delta_table
 from src.run.atomic import write_json
 from src.run.results import utcnow
@@ -41,6 +42,7 @@ def capture(ctx: Any, case: str, keep_stack: bool = False) -> Path:
             contract.get("e2e") or {},
             ctx.paths.images,
         )
+        artifacts = normalize(artifacts, ctx.base_url())
         after = database.dump_many(columns)
     finally:
         if not keep_stack:

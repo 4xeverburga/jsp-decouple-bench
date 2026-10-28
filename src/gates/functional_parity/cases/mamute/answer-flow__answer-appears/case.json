@@ -65,7 +65,8 @@
           "id"
         ],
         "ignore_columns": [
-          "createdAt"
+          "createdAt",
+          "ip"
         ]
       },
       {
@@ -118,7 +119,8 @@
           "id"
         ],
         "ignore_columns": [
-          "createdAt"
+          "createdAt",
+          "ip"
         ]
       },
       {

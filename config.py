@@ -52,6 +52,8 @@ DOCKER = _req("BENCH_DOCKER")
 COMPOSE = _req("BENCH_COMPOSE")
 COMPOSE_PROJECT_PREFIX = _req("BENCH_COMPOSE_PROJECT_PREFIX")
 STACK_UP_TIMEOUT_S = int(_req("STACK_UP_TIMEOUT_S"))
+STACK_POLL_INTERVAL_S = int(_req("STACK_POLL_INTERVAL_S"))
+STACK_PROBE_TIMEOUT_S = int(_req("STACK_PROBE_TIMEOUT_S"))
 KEEP_STACK = _flag("KEEP_STACK")
 
 # Host ports are allocated per run, so two runs never collide. Samples must

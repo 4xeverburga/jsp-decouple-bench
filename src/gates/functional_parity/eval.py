@@ -15,6 +15,7 @@ from typing import Any
 
 import config
 from src.gates.functional_parity import corpus
+from src.gates.functional_parity.artifacts import normalize
 from src.gates.functional_parity.delta import canonical, delta_table, summary
 from src.run.atomic import write_json
 from src.run.results import CaseResult, GateResult
@@ -69,6 +70,7 @@ class FunctionalParity:
             artifacts = browser.run_case(
                 corpus.flow(sample, name), base_url, e2e
             )
+            artifacts = normalize(artifacts, base_url)
             after = database.dump_many(columns)
 
             actual = {

@@ -3,7 +3,7 @@
     "slug": "mamute",
     "project_id": "4xeverburga/mamute",
     "branch": "main",
-    "commit_sha": "347a678241b4aa54f09a2dbb1a194c8515ca3095",
+    "commit_sha": "6fbd05891e66c867591bec777b27ce034533d39c",
     "license": "Apache-2.0",
     "description": "Q&A (Stack Overflow clone). VRaptor 4, 49 JSPs, 78 tag files.",
     "entrypoint": "compose.yaml",

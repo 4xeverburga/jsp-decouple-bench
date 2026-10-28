@@ -14,9 +14,12 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse, urlunparse
+from urllib.request import urlopen
 
 import config
 from src import run as run_pkg
@@ -106,14 +109,8 @@ class ComposeStack:
                 f"({self.compose_file}). Add it to the sample and re-pin."
             )
         self._allocate()
-        self._run(
-            "up",
-            "-d",
-            "--wait",
-            "--wait-timeout",
-            str(self.timeout_s),
-            "--remove-orphans",
-        )
+        self._run("up", "-d", "--remove-orphans")
+        self.await_ready()
         return self.base_url()
 
     def down(self, volumes: bool = True) -> None:
@@ -125,6 +122,65 @@ class ComposeStack:
     def reset(self) -> str:
         self.down(volumes=True)
         return self.up()
+
+    # --- readiness -----------------------------------------------------------
+    # `compose up --wait` cannot be trusted: it exits 1 as soon as any service
+    # exits, even with status 0 — and a sample legitimately uses a one-shot
+    # service for one-off setup. Readiness is therefore *observed* rather than
+    # asserted: every container must be up-and-not-unhealthy or exited
+    # cleanly, and the published URL must answer.
+    def await_ready(self) -> None:
+        deadline = time.monotonic() + self.timeout_s
+        while not self._settled():
+            if time.monotonic() >= deadline:
+                raise GateError(
+                    f"stack {self.project} did not become ready within "
+                    f"{self.timeout_s}s: {self._summary()}"
+                )
+            time.sleep(config.STACK_POLL_INTERVAL_S)
+
+    @staticmethod
+    def _settled_status(status: str) -> bool:
+        """`compose ps` Status → has this container reached a final state?"""
+        if status.startswith("Exited"):
+            return status.startswith("Exited (0")
+        if status.startswith("Up"):
+            return (
+                "(unhealthy)" not in status
+                and "(health: starting)" not in status
+            )
+        return False
+
+    def _settled(self) -> bool:
+        rows = self._ps(include_stopped=True)
+        if not rows:
+            return False
+        for row in rows:
+            if not self._settled_status(row.get("Status") or ""):
+                return False
+        return self._answers()
+
+    def _answers(self) -> bool:
+        """Any HTTP answer proves the published port is serving."""
+        try:
+            with urlopen(
+                self.base_url(), timeout=config.STACK_PROBE_TIMEOUT_S
+            ) as response:
+                return response.status < 500
+        except HTTPError:
+            # 4xx/5xx: the server is up and answering; content is not the
+            # adapter's business.
+            return True
+        except (URLError, OSError):
+            return False
+
+    def _summary(self) -> str:
+        rows = self._ps(include_stopped=True)
+        if not rows:
+            return "no containers"
+        return "; ".join(
+            f"{row.get('Service')}={row.get('Status')}" for row in rows
+        )
 
     # --- introspection -------------------------------------------------------
     def base_url(self) -> str:
@@ -143,7 +199,14 @@ class ComposeStack:
         return urlunparse(parsed._replace(netloc=f"{host}:{http_port}"))
 
     def ps(self) -> list[dict[str, Any]]:
-        out = self._run("ps", "--format", "json", check=False).stdout.strip()
+        return self._ps(include_stopped=False)
+
+    def _ps(self, include_stopped: bool) -> list[dict[str, Any]]:
+        args = ["ps"]
+        if include_stopped:
+            args.append("--all")
+        args += ["--format", "json"]
+        out = self._run(*args, check=False).stdout.strip()
         if not out:
             return []
         try:
@@ -161,6 +224,11 @@ class ComposeStack:
         return json.loads(self._docker("inspect", *ids))
 
     def declared(self) -> dict[str, Any]:
+        # Render with this run's ports: `config` publishes whatever
+        # BENCH_HTTP_PORT/BENCH_DB_PORT say, and a gate comparing the
+        # rendered file against the running containers must see the same
+        # numbers.
+        self._allocate()
         out = self._run("config", "--format", "json").stdout
         return json.loads(out)
 
