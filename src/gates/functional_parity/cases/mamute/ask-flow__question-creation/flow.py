@@ -2,10 +2,15 @@
 
 Self-contained: signs up its own author, then asks a question through the
 /ask form. The act under test is the question creation itself: submitting
-the form must redirect to the question page, which must render the title,
-the markdown body and the tag, with a vote count of 0. Returns normalized
-DOM snapshots of the /ask form (before) and the question page (after) for
-parity replay.
+the form must create the question and leave the user able to open its page,
+which must render the title, the markdown body and the tag, with a vote
+count of 0. Returns normalized DOM snapshots of the /ask form (before) and
+the question page (after) for parity replay.
+
+The submit is graded by its **outcome**, not by its transport: a
+server-rendered redirect and a JSON response that updates the form page
+in place are both accepted, because either way the created question has to
+be reachable and render the same page.
 
 No seeded actor is needed — question creation only requires a logged-in
 user, so no credentials come from the environment. The arrange user is
@@ -14,6 +19,10 @@ between test dirs, so consecutive runs are identical.
 """
 
 import re
+import time
+from urllib.parse import urlparse
+
+from playwright.sync_api import Error as PlaywrightError
 
 ARRANGE_EMAIL = "asker@bench.test"
 ARRANGE_PASSWORD = "bench-asker-pass"
@@ -25,6 +34,21 @@ QUESTION_BODY = (
     "frontend independently. What is the recommended approach?"
 )
 QUESTION_TAGS = "jsp"
+
+# A link to a question is `/<id>-<slug>`; the id is numeric, so this also
+# rejects the sidebar links that point at static pages.
+_QUESTION_HREF = re.compile(r"^/\d+-")
+
+# Runs in the page: report a link to a question that was not there before
+# the submit, which is how a page that updates in place announces success.
+_FIND_NEW_QUESTION_JS = """(seen) => {
+  for (const a of document.querySelectorAll('a[href]')) {
+    const path = new URL(a.href).pathname;
+    if (!/^\\/\\d+-/.test(path)) continue;
+    if (!seen.includes(a.href)) return a.href;
+  }
+  return null;
+}"""
 
 
 def _normalize(html):
@@ -51,6 +75,7 @@ def _ask_question(page, base_url):
     page.goto(base_url + "/ask")
     page.wait_for_load_state("networkidle")
     dom_before = _normalize(page.content())
+    seen = page.eval_on_selector_all("a[href]", "els => els.map(e => e.href)")
     page.fill("input[name=title]", QUESTION_TITLE)
     page.fill("textarea[name=description]", QUESTION_BODY)
     # tagNames is a select2 v3 widget (the real input is hidden); drive the UI:
@@ -62,10 +87,30 @@ def _ask_question(page, base_url):
     page.click(".select2-result-selectable")
     # The 'watching' checkbox is checked by default; leave it as-is so the
     # flow stays deterministic (Watcher rows are part of the DB delta).
-    with page.expect_navigation(wait_until="load"):
-        page.click("input[type=submit]")
-    page.wait_for_load_state("networkidle")
-    return page.url, dom_before  # redirected to /{question.id}-{sluggedTitle}
+    page.click("input[type=submit]")
+    return _question_url_after_submit(page, seen), dom_before
+
+
+def _question_url_after_submit(page, seen):
+    """Wait for the created question, whichever way the form reported it."""
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        if not page.url.split("?")[0].rstrip("/").endswith("/ask"):
+            page.wait_for_load_state("load")
+            return page.url
+        try:
+            found = page.evaluate(_FIND_NEW_QUESTION_JS, seen)
+        except PlaywrightError:
+            found = None  # mid-navigation: the loop re-checks the URL
+        if found:
+            page.goto(found)
+            page.wait_for_load_state("networkidle")
+            return page.url
+        page.wait_for_timeout(250)
+    raise AssertionError(
+        "submitting /ask never produced a question: still on %r with no "
+        "link to one" % page.url
+    )
 
 
 def run(page, base_url):
@@ -76,9 +121,8 @@ def run(page, base_url):
     question_url, dom_before = _ask_question(page, base_url)
 
     # --- assert: the question page renders the created question ----------
-    assert "/ask" not in question_url, (
-        "expected redirect to the question page after submit, stayed on %r"
-        % question_url
+    assert _QUESTION_HREF.match(urlparse(question_url).path), (
+        "expected to end on the question page, got %r" % question_url
     )
     title_after = (
         page.locator(".question-title, h1").first.inner_text().strip()

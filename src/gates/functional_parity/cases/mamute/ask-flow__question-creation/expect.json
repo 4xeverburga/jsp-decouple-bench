@@ -1,8 +1,8 @@
 {
   "sample": "mamute",
   "case": "ask-flow__question-creation",
-  "sample_commit": "6fbd05891e66c867591bec777b27ce034533d39c",
-  "captured_at": "2026-10-28T01:17:54Z",
+  "sample_commit": "7f4a0e55cb210b58ee6c51d94ecd15a61be7fa87",
+  "captured_at": "2026-10-28T20:35:02Z",
   "db": {
     "tables": {
       "Users": {
