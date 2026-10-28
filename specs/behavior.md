@@ -6,7 +6,7 @@ Two verbs, plus two support verbs. Nothing else is public.
 make db-init                                    # build bench.db from schema + seeds
 make task  MANIFEST_ID=<n> SAMPLE_SANDBOX=<abs empty folder> [HARNESS=<l>]  # → run_id
 make gate  GATE_ID=<id> RUN_ID=<run_id> [GATE_VERSION=<n>]             # → value
-make case-capture SAMPLE=<s> CASE=<c> SAMPLE_SANDBOX=<abs empty folder>  # golden
+make case-capture MANIFEST_ID=<n> CASE=<c> SAMPLE_SANDBOX=<abs empty folder>  # golden
 ```
 
 Re-pinning is seed data, not a verb: edit `sample.commit_sha` in
@@ -21,9 +21,15 @@ interface; the Makefile is a convenience wrapper with no logic.
 
 ## 1. `task` — start a run
 
-Inputs: a **manifest** (sample + task type + version + prompt + adapter
-bindings + case scope) and the **sandbox**: the folder allocated to this
-run, absolute, absent or empty.
+Inputs: a **manifest**, named by `MANIFEST_ID` — the single row that
+carries sample + task type + version + prompt + adapter bindings + case
+scope — and the **sandbox**: the folder allocated to this run, absolute,
+absent or empty.
+
+There is no sample+name lookup with a "latest version" tie-break: a run
+names exactly one manifest row, and `make manifests` prints the ids. The
+manifest is the unit of work, so nothing else has to be passed to identify
+what the agent is being asked for.
 
 `SAMPLE_SANDBOX` holds one checkout and nothing else. It is *not* a
 provenance claim: the commit comes from `SAMPLE.commit_sha` and the

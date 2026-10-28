@@ -26,7 +26,7 @@ runnable, OTel agent installed) and the cases were authored with
 
 ```bash
 make db-init
-make task SAMPLE=<slug> TASK=<slice> SAMPLE_SANDBOX=<abs empty folder> \
+make task MANIFEST_ID=<n> SAMPLE_SANDBOX=<abs empty folder> \
           HARNESS=command HARNESS_CMD=true            # -> run_id
 make gate GATE_ID=functional_parity  RUN_ID=<run_id>
 make gate GATE_ID=network_isolation  RUN_ID=<run_id>

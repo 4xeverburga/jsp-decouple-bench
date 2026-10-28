@@ -188,7 +188,7 @@ commit to evaluate and launch a task:
 # 1. set sample.commit_sha in seeds/samples.json, then:
 make db-init
 # 2. run from a folder that exists only for this run (absolute, empty)
-make task SAMPLE=<slug> TASK=<task> SAMPLE_SANDBOX=<abs empty folder> \
+make task MANIFEST_ID=<n> SAMPLE_SANDBOX=<abs empty folder> \
   HARNESS=claude-code
 make gate GATE_ID=functional_parity RUN_ID=<run_id>
 ```

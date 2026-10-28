@@ -140,7 +140,7 @@ sample's `compose.yaml` to `templates/compose.template.yaml` (two networks,
 Run it for every manifest of the sample before calling the sample ready:
 
 ```bash
-RUN=$(make task SAMPLE=mamute TASK=answer-flow SAMPLE_SANDBOX=/tmp/run-$RANDOM HARNESS=command HARNESS_CMD=true | tail -1)
+RUN=$(make task MANIFEST_ID=1 SAMPLE_SANDBOX=/tmp/run-$RANDOM HARNESS=command HARNESS_CMD=true | tail -1)
 make gate GATE_ID=functional_parity RUN_ID=$RUN   # must be pass, value 1.0
 make gate GATE_ID=network_isolation RUN_ID=$RUN   # must FAIL (the pin keeps front on both networks)
 ```
@@ -190,7 +190,7 @@ rest are waiting on §2.2 — until a flow stops demanding a navigation, its
 verdict says more about the flow than about the agent.
 
 ```bash
-RUN=$(make task SAMPLE=mamute TASK=vote-flow SAMPLE_SANDBOX=/tmp/run-$RANDOM \
+RUN=$(make task MANIFEST_ID=3 SAMPLE_SANDBOX=/tmp/run-$RANDOM \
              HARNESS=claude-code | tail -1)     # or opencode / pi
 make gate GATE_ID=functional_parity RUN_ID=$RUN
 ```

@@ -3,9 +3,10 @@
 
 python3 main.py db init [--force]
 python3 main.py db samples|manifests|runs
-python3 main.py task run --manifest N --sample-sandbox PATH
+python3 main.py task run --manifest MANIFEST_ID --sample-sandbox PATH
 python3 main.py gate run --gate G --run RUN_ID
-python3 main.py case capture --sample S --case C --sample-sandbox PATH
+python3 main.py case capture --manifest MANIFEST_ID --case C \
+    --sample-sandbox PATH
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from pathlib import Path
 
 import config
 from src import log
-from src.errors import BenchError, NotFoundError
+from src.errors import BenchError
 from src.gates import registry as gate_registry
 from src.gates.functional_parity.capture import capture
 from src.harness import registry as harness_registry
@@ -32,25 +33,13 @@ logger = log.get("main")
 
 
 # --- helpers -----------------------------------------------------------------
-def _resolve_manifest(conn, sample: str, task: str) -> dict:
-    row = conn.execute(
-        "SELECT m.manifest_id FROM task_manifest m"
-        " JOIN sample s ON s.sample_id = m.sample_id"
-        " WHERE s.slug = ? AND m.name = ?"
-        " ORDER BY m.version DESC LIMIT 1",
-        (sample, task),
-    ).fetchone()
-    if row is None:
-        raise NotFoundError(f"no manifest for sample='{sample}' task='{task}'")
-    return repo.manifest_by_id(conn, row["manifest_id"])
+def _manifest(conn, manifest_id: int) -> dict:
+    """The manifest a run is about — by id, the only way in.
 
-
-def _manifest_for(conn, args) -> dict:
-    if getattr(args, "manifest", None) is not None:
-        return repo.manifest_by_id(conn, args.manifest)
-    if not getattr(args, "sample", None) or not getattr(args, "task", None):
-        raise BenchError("give --manifest, or --sample together with --task")
-    return _resolve_manifest(conn, args.sample, args.task)
+    No sample+name lookup with a "latest version" tie-break: a run names
+    exactly one manifest row, and `make manifests` prints the ids.
+    """
+    return repo.manifest_by_id(conn, manifest_id)
 
 
 # --- db ----------------------------------------------------------------------
@@ -117,7 +106,7 @@ def cmd_db(args) -> int:
 def cmd_task_run(args) -> int:
     conn = store_db.connect()
     try:
-        manifest = _manifest_for(conn, args)
+        manifest = _manifest(conn, args.manifest)
         harness = harness_registry.resolve(args.harness, args.harness_cmd)
         run_id = new_run_id()
         paths = RunPaths.create(run_id)
@@ -200,12 +189,18 @@ def cmd_gate_run(args) -> int:
 # --- case --------------------------------------------------------------------
 def cmd_case_capture(args) -> int:
     """Authoring only: freeze a golden. The corpus itself lives in the gate."""
-    task = args.case.split("__", 1)[0]
     conn = store_db.connect()
     try:
-        manifest = _resolve_manifest(conn, args.sample, task)
+        manifest = _manifest(conn, args.manifest)
     finally:
         conn.close()
+
+    owner = args.case.split("__", 1)[0]
+    if owner != manifest["name"]:
+        raise BenchError(
+            f"case '{args.case}' belongs to '{owner}', but manifest "
+            f"{args.manifest} is '{manifest['name']}'"
+        )
 
     run_id = new_run_id()
     paths = RunPaths.create(run_id)
@@ -216,7 +211,7 @@ def cmd_case_capture(args) -> int:
         sample_location=Path(args.sample_sandbox).expanduser(),
     )
     print(
-        f"captured {args.sample}/{args.case} -> "
+        f"captured {manifest['sample']['slug']}/{args.case} -> "
         f"{capture(ctx, args.case, keep_stack=args.keep_stack)}"
     )
     return 0
@@ -250,12 +245,11 @@ def build_parser() -> argparse.ArgumentParser:
     task_run = task_sub.add_parser(
         "run", help="prepare a run, print its run_id"
     )
-    task_run.add_argument("--manifest", type=int, help="manifest_id")
     task_run.add_argument(
-        "--sample", help="sample slug (alternative to --manifest)"
-    )
-    task_run.add_argument(
-        "--task", help="feature boundary, e.g. vote-flow (with --sample)"
+        "--manifest",
+        type=int,
+        required=True,
+        help="manifest_id, as printed by `make manifests`",
     )
     task_run.add_argument(
         "--sample-sandbox",
@@ -303,7 +297,12 @@ def build_parser() -> argparse.ArgumentParser:
     case_capture = case_sub.add_parser(
         "capture", help="capture expect.json + images"
     )
-    case_capture.add_argument("--sample", required=True)
+    case_capture.add_argument(
+        "--manifest",
+        type=int,
+        required=True,
+        help="manifest_id the case belongs to (`make manifests`)",
+    )
     case_capture.add_argument("--case", required=True)
     case_capture.add_argument(
         "--sample-sandbox",

@@ -122,7 +122,7 @@ auth plumbing (e.g. `UserSession`) deliberately and say why in `notes`.
 
 ```bash
 # pristine state is mandatory: ids must match across runs
-make case-capture SAMPLE=<sample> CASE=<slice>__<behavior> \
+make case-capture MANIFEST_ID=<n> CASE=<slice>__<behavior> \
                    SAMPLE_SANDBOX=<abs empty folder>
 ```
 

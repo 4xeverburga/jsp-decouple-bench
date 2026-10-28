@@ -19,7 +19,7 @@ not for you — you have no reason to be reading it.
 ## Running an agent
 
 ```bash
-make task SAMPLE=mamute TASK=vote-flow \
+make task MANIFEST_ID=3 \
           SAMPLE_SANDBOX=/abs/tmp/run-<id> HARNESS=opencode     # -> run_id
 make gate GATE_ID=functional_parity RUN_ID=<run_id>
 ```
@@ -83,7 +83,7 @@ intend to compare runs. The exact command line is in the run's
 ## Trust nothing until the self-check is green
 
 ```bash
-make task SAMPLE=<s> TASK=<t> SAMPLE_SANDBOX=/abs/tmp/run-<id> HARNESS=command HARNESS_CMD=true
+make task MANIFEST_ID=<n> SAMPLE_SANDBOX=/abs/tmp/run-<id> HARNESS=command HARNESS_CMD=true
 make gate GATE_ID=functional_parity RUN_ID=<run_id>     # must pass
 ```
 

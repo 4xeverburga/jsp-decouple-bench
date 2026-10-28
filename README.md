@@ -178,7 +178,7 @@ cp -r <env assets> ../<sample>/          # compose.yaml, Dockerfile, .env(.examp
 git -C ../<sample> add -A && git -C ../<sample> commit -m "..."
 # re-pin: set sample.commit_sha in seeds/samples.json, then
 make db-init                             # the seed wins over the old row
-make case-capture SAMPLE=<slug> CASE=<case> SAMPLE_SANDBOX=/abs/tmp/capture-<n>
+make case-capture MANIFEST_ID=<n> CASE=<case> SAMPLE_SANDBOX=/abs/tmp/capture-<n>
 ```
 
 There is no `make pin`: the pin is data in `seeds/samples.json` (tracked

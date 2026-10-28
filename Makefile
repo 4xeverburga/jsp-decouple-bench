@@ -15,8 +15,6 @@ HARNESS_CMD     ?=
 GATE_ID         ?=
 GATE_VERSION    ?=
 RUN_ID          ?=
-SAMPLE          ?=
-TASK            ?=
 CASE            ?=
 
 # optional task arguments, expanded inline so neither can leave a dangling
@@ -29,8 +27,9 @@ HARNESS_CMD_ARG  = $(if $(HARNESS_CMD),--harness-cmd '$(HARNESS_CMD)')
 
 help:
 	@echo "make db-init                                    build bench.db from schema.sql + seeds"
-	@echo "make task  MANIFEST_ID=1 SAMPLE_SANDBOX=/abs/tmp/run-id [HARNESS=<label>]"
-	@echo "         or  SAMPLE=mamute TASK=vote-flow SAMPLE_SANDBOX=/abs/tmp/run-id"
+	@echo "make task  MANIFEST_ID=3 SAMPLE_SANDBOX=/abs/tmp/run-id [HARNESS=<label>]"
+	@echo "         MANIFEST_ID comes from \`make manifests\`; it names the sample,"
+	@echo "         the slice, the version and the case scope in one row."
 	@echo "         SAMPLE_SANDBOX is the folder THIS run owns (absolute, absent or empty)."
 	@echo "         The bench puts the pin's only checkout there from the local mirror"
 	@echo "         out/cache/<slug>.git and refuses a folder holding anything else:"
@@ -59,9 +58,10 @@ runs:
 	$(PYTHON) main.py db runs
 
 task:
+	@test -n "$(MANIFEST_ID)" || (echo "MANIFEST_ID is required" && exit 2)
 	@test -n "$(SAMPLE_SANDBOX)" || (echo "SAMPLE_SANDBOX is required" && exit 2)
 	$(PYTHON) main.py task run \
-		$(if $(MANIFEST_ID),--manifest $(MANIFEST_ID),--sample $(SAMPLE) --task $(TASK)) \
+		--manifest $(MANIFEST_ID) \
 		--sample-sandbox "$(SAMPLE_SANDBOX)" $(HARNESS_ARG) $(HARNESS_CMD_ARG)
 
 gate:
@@ -70,7 +70,7 @@ gate:
 	$(PYTHON) main.py gate run --gate $(GATE_ID) --run $(RUN_ID) $(if $(GATE_VERSION),--gate-version $(GATE_VERSION))
 
 case-capture:
-	@test -n "$(SAMPLE)" -a -n "$(CASE)" -a -n "$(SAMPLE_SANDBOX)" || \
-		(echo "SAMPLE, CASE and SAMPLE_SANDBOX are required" && exit 2)
-	$(PYTHON) main.py case capture --sample $(SAMPLE) --case $(CASE) \
-		--sample-sandbox "$(SAMPLE_SANDBOX)"
+	@test -n "$(MANIFEST_ID)" -a -n "$(CASE)" -a -n "$(SAMPLE_SANDBOX)" || \
+		(echo "MANIFEST_ID, CASE and SAMPLE_SANDBOX are required" && exit 2)
+	$(PYTHON) main.py case capture --manifest $(MANIFEST_ID) \
+		--case $(CASE) --sample-sandbox "$(SAMPLE_SANDBOX)"
