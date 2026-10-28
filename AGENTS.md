@@ -19,8 +19,8 @@ not for you — you have no reason to be reading it.
 ## Running an agent
 
 ```bash
-make task SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute \
-          HARNESS=opencode                          # -> run_id
+make task SAMPLE=mamute TASK=vote-flow \
+          SAMPLE_SANDBOX=/abs/tmp/run-<id> HARNESS=opencode     # -> run_id
 make gate GATE_ID=functional_parity RUN_ID=<run_id>
 ```
 
@@ -50,9 +50,16 @@ intend to compare runs. The exact command line is in the run's
 4. **Do not brand the environment.** The `command` harness adds no
    environment variables; keep it that way. An agent that runs `env` or
    `pwd` must learn nothing about the bench.
-5. **Pinned checkout.** The harness starts from a clean tree at
-   `SAMPLE.commit_sha`; a dirty tree aborts the run. The agent may dirty
-   the tree afterwards — that is the point.
+5. **One folder, one run.** `SAMPLE_SANDBOX` is the folder allocated to
+   **this** run (absolute path, absent or empty). The bench puts that run's
+   single checkout in it and refuses a folder that already holds anything:
+   nothing may sit beside the agent's tree, because a sibling is a place to
+   look for the answer. The commit comes from the registry
+   (`SAMPLE.source` + `SAMPLE.commit_sha`) through a bare mirror under
+   `out/cache/<slug>.git` — never from a working copy. The clone is
+   scrubbed before the agent starts: no remote, no branches, no tags, no
+   reflog, so there is no history to mine either. The agent dirties its own
+   tree freely afterwards, which is the point.
 6. **Credentials come from the sample's `.env`.** Never hardcode them in a
    prompt, a case or a flow.
 7. **Determinism.** `en-US`, `UTC`, `1280x800`, fresh DB per case. Do not
@@ -76,7 +83,7 @@ intend to compare runs. The exact command line is in the run's
 ## Trust nothing until the self-check is green
 
 ```bash
-make task SAMPLE=<s> TASK=<t> SAMPLE_LOCATION=../<s> HARNESS=command HARNESS_CMD=true
+make task SAMPLE=<s> TASK=<t> SAMPLE_SANDBOX=/abs/tmp/run-<id> HARNESS=command HARNESS_CMD=true
 make gate GATE_ID=functional_parity RUN_ID=<run_id>     # must pass
 ```
 

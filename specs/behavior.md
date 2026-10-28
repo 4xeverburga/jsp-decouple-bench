@@ -1,14 +1,17 @@
 # SPEC — `behavior.md` (verbs, lifecycle, gates)
 
-Two verbs, plus three support verbs. Nothing else is public.
+Two verbs, plus two support verbs. Nothing else is public.
 
 ```bash
 make db-init                                    # build bench.db from schema + seeds
-make task  MANIFEST_ID=<n> SAMPLE_LOCATION=<path> [HARNESS=<label>]      # → run_id
+make task  MANIFEST_ID=<n> SAMPLE_SANDBOX=<abs empty folder> [HARNESS=<l>]  # → run_id
 make gate  GATE_ID=<id> RUN_ID=<run_id> [GATE_VERSION=<n>]             # → value
-make case-capture SAMPLE=<s> CASE=<c> SAMPLE_LOCATION=<path>           # freeze golden
-make pin   SAMPLE=<s> SAMPLE_LOCATION=<path>                           # re-pin commit
+make case-capture SAMPLE=<s> CASE=<c> SAMPLE_SANDBOX=<abs empty folder>  # golden
 ```
+
+Re-pinning is seed data, not a verb: edit `sample.commit_sha` in
+`seeds/samples.json` and run `make db-init`, which is the only writer of
+`bench.db`.
 
 The harness is a command, not a name: `BENCH_HARNESS_CMD` in `.env`, or
 `HARNESS_CMD` / `--harness-cmd` for one run, with the prompt on stdin.
@@ -19,25 +22,32 @@ interface; the Makefile is a convenience wrapper with no logic.
 ## 1. `task` — start a run
 
 Inputs: a **manifest** (sample + task type + version + prompt + adapter
-bindings + case scope) and **where the sample lives on this filesystem**.
+bindings + case scope) and the **sandbox**: the folder allocated to this
+run, absolute, absent or empty.
 
-`SAMPLE_LOCATION` is only a path. It is *not* a provenance claim: the
-pinned commit comes from `SAMPLE.commit_sha` via the manifest.
+`SAMPLE_SANDBOX` holds one checkout and nothing else. It is *not* a
+provenance claim: the commit comes from `SAMPLE.commit_sha` and the
+repository from `SAMPLE.source`, both via the manifest. Nothing may be
+cloned beside the agent's tree — a sibling is a place to look for the
+answer — so a non-empty sandbox is refused rather than reused.
 
 Steps:
 
 1. Load manifest → sample → pin. Resolve bindings.
-2. **Precondition — pinned checkout.** In `SAMPLE_LOCATION`:
-   - if `HEAD != SAMPLE.commit_sha`, `git checkout --detach <sha>`;
-   - if the worktree is dirty after that, **abort** (`PreconditionError`).
-     No stash, no reset, no force.
-   - `SAMPLE.entrypoint` must exist in the checkout, else abort.
-3. Allocate `run_id = uuid4().hex`, create `out/runs/<run_id>/`.
-4. Insert `TASK_RUN` (`started_at`, `harness`, `environment`).
+2. Allocate `run_id = uuid4().hex`, create `out/runs/<run_id>/`.
+3. Insert `TASK_RUN` (`started_at`, `harness`, `environment`).
+4. **Provision the sandbox.** Ensure the bench's bare mirror
+   `out/cache/<slug>.git` has `SAMPLE.commit_sha`, fetching
+   `SAMPLE.source` only if it does not. Clone the pin out of the mirror
+   into `SAMPLE_SANDBOX`, detach at the pin, then delete the remote, every
+   ref (branches, tags) and the reflog. Verify: HEAD == pin, no refs, no
+   remote, clean tree. `SAMPLE.entrypoint` and the credentials file must be
+   carried by the pin, else abort (`PreconditionError`).
 5. Resolve the harness (`--harness`, default `command`) and run it with
-   the **filled prompt**: the manifest prompt verbatim, in the sample
-   checkout. The agent is told nothing else — see §5.
-6. Capture `diff.patch` = `git diff` of the worktree against the pin
+   the **filled prompt**: the manifest prompt verbatim, with
+   `cwd = out/runs/<run_id>/sample`. The agent is told nothing else — see
+   §5.
+6. Capture `diff.patch` = `git diff` of that checkout against the pin
    (empty if the agent changed nothing).
 7. Write `out/runs/<run_id>/task.json` and `harness.json`
    (`{harness, exit_code, duration_s, cost_usd, tokens, log,
@@ -55,8 +65,9 @@ Inputs: a gate id (plus optional version) and a `run_id`.
 Steps:
 
 1. Load run → manifest → sample → bindings → case scope.
-2. Start the stack from `SAMPLE.entrypoint` inside `SAMPLE_LOCATION`,
-   using the sample's own `compose.yaml` and `.env`. The harness injects
+2. Start the stack from `SAMPLE.entrypoint` inside the run's own checkout
+   (`out/runs/<run_id>/sample`), using the sample's own `compose.yaml` and
+   `.env`. The harness injects
    an override: project name `bench-<run_id>`, allocated host ports,
    fixed healthcheck wait. The app is up when healthchecks pass.
    Gates that only read declarations (`network_isolation`) skip this step

@@ -1,13 +1,14 @@
 # ROADMAP — JSP-Decouple-Bench
 
 **Resume here.** Branch `refactor/harness-ports-and-adapters`, last commit
-`a036e67`, pushed, worktree clean. Everything below is either *done*
-(verified), *next* (ordered, with commands), or *considered* (with a cost).
+`a036e67`, plus §2.1 (per-run sample provisioning) in the working tree.
+Everything below is either *done* (verified), *next* (ordered, with
+commands), or *considered* (with a cost).
 
-Size today: **3 207 lines of harness code** + **1 739 lines of case
+Size today: **3 700 lines of harness code** + **1 739 lines of case
 scripts** (`flow.py` × 17, data not logic). Breakdown: `main.py`+`config.py`
-479, `src/env` 811, `src/gates` 801 (cases excluded), `src/run` 449,
-`src/store` 326, `src/harness` 233, `src/tasks` 108.
+489, `src/env` 881, `src/gates` 826 (cases excluded), `src/run` 782,
+`src/store` 326, `src/harness` 196, `src/tasks` 135.
 
 ---
 
@@ -31,7 +32,9 @@ Verified by running it, not by reading it:
 
 - `make db-init` → 3 / 14 / 3, and the drift guard refuses a stale schema.
 - `make task` → run id, `task.json`, `harness.json`, `diff.patch`, `TASK_RUN` row.
-- dirty sample → `PreconditionError`, no partial run trusted.
+- a dirty source repo no longer blocks a run: the agent works in a fresh
+  clone at `out/runs/<id>/sample` (0 refs, 0 remotes, detached at the pin),
+  so an aborted run cannot poison the next one.
 - `HARNESS=command` with an env-dumping agent → the composed work order
   (base prompt + ask) reaches the agent verbatim, **zero `BENCH_*`
   variables**, `PATH` intact.
@@ -51,50 +54,65 @@ screenshot at `out/runs/<id>/images/<gate>/<case>.png`.
 
 ## 2. Next, in order
 
-### 2.1 Parallel-safe runs: one git worktree per run
+### 2.1 Parallel-safe runs: one folder, one checkout — DONE
 
-Today the harness works inside `SAMPLE_LOCATION` itself. Consequences: an
-agent dirties the sample repo, the next run refuses to start (AGENTS rule
-5), two agents cannot be compared in parallel, and a gate run against a
-tree someone else is editing measures the wrong thing. The UUID, the
-per-run ports and the atomic writes already make everything *else*
-parallel-safe (D10); the sample tree is the last shared mutable object.
+Was: the harness worked inside the sample checkout itself, so an agent
+dirtied the sample repo and the next run refused to start.
 
-Proposal: one `git worktree` per run.
+**How it is built now.** The bench keeps one bare mirror per sample and
+gives each run a folder of its own:
 
 ```bash
-git -C ../mamute worktree add --detach \
-    out/runs/<run_id>/sample <commit_sha>
-# agent runs with cwd = that worktree; diff, gates and screenshots read it
-git -C ../mamute worktree remove --force out/runs/<run_id>/sample
+# mirror (once per pin, refreshed only if the pin is missing)
+git clone --bare https://github.com/4xeverburga/mamute.git out/cache/mamute.git
+# the run's sandbox: absent or empty, and nothing beside it
+git clone --no-hardlinks --no-checkout --quiet out/cache/mamute.git $SAMPLE_SANDBOX
+git -C $SAMPLE_SANDBOX checkout --detach <commit_sha>
+git -C $SAMPLE_SANDBOX update-ref -d <every ref>   # heads, tags, remotes
+git -C $SAMPLE_SANDBOX remote remove origin        # no url in .git/config
+git -C $SAMPLE_SANDBOX reflog expire --expire=now --all
+git -C $SAMPLE_SANDBOX gc --prune=now --quiet
 ```
 
-A worktree rather than a clone because it shares the object database (no
-copy, instant), `git diff <sha>` behaves identically, `git status` inside it
-is that run's alone, and the sample repo stays clean — `make task` no longer
-needs a vanilla tree to start from.
+then verifies the result (HEAD == pin, `for-each-ref` empty, no `remote.*`,
+clean tree) and checks the declared `entrypoint` exists.
 
-Settled by this: `SAMPLE_LOCATION` keeps meaning "the repo holding the pin";
-the per-run worktree becomes `ctx.sample_location` for the task and every
-gate, and `task.json` records both.
+**Why not a `git worktree`** (the earlier proposal): a worktree shares the
+object database *and every ref* of the source, so `git show-ref` inside the
+run lists other branches, other agents' commits and custom namespaces. It
+did happen: a `mamute` run found `refs/agents/<uuid>/checkpoints/turn/N`
+from earlier sessions and spent turns reading `git show --stat` on them even
+though nothing in them was the answer. A worktree also registers the run
+inside the sample repo's `.git/worktrees/<id>`, so a crashed run leaves
+metadata behind in the supervisor's checkout.
 
-Not settled yet, and each one decides an edge:
+Settled by this: `SAMPLE_SANDBOX` is the folder allocated to one run
+(absent or empty; a sibling tree would be somewhere to look for the
+answer), and the pin is taken from the registry's `SAMPLE.source` through a
+bare mirror at `out/cache/<slug>.git` — no working copy on disk is read,
+so the sandbox cannot be prepared from a tree the agent could also see.
 
-- **Untracked-but-needed files.** A fresh worktree only has committed
-  files. `mamute` commits `.env`; a sample whose `.env` is untracked would
-  start credential-less. Either require the file at the pin or copy it in.
-- **Cold build cache.** `target/`, `node_modules/` and the generated assets
-  are gitignored, so every run pays a full compile. Accept it, or seed the
-  worktree from a warm template.
-- **Re-grading an old run.** Today `make gate RUN_ID=…` works because the
-  tree is still there. With the worktree removed after the run, an old run
-  can only be re-graded by replaying `diff.patch` (§2.8) or by keeping the
-  worktree until the run is pruned.
-- **Cleanup.** A crashed run leaves a registered worktree; add `make prune`
-  and a `KEEP_WORKTREE=1` knob, mirroring `KEEP_STACK`.
+The open questions from the worktree plan, answered:
 
-Cost: ~50 lines — `src/run` gains worktree create/remove, `RunContext`
-carries both paths.
+- **Untracked-but-needed files.** Settled the hard way: the pin must carry
+  them. A sample whose `BENCH_SAMPLE_ENV_FILE` is not committed is refused
+  — credentials come from the sample's own committed file (AGENTS rule 6),
+  never from a copy the supervisor drops in.
+- **Cold build cache.** Real cost, accepted: a provisioned run starts with
+  an empty `target/` and no built assets, and the docker build no longer
+  hits the cache of the sample directory (215 s for two cases, against 79 s
+  when the stack was built from the source path). Seed a warm template if
+  this starts to matter.
+- **Re-grading an old run.** Unchanged: the sandbox stays where the
+  operator put it, so `make gate RUN_ID=…` still works as long as that
+  folder is intact.
+- **Cleanup.** The sandbox is the operator's folder, so the bench never
+  deletes it; what is still missing is a `make prune` for the run dirs
+  under `out/runs/<id>` and for `out/cache/<slug>.git`.
+
+Cost: ~150 lines — `src/run/sample_checkout.py` mirrors, provisions and
+verifies; `ctx.sample_location` is the sandbox the run owns, and
+`config.SAMPLE_CACHE_DIR` holds one bare mirror per sample.
 
 ### 2.2 The remaining flows still wait for a navigation
 
@@ -113,19 +131,16 @@ transport.
 ### 2.3 The self-check (re-run after every change)
 
 Every sample commits its stack at the pin (`git show <sha>:compose.yaml`
-renders), so nothing needs to be committed to run the self-check. What gets
-in the way is the dirty worktree an agent run leaves behind — the harness
-refuses to start from a dirty checkout until §2.1 lands. When migrating a
+renders), so nothing needs to be committed to run the self-check — and
+since §2.1 the agent never touches the source tree, so there is nothing to
+restore first either. When migrating a
 sample's `compose.yaml` to `templates/compose.template.yaml` (two networks,
 `front` on both at the pin), re-pin before capturing.
 
 Run it for every manifest of the sample before calling the sample ready:
 
 ```bash
-# until §2.1 lands the agent run leaves the tree dirty; restore it first
-cd ../mamute && git checkout -- . && git clean -fd && cd -
-
-RUN=$(make task SAMPLE=mamute TASK=answer-flow SAMPLE_LOCATION=../mamute HARNESS=command HARNESS_CMD=true | tail -1)
+RUN=$(make task SAMPLE=mamute TASK=answer-flow SAMPLE_SANDBOX=/tmp/run-$RANDOM HARNESS=command HARNESS_CMD=true | tail -1)
 make gate GATE_ID=functional_parity RUN_ID=$RUN   # must be pass, value 1.0
 make gate GATE_ID=network_isolation RUN_ID=$RUN   # must FAIL (the pin keeps front on both networks)
 ```
@@ -175,7 +190,7 @@ rest are waiting on §2.2 — until a flow stops demanding a navigation, its
 verdict says more about the flow than about the agent.
 
 ```bash
-RUN=$(make task SAMPLE=mamute TASK=vote-flow SAMPLE_LOCATION=../mamute \
+RUN=$(make task SAMPLE=mamute TASK=vote-flow SAMPLE_SANDBOX=/tmp/run-$RANDOM \
              HARNESS=claude-code | tail -1)     # or opencode / pi
 make gate GATE_ID=functional_parity RUN_ID=$RUN
 ```
@@ -245,9 +260,9 @@ Ranked by value, since two of these would have caught bugs we already hit.
      `evaluat`, `baseline`, `case`) — this is the one that keeps D16 true;
    - asserts `HarnessTask` still has exactly `{prompt, cwd}`.
    Would have caught the manifest-PK collapse and the `BENCH_*` inheritance.
-2. ~~Per-run sample clone~~ → promoted to §2.1, as a **worktree** rather
-   than a clone: same isolation, no copy of the object database, and
-   `git diff <sha>` keeps working inside it.
+2. ~~Per-run sample clone~~ → done in §2.1, as a **scrubbed clone**: the
+   worktree variant was rejected because sharing the object database means
+   sharing every ref of the source.
 3. **`make run`** (~15 lines in the Makefile). `task` + the three gates +
    one summary line, so a run is one command instead of four.
 4. **A prompt review pass** — not code. Read the 13 prompts as a developer
@@ -278,14 +293,14 @@ Ranked by value, since two of these would have caught bugs we already hit.
 | D17 | The supervisor owns isolation and provisioning; the bench only refuses to start from a dirty or unpinned tree. *(Superseded by D20 for the sample tree.)* |
 | D18 | A prompt is two data layers: `TASK_TYPE.base_prompt` says what this kind of work means and what it must not break; `TASK_MANIFEST.prompt` says which sliver. Both are recorded per run. |
 | D19 | A decoupling must be invisible: the rendered markup is unchanged (same elements, classes and text), so a user or a browser automation sees the same page. A redesign is a failure, not a bonus. |
-| D20 | *Proposed, not implemented.* One run = one git worktree of the pin; the sample repo is where the pin lives, never the agent's scratch space. |
+| D20 | One run = one **fresh clone** of the pin at `out/runs/<id>/sample`: detached HEAD, no remote, no branches, no tags, no reflog. `SAMPLE_SANDBOX` is where the pin lives, never the agent's scratch space. *(A `git worktree` was rejected: it shares the object database and every ref of the source.)* |
+| D21 | The pin is **seed data**: `sample.commit_sha` in `seeds/samples.json`, written to `bench.db` only by `make db-init`. There is no `make pin` — it wrote to the DB, which the next `db-init` silently reverted. |
 
 ## 6. Known gaps
 
 | Gap | Consequence | Where it is fixed |
 |---|---|---|
 | 16 of 17 flows wait for a navigation | a correct in-place implementation is graded as broken | §2.2 |
-| One run = one dirty checkout | serialises agent comparisons, blocks re-runs | §2.1 |
 | `openclinica` has no compose | one sample cannot be scored | §2.4 |
 | `trace_similarity` has no producer | gate always `pending` | §2.5 |
 | Egress is not measured | `network_isolation` reads shape only | runner-side policy, not a gate |
@@ -300,7 +315,7 @@ bench.db  schema.sql  seeds/      registry: inputs only
 main.py  config.py                the two verbs + every tunable
 specs/{er,modules,behavior}.md    the contract
 templates/compose.template.yaml   the stack shape every sample commits
-src/run/       run_id, paths, atomic writes, ports, pinned checkout, RunContext
+src/run/       run_id, paths, atomic writes, ports, per-run sample provisioning, RunContext
 src/store/     sqlite connection + repositories
 src/tasks/     one Task: assert pin, hand prompt to harness, record
 src/gates/     functional_parity (+ its corpus, capture, delta), network_isolation, trace_similarity

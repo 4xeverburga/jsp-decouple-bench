@@ -3,17 +3,15 @@
 
 python3 main.py db init [--force]
 python3 main.py db samples|manifests|runs
-python3 main.py task run --manifest N --sample-location PATH
+python3 main.py task run --manifest N --sample-sandbox PATH
 python3 main.py gate run --gate G --run RUN_ID
-python3 main.py case capture --sample S --case C --sample-location PATH
-python3 main.py pin --sample S --sample-location PATH
+python3 main.py case capture --sample S --case C --sample-sandbox PATH
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -53,15 +51,6 @@ def _manifest_for(conn, args) -> dict:
     if not getattr(args, "sample", None) or not getattr(args, "task", None):
         raise BenchError("give --manifest, or --sample together with --task")
     return _resolve_manifest(conn, args.sample, args.task)
-
-
-def _git(location: Path, *args: str) -> str:
-    proc = subprocess.run(
-        ["git", "-C", str(location), *args], capture_output=True, text=True
-    )
-    if proc.returncode != 0:
-        raise BenchError(f"git {' '.join(args)} failed: {proc.stderr.strip()}")
-    return proc.stdout.strip()
 
 
 # --- db ----------------------------------------------------------------------
@@ -136,7 +125,7 @@ def cmd_task_run(args) -> int:
             run_id=run_id,
             paths=paths,
             manifest=manifest,
-            sample_location=Path(args.sample_location).expanduser(),
+            sample_location=Path(args.sample_sandbox).expanduser(),
         )
         repo.insert_run(
             conn,
@@ -219,44 +208,17 @@ def cmd_case_capture(args) -> int:
         conn.close()
 
     run_id = new_run_id()
+    paths = RunPaths.create(run_id)
     ctx = RunContext(
         run_id=run_id,
-        paths=RunPaths.create(run_id),
+        paths=paths,
         manifest=manifest,
-        sample_location=Path(args.sample_location).expanduser(),
+        sample_location=Path(args.sample_sandbox).expanduser(),
     )
     print(
         f"captured {args.sample}/{args.case} -> "
         f"{capture(ctx, args.case, keep_stack=args.keep_stack)}"
     )
-    return 0
-
-
-# --- pin ---------------------------------------------------------------------
-def cmd_pin(args) -> int:
-    location = Path(args.sample_location).expanduser().resolve()
-    commit = _git(location, "rev-parse", "HEAD")
-    branch = _git(location, "rev-parse", "--abbrev-ref", "HEAD")
-    if branch == "HEAD":
-        branch = _git(
-            location,
-            "rev-parse",
-            "--abbrev-ref",
-            "--symbolic-full-name",
-            "@{u}",
-        )
-    conn = store_db.connect()
-    try:
-        updated = conn.execute(
-            "UPDATE sample SET commit_sha = ?, branch = ? WHERE slug = ?",
-            (commit, branch, args.sample),
-        ).rowcount
-        conn.commit()
-    finally:
-        conn.close()
-    if not updated:
-        raise NotFoundError(f"no sample with slug '{args.sample}'")
-    print(f"{args.sample} pinned to {branch}@{commit}")
     return 0
 
 
@@ -296,9 +258,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--task", help="feature boundary, e.g. vote-flow (with --sample)"
     )
     task_run.add_argument(
-        "--sample-location",
+        "--sample-sandbox",
         required=True,
-        help="where the sample checkout lives on this filesystem",
+        help="the folder allocated to this run (absolute, empty): the bench "
+        "puts the pin there and nothing else",
     )
     task_run.add_argument(
         "--harness",
@@ -342,14 +305,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     case_capture.add_argument("--sample", required=True)
     case_capture.add_argument("--case", required=True)
-    case_capture.add_argument("--sample-location", required=True)
+    case_capture.add_argument(
+        "--sample-sandbox",
+        required=True,
+        help="the folder allocated to this capture (absolute, empty)",
+    )
     case_capture.add_argument("--keep-stack", action="store_true")
     case_capture.set_defaults(func=cmd_case_capture)
-
-    pin = sub.add_parser("pin", help="re-pin a sample to its checkout's HEAD")
-    pin.add_argument("--sample", required=True)
-    pin.add_argument("--sample-location", required=True)
-    pin.set_defaults(func=cmd_pin)
 
     return parser
 

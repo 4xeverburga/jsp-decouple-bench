@@ -26,17 +26,18 @@ runnable, OTel agent installed) and the cases were authored with
 
 ```bash
 make db-init
-make pin  SAMPLE=<slug> SAMPLE_LOCATION=<fresh clone>
-make task SAMPLE=<slug> TASK=<slice> SAMPLE_LOCATION=<fresh clone> \
+make task SAMPLE=<slug> TASK=<slice> SAMPLE_SANDBOX=<abs empty folder> \
           HARNESS=command HARNESS_CMD=true            # -> run_id
 make gate GATE_ID=functional_parity  RUN_ID=<run_id>
 make gate GATE_ID=network_isolation  RUN_ID=<run_id>
 make gate GATE_ID=trace_similarity   RUN_ID=<run_id>
 ```
 
-Always use a **fresh clone** of the sample as `SAMPLE_LOCATION`
-(`git clone ../<sample> /tmp/<sample>-ready`). It proves a bare checkout
-works, and keeps destructive checks off the real working tree.
+`SAMPLE_SANDBOX` is an absolute folder that exists for that one run and
+holds nothing yet. The bench clones the pin into it from the local mirror
+`out/cache/<slug>.git` and refuses a folder with anything in it, so no
+sibling tree exists for an agent to read — the checks cannot disturb a
+working copy and nothing can be learned by looking around the sandbox.
 
 ## Checks (in order — stop at the first hard failure)
 

@@ -59,7 +59,8 @@ the pristine upstream state. A rewritten history destroys that.
   ```
   This tag preserves the original upstream provenance; it is not a harness
   or a runtime selector. Benchmark runs and captures use the sample's pinned
-  `commit_sha` in `bench.db`, managed with `make pin`. If the repo is a
+  `commit_sha`, which is seed data in `seeds/samples.json` and reaches
+  `bench.db` only through `make db-init`. If the repo is a
   HEAD-only upstream mirror, this single commit IS the provenance anchor —
   treat it as immutable.
 - **Work on feature branches, merge with merge commits** into `main`
@@ -184,8 +185,10 @@ After the sample is wired into the registry and its cases are ready, pin the
 commit to evaluate and launch a task:
 
 ```bash
-make pin SAMPLE=<slug> SAMPLE_LOCATION=../<sample>
-make task SAMPLE=<slug> TASK=<task> SAMPLE_LOCATION=../<sample> \
+# 1. set sample.commit_sha in seeds/samples.json, then:
+make db-init
+# 2. run from a folder that exists only for this run (absolute, empty)
+make task SAMPLE=<slug> TASK=<task> SAMPLE_SANDBOX=<abs empty folder> \
   HARNESS=claude-code
 make gate GATE_ID=functional_parity RUN_ID=<run_id>
 ```
@@ -220,7 +223,7 @@ harness that launches a real agent requires its command via `HARNESS_CMD`.
 - [ ] OpenTelemetry Java agent installed, version pinned and checksummed,
       configured via `OTEL_*` in `.env`, collector (if any) declared in
       `compose.yaml`, app still boots with it and with the collector
-      down, and committed **before** `make pin`.
+      down, and committed before `sample.commit_sha` is set.
 - [ ] Working tree clean apart from intentional, committed changes;
       local artifacts gitignored.
 

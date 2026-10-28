@@ -12,22 +12,31 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+import config
 from src import log
 from src.gates.functional_parity import corpus
 from src.gates.functional_parity.artifacts import normalize
 from src.gates.functional_parity.delta import delta_table
 from src.run.atomic import write_json
 from src.run.results import utcnow
-from src.run.sample_checkout import ensure_pinned
+from src.run.sample_checkout import SamplePin, provision
 
 logger = log.get("capture")
 
 
-def capture(ctx: Any, case: str, keep_stack: bool = False) -> Path:
+def capture(ctx: Any, case: str, keep_stack: bool) -> Path:
     sample = ctx.sample
     logger.info("capturing %s/%s", sample["slug"], case)
-    preconditions = ensure_pinned(
-        ctx.sample_location, sample["commit_sha"], sample.get("entrypoint")
+    preconditions = provision(
+        SamplePin(
+            slug=sample["slug"],
+            source=sample["source"],
+            commit_sha=sample["commit_sha"],
+            entrypoint=sample.get("entrypoint"),
+        ),
+        ctx.sample_location,
+        config.SAMPLE_ENV_FILE,
+        config.SAMPLE_CACHE_DIR,
     )
 
     contract = corpus.contract(sample["slug"], case)

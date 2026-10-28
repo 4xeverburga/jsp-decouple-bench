@@ -13,13 +13,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import config
 from src import log
 from src.errors import BenchError
 from src.harness.ports import HarnessPort, HarnessResult, HarnessTask
 from src.run import RunContext
 from src.run.atomic import write_json, write_text
 from src.run.results import utcnow
-from src.run.sample_checkout import diff, ensure_pinned
+from src.run.sample_checkout import SamplePin, diff, provision
 
 logger = log.get("task")
 
@@ -46,10 +47,21 @@ class Task:
     def prepare(self, ctx: RunContext, harness: HarnessPort) -> HarnessResult:
         sample = ctx.sample
         logger.info(
-            "pinning %s to %s", sample["slug"], sample["commit_sha"][:10]
+            "provisioning %s at %s into %s",
+            sample["slug"],
+            sample["commit_sha"][:10],
+            ctx.sample_location,
         )
-        preconditions = ensure_pinned(
-            ctx.sample_location, sample["commit_sha"], sample.get("entrypoint")
+        preconditions = provision(
+            SamplePin(
+                slug=sample["slug"],
+                source=sample["source"],
+                commit_sha=sample["commit_sha"],
+                entrypoint=sample.get("entrypoint"),
+            ),
+            ctx.sample_location,
+            config.SAMPLE_ENV_FILE,
+            config.SAMPLE_CACHE_DIR,
         )
         scope = ctx.scope
 
@@ -91,7 +103,10 @@ class Task:
                 "prompt": prompt,
                 "base_prompt": ctx.manifest["base_prompt"],
                 "ask": ctx.manifest["prompt"],
-                "sample": {**sample, "location": preconditions["location"]},
+                "sample": {
+                    **sample,
+                    "location": preconditions["location"],
+                },
                 "technologies": ctx.manifest.get("sample_technologies", []),
                 "bindings": ctx.bindings,
                 "scope": scope,

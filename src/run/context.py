@@ -73,9 +73,10 @@ class RunContext:
                 "was it started with `make task`?"
             )
         task = json.loads(paths.task_json.read_text())
+        sample = task["sample"]
         return cls(
             run_id=run_id,
             paths=paths,
             manifest=manifest,
-            sample_location=Path(task["sample"]["location"]),
+            sample_location=Path(sample["location"]),
         )

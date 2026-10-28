@@ -24,7 +24,7 @@ bounded is the **verification scope**: the cases the run is graded against.
 ```bash
 make db-init                                                  # build bench.db from schema + seeds
 
-make task MANIFEST_ID=3 SAMPLE_LOCATION=../mamute HARNESS=opencode      # -> run_id
+make task MANIFEST_ID=3 SAMPLE_SANDBOX=/abs/tmp/run-<id> HARNESS=opencode  # -> run_id
 make gate GATE_ID=functional_parity RUN_ID=<run_id>                     # -> value
 ```
 
@@ -58,9 +58,15 @@ benchmark vocabulary. `harness.ports.HarnessTask` holds only `prompt` and
 `cwd`, so that is structural rather than a convention. See `AGENTS.md`
 for the supervisor's obligations.
 
-`SAMPLE_LOCATION` is only *where the sample checkout lives on this
-filesystem*. Provenance comes from `SAMPLE.commit_sha`: the runner checks
-the worktree out to that commit and **refuses to run on a dirty tree**.
+`SAMPLE_SANDBOX` is the folder allocated to **one** run (absolute path,
+absent or empty). The bench puts that run's only checkout there and refuses
+a folder that already holds something: nothing sits beside the agent's tree,
+because a sibling is somewhere to look for the answer. The commit comes
+from the registry (`SAMPLE.source` + `SAMPLE.commit_sha`) through a bare
+mirror at `out/cache/<slug>.git`, so a run needs neither network nor
+credentials once the mirror has the pin. The clone is then scrubbed —
+remote, branches, tags and reflog deleted — and the agent sees a checkout,
+not a repository history.
 
 Inspection:
 
@@ -170,9 +176,14 @@ every MySQL sample. Which adapter a run uses is data: the manifest's
 ```bash
 cp -r <env assets> ../<sample>/          # compose.yaml, Dockerfile, .env(.example)
 git -C ../<sample> add -A && git -C ../<sample> commit -m "..."
-make pin SAMPLE=<slug> SAMPLE_LOCATION=../<sample>   # pin to that commit
-make case-capture SAMPLE=<slug> CASE=<case> SAMPLE_LOCATION=../<sample>
+# re-pin: set sample.commit_sha in seeds/samples.json, then
+make db-init                             # the seed wins over the old row
+make case-capture SAMPLE=<slug> CASE=<case> SAMPLE_SANDBOX=/abs/tmp/capture-<n>
 ```
+
+There is no `make pin`: the pin is data in `seeds/samples.json` (tracked
+and reviewable), and `make db-init` is the only writer. Pinning through the
+DB would have been silently reverted by the next `db-init`.
 
 `expect.json` is always **generated** by `case-capture` from the pristine
 tree — never hand-written.

@@ -50,6 +50,9 @@ SCHEMA_SQL = ROOT / "schema.sql"
 SEEDS_DIR = _path("BENCH_SEEDS_DIR")
 OUT_DIR = _path("BENCH_OUT_DIR")
 RUNS_DIR = OUT_DIR / "runs"
+# One bare mirror per sample, fetched from SAMPLE.source. Runs clone out of
+# it, so the sandbox a run owns never sits next to another checkout.
+SAMPLE_CACHE_DIR = OUT_DIR / "cache"
 
 # --- sample / stack ----------------------------------------------------------
 COMPOSE_FILE_NAME = _req("BENCH_COMPOSE_FILE")

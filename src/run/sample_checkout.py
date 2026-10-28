@@ -1,26 +1,53 @@
-"""src/run/sample_checkout.py — the pinned-checkout precondition.
+"""src/run/sample_checkout.py — this run's checkout, and nothing else.
 
-`SAMPLE_LOCATION` is only *where the sample lives on this filesystem*.
-Provenance comes from `SAMPLE.commit_sha`; this module makes the worktree
-match it, or refuses to run. It never stashes, resets or force-checks-out.
+`SAMPLE_SANDBOX` is the folder allocated to **one** run. The bench puts the
+single checkout of that run in it: nothing is ever cloned next to it, so
+nothing can be learned by reading around the tree the agent was given. A
+sandbox that already holds anything is refused rather than merged into.
+
+The pin itself is not taken from a working copy on disk. The bench keeps a
+bare mirror per sample under `<out>/cache/<slug>.git`, fetched from
+`SAMPLE.source` when it lacks the pin, and clones out of that mirror. So a
+run needs no network and no credentials, and no other sample's history is
+anywhere near the sandbox.
+
+After the clone the repository is scrubbed to a detached HEAD: no remote,
+no branches, no tags, no reflog. What survives is what a developer would
+have if the project had simply been downloaded at that commit — the files,
+and a `.git` that knows one commit.
 """
 
 from __future__ import annotations
 
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 from src.errors import PreconditionError
 
 
-def _git(location: Path, *args: str) -> str:
-    proc = subprocess.run(
+@dataclass(frozen=True)
+class SamplePin:
+    """What the registry knows about the commit a run must work from."""
+
+    slug: str
+    source: str
+    commit_sha: str
+    entrypoint: str | None
+
+
+def _git_proc(location: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
         ["git", "-C", str(location), *args],
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
     )
+
+
+def _git(location: Path, *args: str) -> str:
+    proc = _git_proc(location, *args)
     if proc.returncode != 0:
         raise PreconditionError(
             f"git {' '.join(args)} failed in {location}: {proc.stderr.strip()}"
@@ -28,52 +55,182 @@ def _git(location: Path, *args: str) -> str:
     return proc.stdout.strip()
 
 
-def ensure_pinned(
-    location: Path, commit_sha: str, entrypoint: str | None = None
+def _git_outside_repo(*args: str) -> str:
+    """`git` that is not pointed at a repository (`clone` has no `-C`)."""
+    proc = subprocess.run(
+        ["git", *args],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if proc.returncode != 0:
+        raise PreconditionError(
+            f"git {' '.join(args)} failed: {proc.stderr.strip()}"
+        )
+    return proc.stdout.strip()
+
+
+def provision(
+    pin: SamplePin,
+    sandbox: Path,
+    env_file: str,
+    cache_dir: Path,
 ) -> dict:
-    location = Path(location).expanduser().resolve()
-    if not location.is_dir():
-        raise PreconditionError(f"sample location does not exist: {location}")
+    """Put the pin in `sandbox`: the folder this one run owns.
 
-    try:
-        _git(location, "rev-parse", "--git-dir")
-    except PreconditionError:
-        raise PreconditionError(f"not a git checkout: {location}") from None
+    `sandbox` must be absent or empty — one run, one checkout, no siblings
+    to read. The commit comes from the local mirror of `pin.source`, and
+    the result is a clean worktree detached at `pin.commit_sha` with no
+    refs, no remote and the declared `entrypoint` in place.
+    """
+    sandbox = Path(sandbox).expanduser().resolve()
+    cache_dir = Path(cache_dir).expanduser().resolve()
 
-    head = _git(location, "rev-parse", "HEAD")
-    moved = False
+    if sandbox.exists():
+        if not sandbox.is_dir():
+            raise PreconditionError(
+                f"sample sandbox is not a directory: {sandbox}"
+            )
+        if any(sandbox.iterdir()):
+            raise PreconditionError(
+                f"sample sandbox must be an empty folder — it holds this "
+                f"run's only checkout, and nothing else may sit beside it "
+                f"({sandbox})"
+            )
+    else:
+        sandbox.mkdir(parents=True)
+
+    mirror = _mirror(pin, cache_dir)
+
+    # `--no-hardlinks` so the run's object database is its own copy: the
+    # mirror is never a window into the agent's tree, nor it into ours.
+    _git_outside_repo(
+        "clone",
+        "--no-hardlinks",
+        "--no-checkout",
+        "--quiet",
+        str(mirror),
+        str(sandbox),
+    )
+
+    _git(sandbox, "checkout", "--detach", "--quiet", pin.commit_sha)
+    _scrub(sandbox)
+    _verify(sandbox, pin.commit_sha)
+
+    if env_file and not (sandbox / env_file).is_file():
+        raise PreconditionError(
+            f"the pin does not carry '{env_file}'. Credentials come from "
+            f"the sample's own committed file (AGENTS rule 6); commit it "
+            f"at the pin rather than copying it into a run."
+        )
+
+    if pin.entrypoint and not (sandbox / pin.entrypoint).is_file():
+        raise PreconditionError(
+            f"pinned commit does not contain the declared entrypoint "
+            f"'{pin.entrypoint}' (looked in {sandbox}). Point "
+            f"`sample.commit_sha` in seeds/samples.json at a commit that "
+            f"includes it, then `make db-init`."
+        )
+
+    return {
+        "location": str(sandbox),
+        "source": pin.source,
+        "mirror": str(mirror),
+        "commit": pin.commit_sha,
+        "clean": True,
+        "refs": 0,
+        "entrypoint": pin.entrypoint,
+    }
+
+
+def _mirror(pin: SamplePin, cache_dir: Path) -> Path:
+    """The bare mirror of `pin.source` that is guaranteed to have the pin.
+
+    Built on demand from the registry's source, and only fetched again when
+    it does not already contain the commit — so a run in steady state never
+    touches the network.
+    """
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    mirror = cache_dir / f"{pin.slug}.git"
+    wants = pin.commit_sha + "^{commit}"
+
+    if not mirror.exists():
+        _git_outside_repo(
+            "clone", "--bare", "--quiet", pin.source, str(mirror)
+        )
+        _git(mirror, "config", "remote.origin.url", pin.source)
+
+    if _git_proc(mirror, "cat-file", "-e", wants).returncode != 0:
+        _git(
+            mirror,
+            "fetch",
+            "--quiet",
+            "--prune",
+            "--tags",
+            pin.source,
+            "+refs/heads/*:refs/heads/*",
+            "+refs/tags/*:refs/tags/*",
+        )
+
+    if _git_proc(mirror, "cat-file", "-e", wants).returncode != 0:
+        raise PreconditionError(
+            f"the mirror {mirror} has no commit {pin.commit_sha[:10]} after "
+            f"fetching {pin.source}. Push the pin there, or seed the mirror "
+            f"by hand: git clone --bare <checkout> {mirror}"
+        )
+    return mirror
+
+
+def _scrub(destination: Path) -> None:
+    """Leave the clone knowing the commit, and nothing about its past."""
+    refs = _git(
+        destination, "for-each-ref", "--format=%(refname)"
+    ).splitlines()
+    for ref in [r for r in refs if r]:
+        _git(destination, "update-ref", "-d", ref)
+    _git(destination, "remote", "remove", "origin")
+    _git(destination, "reflog", "expire", "--expire=now", "--all")
+    _git(destination, "gc", "--prune=now", "--quiet")
+
+
+def _verify(destination: Path, commit_sha: str) -> None:
+    """Clean, pinned and anonymous — or the provisioning is wrong."""
+    head = _git(destination, "rev-parse", "HEAD")
     if head != commit_sha:
-        # Safe, non-destructive: no branch moves, the pin is a detached HEAD.
-        _git(location, "checkout", "--detach", commit_sha)
-        head = _git(location, "rev-parse", "HEAD")
-        moved = True
+        raise PreconditionError(
+            f"provisioned checkout is at {head}, expected {commit_sha}"
+        )
+
+    refs = [
+        line
+        for line in _git(
+            destination, "for-each-ref", "--format=%(refname)"
+        ).splitlines()
+        if line
+    ]
+    if refs:
+        raise PreconditionError(
+            f"provisioned checkout still carries refs: {refs[:5]}"
+        )
+
+    remotes = _git_proc(
+        destination, "config", "--get-regexp", r"^remote\."
+    ).stdout.strip()
+    if remotes:
+        raise PreconditionError(
+            f"provisioned checkout still names a remote: {remotes}"
+        )
 
     dirty = [
         line
-        for line in _git(location, "status", "--porcelain").splitlines()
+        for line in _git(destination, "status", "--porcelain").splitlines()
         if line
     ]
     if dirty:
         raise PreconditionError(
-            "sample worktree is dirty at the pinned commit; refusing to run "
-            f"({location}). Commit, revert or clone fresh. "
-            f"First entries: {dirty[:5]}"
+            f"provisioned checkout is not clean: {dirty[:5]}"
         )
-
-    if entrypoint and not (location / entrypoint).is_file():
-        raise PreconditionError(
-            f"pinned commit does not contain the declared entrypoint "
-            f"'{entrypoint}' (looked in {location}). Re-pin the sample "
-            f"(`make pin`) to a commit that includes it."
-        )
-
-    return {
-        "location": str(location),
-        "commit": head,
-        "checked_out": moved,
-        "clean": True,
-        "entrypoint": entrypoint,
-    }
 
 
 def show_file(location: Path, commit_sha: str, path: str) -> str:
