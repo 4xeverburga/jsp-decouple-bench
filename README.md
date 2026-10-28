@@ -55,6 +55,41 @@ benchmark vocabulary. `harness.ports.HarnessTask` holds only `prompt` and
 `cwd`, so that is structural rather than a convention. See `AGENTS.md`
 for the supervisor's obligations.
 
+### A scoped checkout is not enough — sandbox the command
+
+The agent is a process on the supervisor's machine, so `$HOME` and `/tmp`
+are as reachable as the tree it was handed. A run that reads them has left
+the work order behind, and no amount of scrubbing the checkout helps:
+`scripts/agent-sandbox.sh` is the answer, because what the agent can see is
+a property of the command, and the command is already yours to choose.
+
+```bash
+export AGENT_HOME=~/.opencode                   # agent install, read-only
+export AGENT_STATE_DIR=$(mktemp -d)             # fresh for every run
+mkdir -p "$AGENT_STATE_DIR"/{home,data,config,cache}
+"$AGENT_HOME/bin/opencode" auth export > "$AGENT_STATE_DIR/creds.json"
+chmod 600 "$AGENT_STATE_DIR/creds.json"
+XDG_DATA_HOME="$AGENT_STATE_DIR/data" "$AGENT_HOME/bin/opencode" \
+    auth import --standalone "$AGENT_STATE_DIR/creds.json"
+
+make task ... HARNESS=opencode-ds-flash-high \
+  HARNESS_CMD="$PWD/scripts/agent-sandbox.sh opencode run --standalone \
+               --auto --model opencode-go/deepseek-v4.1-flash#high \"\$$(cat)\""
+```
+
+Inside it, `/home` holds one entry, `/tmp` is empty on every run, and
+`$HOME` is `/state/home` — a per-run directory, so a run cannot read the
+previous run's transcripts either. Use an absolute path: the wrapper lives
+here, not in the sample, so a relative one would not resolve from the
+checkout.
+
+Two limits worth knowing. The docker socket is mounted, because the agent
+has to start the stack to check its own work — that is also the hole this
+does not close, since `docker run -v /:/host` reaches the host through the
+daemon; audit the trace for `docker run` with a bind mount outside the
+checkout. And the mount namespace hides files, it does not hide the network:
+the agent can still reach any service on localhost.
+
 `SAMPLE_SANDBOX` is the folder allocated to **one** run (absolute path,
 absent or empty). The bench puts that run's only checkout there and refuses
 a folder that already holds something: nothing sits beside the agent's tree,

@@ -269,6 +269,28 @@ self-check, use `HARNESS=command HARNESS_CMD=true`; run this only after the
 sample's benchmark cases and environment have been authored. A `command`
 harness that launches a real agent requires its command via `HARNESS_CMD`.
 
+### Scoping the tree is not isolation
+
+The agent runs as the supervisor's user, so everything that user can read is
+in reach: `$HOME` (this repository, `bench.db`, the cases), `/tmp` (whatever
+the last command left there), shell history, and the agent's own store from
+earlier runs. Two runs were scored this way — one walked the sample's own
+git ancestry, the next found a replay harness in the supervisor's `/tmp`
+scratch and copied it.
+
+Sandbox the command instead: `scripts/agent-sandbox.sh` runs the agent in a
+mount namespace where the checkout is the only directory that exists,
+`/tmp` is empty, `$HOME` is a per-run directory, and only the checkout and
+that state directory are writable. Point `HARNESS_CMD` at it; README has
+the credential-setup recipe. This is a command, not an adapter — the
+harness boundary does not change.
+
+Two holes to audit rather than assume. The docker socket is mounted so the
+agent can start the stack, and the daemon can mount the host into a
+container of the agent's choosing. And a mount namespace hides files, not
+the network: localhost services stay reachable. `audit-agent-trace` looks
+for both.
+
 ## Checklist (all must be true before authoring starts)
 
 - [ ] GitHub branch protection/ruleset active on `main`: direct pushes
