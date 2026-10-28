@@ -1,8 +1,9 @@
 """Playing one case: its flow, its golden, and the difference.
 
-A case is a directory holding `flow.py` (drives the app with Playwright) and
-`expect.json` (the frozen artifacts and the database delta). Both are loaded
-by path, because a case is data: adding one must not mean touching Python.
+A case is a directory in this package's `corpus/` holding `flow.py` (drives
+the app with Playwright) and `expect.json` (the frozen artifacts and the
+database delta). The golden is read as JSON; the flow is loaded by path,
+because a case is data: adding one must not mean touching Python.
 """
 
 import importlib.util
@@ -10,8 +11,10 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from . import settings
-from .settings import ARTIFACTS, CORPUS
+from ... import settings
+from .artifacts import normalize
+
+CORPUS = Path(__file__).with_name("corpus")
 
 
 def load(path: Path, name: str):
@@ -53,7 +56,6 @@ def play(slug: str, case: str) -> dict:
     """
     from playwright.sync_api import sync_playwright
 
-    normalize = load(ARTIFACTS, "bench_artifacts").normalize
     case_dir = CORPUS / slug / case
     flow = load(case_dir / "flow.py", f"flow_{case.replace('-', '_')}")
     expect = golden(slug, case)["artifacts"]

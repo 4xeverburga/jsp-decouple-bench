@@ -30,15 +30,10 @@ from src.bench import (  # noqa: E402
     solves,
 )
 from src.bench.compose import sandbox_compose  # noqa: E402
-from src.bench.scorers.parity import parity  # noqa: E402
+from src.bench.scorers.functional_parity import parity  # noqa: E402
 from src.bench.scorers.topology import network_isolation  # noqa: E402
 from src.bench.seeds import manifest as load_manifest  # noqa: E402
 from src.bench.seeds import task_type  # noqa: E402
-
-
-def _cases(chosen: dict) -> list[str]:
-    """The cases this manifest is graded against, whatever its type."""
-    return list(chosen["scope"]["cases"])
 
 
 def _scorers(chosen: dict) -> list:

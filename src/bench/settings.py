@@ -11,8 +11,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SEEDS = ROOT / "seeds"
-ARTIFACTS = Path(__file__).with_name("artifacts.py")
-CORPUS = Path(__file__).with_name("corpus")
 
 # What a failing case leaves behind: a screenshot of the page it ended on.
 # The name carries a random suffix, so two runs of the same case cannot land

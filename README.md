@@ -78,18 +78,26 @@ src/bench/
   seeds.py                sources, manifests, the work order
   samples.py              (source, case) pairs
   compose.py              source Compose setup and topology comparison
-  cases.py                play a flow, read a golden
-  db.py                   table snapshots through sandbox("db")
-  delta.py, tabular.py    the delta algorithm and TSV parsing, copied verbatim
-  artifacts.py            the normalizer (base URL, clocks, inline styles)
-  scorers/                parity, topology, and the all-must-pass metric
   solves.py               a run id, its tree and its diff
+  settings.py             paths and the environment, read when asked
   compose.solve.yaml      isolated agent workspace
-  corpus/<source>/<case>/ flow.py + expect.json
+  scorers/
+    functional_parity/    the gate, the corpus, and what grades it
+      parity.py           the scorer: artifacts and rows, compared
+      cases.py            play a flow, read a golden
+      db.py               table snapshots through sandbox("db")
+      delta.py            the delta algorithm, copied verbatim
+      tabular.py          TSV parsing shared by every SQL adapter
+      artifacts.py        the normalizer (base URL, clocks, inline styles)
+      corpus/<source>/<case>/  flow.py + expect.json
+    topology.py           network_isolation
+    metrics.py            all_must_pass
 ```
 
 `delta.py` is copied rather than reimplemented on purpose: the goldens were
 produced by it, so rewriting it would quietly change what "matches" means.
+A case is a functional-parity test, so the corpus lives inside that package
+— nothing outside it reads the layout.
 
 ## Not done yet
 

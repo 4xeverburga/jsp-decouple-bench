@@ -10,7 +10,7 @@ this file is not for you.
 |---|---|
 | the code under test, its pin and stack entrypoint | `seeds/sources.json` |
 | the graded cases and the work order | `seeds/manifests.json` |
-| the answer key: flows and goldens | `src/bench/corpus/` |
+| the answer key: flows and goldens | `src/bench/scorers/functional_parity/corpus/` |
 | the shared stack template and checks | `templates/compose.template.yaml`, `src/bench/compose.py` |
 | the verdicts | `src/bench/scorers/` |
 

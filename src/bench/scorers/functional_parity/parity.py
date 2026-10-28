@@ -18,10 +18,11 @@ import asyncio
 from inspect_ai.scorer import CORRECT, INCORRECT, Score, Target, scorer
 from inspect_ai.solver import TaskState
 
-from .. import db, settings
-from ..cases import golden, play
-from ..delta import canonical, delta_table, summary
-from .metrics import all_must_pass
+from ... import settings
+from ..metrics import all_must_pass
+from . import db
+from .cases import golden, play
+from .delta import canonical, delta_table, summary
 
 
 def _db_differences(
