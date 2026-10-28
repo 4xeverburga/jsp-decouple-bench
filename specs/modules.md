@@ -145,8 +145,7 @@ class HarnessPort(Protocol):
 
 | adapter | meaning |
 |---|---|
-| `command` | any agent CLI: the prompt arrives on stdin |
-| `claude-code`, `opencode`, `pi` | presets over `command` |
+| `command` | the only one: any agent CLI, prompt on stdin, command from `BENCH_HARNESS_CMD` / `HARNESS_CMD` / `--harness-cmd` |
 
 Rules:
 

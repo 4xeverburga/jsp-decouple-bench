@@ -4,13 +4,15 @@ Two verbs, plus three support verbs. Nothing else is public.
 
 ```bash
 make db-init                                    # build bench.db from schema + seeds
-make task  MANIFEST_ID=<n> SAMPLE_LOCATION=<path> [HARNESS=claude-code]   # → run_id
+make task  MANIFEST_ID=<n> SAMPLE_LOCATION=<path> [HARNESS=<label>]      # → run_id
 make gate  GATE_ID=<id> RUN_ID=<run_id> [GATE_VERSION=<n>]             # → value
 make case-capture SAMPLE=<s> CASE=<c> SAMPLE_LOCATION=<path>           # freeze golden
 make pin   SAMPLE=<s> SAMPLE_LOCATION=<path>                           # re-pin commit
 ```
 
-`HARNESS` defaults to `command`, which needs `HARNESS_CMD`. Everything is also
+The harness is a command, not a name: `BENCH_HARNESS_CMD` in `.env`, or
+`HARNESS_CMD` / `--harness-cmd` for one run, with the prompt on stdin.
+`HARNESS` is only the label recorded with the run. Everything is also
 reachable directly via `python3 main.py …`, which is the stable
 interface; the Makefile is a convenience wrapper with no logic.
 
