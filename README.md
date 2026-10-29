@@ -64,7 +64,7 @@ uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=solve -T run=$RUN \
   --model anthropic/claude-sonnet-4-5 --display plain --log-dir out/evals
 
-# score: the tree it left, on the sample's own stack
+# score: the tree it left; the scorer starts the sample's stack itself
 BENCH_CHECKOUT=$PWD/out/solves/$RUN/tree \
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=score --max-samples 1 \
@@ -93,9 +93,11 @@ different numbers and should never share a label. Until then
 
 - Each manifest lists its scorer IDs. The score task runs every assigned
   scorer automatically after solving.
-- Scoring uses the selected source's Compose file and default service. The
-  adapter adds Inspect metadata in a temporary sidecar; it does not keep a
-  global app-specific stack file.
+- Scoring uses the selected source's Compose file. The scorer starts that
+  stack itself with `docker compose` from the host (`src/bench/stack.py`),
+  one per case, and removes it afterwards; Playwright and the database reads
+  run on the host too. There is no Inspect sandbox in the score phase, so
+  nothing runs Docker inside Docker.
 - **functional_parity** — boots the stack, plays each case, compares browser
   artifacts (including normalized DOM) *and* database deltas. It passes only
   if every case passes.
@@ -116,13 +118,14 @@ src/bench/
   seeds.py                sources, manifests, the work order
   samples.py              (source, case) pairs
   compose.py              the scoring stack and the solve workspace, per sample
+  stack.py                starts and removes a case's stack from the host
   solves.py               a run id, its tree and its diff
   settings.py             paths and the environment, read when asked
   scorers/
     functional_parity/    the gate, and what grades a case
       parity.py           the scorer: artifacts and rows, compared
       cases.py            play a flow, read a golden
-      db.py               table snapshots through sandbox("db")
+      db.py               table snapshots through the case's stack
       delta.py            the delta algorithm, copied verbatim
       tabular.py          TSV parsing shared by every SQL adapter
       artifacts.py        the normalizer (base URL, clocks, inline styles)

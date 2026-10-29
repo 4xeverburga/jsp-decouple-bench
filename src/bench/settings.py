@@ -1,8 +1,7 @@
 """Constants the bench runs with, and the one import bootstrap.
 
 Nothing here is a tunable: the checkout under test and the URL its stack
-publishes arrive from the environment, because Inspect owns the sandbox and
-has already booted it by the time a scorer runs.
+publishes arrive from the environment.
 """
 
 import os
@@ -23,7 +22,7 @@ EVIDENCE = ROOT / "out" / "evidence"
 
 
 # Read when asked, not at import: listing the manifests must not require
-# a checkout, a published URL or a sandbox.
+# a checkout or a published URL.
 def checkout() -> str:
     return os.environ["BENCH_CHECKOUT"]
 

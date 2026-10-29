@@ -1,8 +1,8 @@
 """functional_parity as a scorer: one sample, one case.
 
-Each case is its own Sample, so Inspect provisions a fresh stack for it —
-which is what the goldens assume. They were captured against a pristine
-database, and a case that ran after another would see its rows.
+Each case is its own Sample and gets its own stack, started and removed by
+the scorer — which is what the goldens assume. They were captured against a
+pristine database, and a case that ran after another would see its rows.
 
 Two things are compared: the browser artifacts, and the database delta the
 flow caused. The second is what makes the gate falsifiable — a submission
@@ -19,6 +19,7 @@ from inspect_ai.scorer import CORRECT, INCORRECT, Score, Target, scorer
 from inspect_ai.solver import TaskState
 
 from ... import settings
+from ...stack import running
 from ..metrics import all_must_pass
 from . import db
 from .cases import golden, play
@@ -70,9 +71,10 @@ def parity(slug: str, db_service: str, database: str) -> scorer:
     async def score(state: TaskState, target: Target) -> Score:
         case = state.metadata["case"]
         tables = list(golden(slug, case)["db"]["tables"])
-        before = await db.snapshot(db_service, database, tables)
-        artifacts = await asyncio.to_thread(play, slug, case)
-        after = await db.snapshot(db_service, database, tables)
+        async with running(slug) as stack:
+            before = await db.snapshot(stack, db_service, database, tables)
+            artifacts = await asyncio.to_thread(play, slug, case)
+            after = await db.snapshot(stack, db_service, database, tables)
 
         browser = artifacts["differing"]
         rows, detail = _db_differences(slug, case, before, after)

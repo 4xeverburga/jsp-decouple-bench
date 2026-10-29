@@ -32,7 +32,7 @@ from src.bench import (  # noqa: E402
     settings,
     solves,
 )
-from src.bench.compose import sandbox_compose, solve_compose  # noqa: E402
+from src.bench.compose import solve_compose  # noqa: E402
 from src.bench.scorers.functional_parity import parity  # noqa: E402
 from src.bench.seeds import manifest as load_manifest  # noqa: E402
 from src.bench.seeds import task_type  # noqa: E402
@@ -54,9 +54,10 @@ def _scorers(chosen: dict) -> list:
 def submitted_tree() -> Solver:
     """The agent stage when there is no agent.
 
-    The stack is the sandbox Inspect boots, so there is nothing to start
-    here: this stands where the agent's run goes, and grades the tree as it
-    stands — which is exactly what the no-op self-check wants.
+    The scorer starts the stack itself (src/bench/stack.py), so there is
+    nothing to start here: this stands where the agent's run goes, and
+    grades the tree as it stands — which is exactly what the no-op
+    self-check wants.
     """
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
@@ -121,10 +122,6 @@ def _manifest_task(
             scorer=_scorers(chosen),
             description=kind["description"],
             metadata=metadata,
-            sandbox=(
-                "docker",
-                str(sandbox_compose(chosen["source"])),
-            ),
         )
 
     raise ValueError(f"unknown task phase: {phase}")

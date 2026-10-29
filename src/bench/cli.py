@@ -1,9 +1,10 @@
 """The bench's command line: `python main.py <verb>`.
 
 One manifest takes two `inspect eval` runs — the agent in the workspace
-built for it, then the scored tree on the sample's own stack — because a
-Task carries exactly one sandbox. What two processes cannot hand each other
-is ours, and it is all this file is:
+built for it, then the scored tree — because the agent needs an Inspect
+sandbox and the scorer does not: it starts the app's stack itself, from the
+host. What two processes cannot hand each other is ours, and it is all this
+file is:
 
 - a run id, which names `out/solves/<id>/`;
 - the checkout the scoring phase needs, derived from that id, so a stale
@@ -101,7 +102,7 @@ def solve(
 
 
 def score(manifest_id: int, run: str, logs: str) -> None:
-    """Grade the tree a solve kept, on the sample's own stack."""
+    """Grade the tree a solve kept; the scorer starts the stack itself."""
     tree = solves.tree(run)
     if not tree.is_dir():
         raise SystemExit(f"no tree for run {run}: {tree} is missing")
@@ -122,7 +123,6 @@ def score(manifest_id: int, run: str, logs: str) -> None:
         {
             **{k: v for k, v in credentials.items() if v is not None},
             "BENCH_CHECKOUT": str(tree),
-            "BENCH_SAMPLE_ENV": str(env_dir),
         },
         MODEL,
     )

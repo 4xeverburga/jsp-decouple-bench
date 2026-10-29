@@ -15,7 +15,7 @@ def sample_env(slug: str) -> Path:
     return settings.SAMPLES / slug / "env"
 
 
-def sandbox_compose(slug: str) -> Path:
+def scoring_compose(slug: str) -> Path:
     """The scoring stack, built from the tree under test."""
     compose = sample_env(slug) / "compose.yaml"
     if not compose.is_file():

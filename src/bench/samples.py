@@ -1,8 +1,8 @@
 """The samples: the code under test, and the behaviour being graded.
 
-Inspect gives every Sample a fresh sandbox and the sandbox is the stack, so
-a sample cannot be the code alone — every case of a manifest would then share
-one database, and the goldens were captured on a pristine one.
+The scorer starts a fresh stack for every Sample, so a sample cannot be the
+code alone — every case of a manifest would then share one database, and the
+goldens were captured on a pristine one.
 
 What identifies it is the CODE, not the task: a manifest is already fixed by
 the task you invoked, so folding its id into the sample says nothing. The
@@ -13,8 +13,6 @@ of the same commit distinct.
               project slug, commit, behaviour — a score can be quoted from it
     metadata  project_id, branch, commit, case, manifest, task type
     input     the work order (read when solving, unused when scoring)
-
-`sandbox` is bound at the Task, so it stays out of here.
 """
 
 from inspect_ai.dataset import Sample
