@@ -92,6 +92,23 @@ the pristine upstream state. A rewritten history destroys that.
 - **Keep the build inputs**: `local-repo/`, pinned vendored artifacts and
   committed toolchain files stay in the repo — they are what makes the
   sample build, not references to its origin.
+- **The pin carries no stack file.** The stack (compose, Containerfile,
+  `.env`, the collector) is the harness's and lives in the bench under
+  `src/samples/<sample>/env/`; a copy in the tree tells the agent how the
+  app is run — service names, the database host, the image its toolchain
+  comes from. Delete them in the sample repo and re-pin; never expect the
+  runner to strip them, because it refuses a tree that still has one
+  (`solves.materialise`) rather than quietly grading a leaked sample.
+  ```bash
+  git ls-tree -r --name-only HEAD | grep -Ei \
+    '(^|/)(.*ockerfile|(docker-)?compose([.-].*)?|entrypoint\.sh|\
+  bootstrap\.sh|\.env)$'
+  ```
+  must be empty. Three files are **not** stack files and stay:
+  `.dockerignore` (the build context *is* this tree, so it is what keeps
+  `target/` and `node_modules/` out of the image), `.env.example`, and the
+  app's own `*.properties.example` templates — setup documentation with no
+  secrets, which the runbook depends on.
 - **Nothing in the tree may name the bench.** Provenance is one kind of
   tell; vocabulary is the other. The checkout is read by an agent that
   must not know it is being measured, so any phrase that describes the

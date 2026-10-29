@@ -9,7 +9,7 @@ file is:
 - a run id, which names `out/solves/<id>/`;
 - the checkout the scoring phase needs, derived from that id, so a stale
   one cannot quietly grade the previous run's tree;
-- the solve workspace, cut from the pin with its container files removed.
+- the solve workspace, cut from the pin, which must carry no stack file.
 
 Everything else is Inspect's own CLI (`inspect view`, `inspect log`) or
 ruff, and `README.md` shows the two commands by hand.

@@ -11,31 +11,44 @@ after a golden is corrected, say — without paying for the agent again.
 """
 
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
 
 import settings
 
-# The stack is the bench's, not the tree's: none of these reach the agent.
-# `.dockerignore` is deliberately NOT here: the build context is this very
-# tree, so that file is what keeps `target/` and `node_modules/` out of it.
-CONTAINER_FILES = (
-    "Dockerfile",
-    "Containerfile",
-    "compose.yaml",
-    "compose.yml",
-    "docker-compose.yml",
-    "docker-compose.yaml",
-    "entrypoint.sh",
-    "bootstrap.sh",
-    ".env",
-    ".env.example",
+# The stack is the bench's, not the tree's, so a pin carries no stack file:
+# deleting one here would keep a list of names to maintain and hide a sample
+# that was pinned wrong. Preparing the sample is what keeps them out (see
+# `prepare-repo-for-dataset`). `.dockerignore` is deliberately not a stack
+# file: the build context is this very tree, so that file is what keeps
+# `target/` and `node_modules/` out of it.
+STACK_FILE = re.compile(
+    r"^(?:(?:docker|container)file(?:\..*)?"
+    r"|(?:docker-)?compose(?:[-.].*)?"
+    r"|entrypoint\.sh|bootstrap\.sh|\.env)$",
+    re.IGNORECASE,
 )
 
 
 # Where the CLI keeps its session database and log, inside the sandbox.
 AGENT_STATE = "/root/.local/share/opencode"
+
+
+def _refuse_stack_files(tree: Path) -> None:
+    """A pin that carries the stack is a preparation mistake, not ours."""
+    found = [
+        path.relative_to(tree)
+        for path in sorted(tree.rglob("*"))
+        if path.is_file() and STACK_FILE.match(path.name)
+    ]
+    if found:
+        listed = ", ".join(str(path) for path in found)
+        raise RuntimeError(
+            f"the pin carries stack files ({listed}): the stack is the "
+            "bench's, so delete them in the sample repo and re-pin"
+        )
 
 
 def keep_agent(run_id: str, archive: bytes) -> Path:
@@ -53,7 +66,7 @@ def keep_agent(run_id: str, archive: bytes) -> Path:
 
 
 def materialise(run_id: str, repo: Path, pin: str) -> Path:
-    """The pinned tree without container files, as a baseline commit."""
+    """The pinned tree, as a baseline commit, if it carries no stack file."""
     tree = settings.WORKSPACES / run_id
     if tree.exists():
         shutil.rmtree(tree)
@@ -64,11 +77,7 @@ def materialise(run_id: str, repo: Path, pin: str) -> Path:
         check=True,
     ).stdout
     subprocess.run(["tar", "-x", "-C", str(tree)], input=archive, check=True)
-    for name in CONTAINER_FILES:
-        (tree / name).unlink(missing_ok=True)
-    # Variants a sample may carry: docker-compose-it.yml, -override, ...
-    for variant in tree.glob("docker-compose*"):
-        variant.unlink()
+    _refuse_stack_files(tree)
     git = ["git", "-C", str(tree), "-c", "user.name=bench"]
     git += ["-c", "user.email=bench@localhost"]
     subprocess.run([*git, "init", "-q"], check=True)

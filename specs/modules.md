@@ -92,7 +92,9 @@ the environment, never written in a case or a flow.
 ## `src/samples/<slug>/env/`
 
 The stack is the bench's, never the tree's: the agent gets a checkout with no
-container files in it (`solves.CONTAINER_FILES` strips them).
+stack file in it. The pin carries none — `solves.materialise` refuses a tree
+that does, because a sample pinned with one is prepared wrong, not scrubbed
+(`prepare-repo-for-dataset`).
 
 | file | role |
 |---|---|

@@ -45,7 +45,8 @@ modules and the lifecycle.
    or a flow.
 7. **The bench owns the stack.** Compose, Containerfile, `.env` and the
    OpenTelemetry setup live in `src/samples/<sample>/env/`, never in the tree
-   the agent gets.
+   the agent gets. A pin carries none of them: preparing the sample is what
+   keeps them out, and a solve refuses a tree that still has one.
 8. **A gate never averages.** `all_must_pass` reduces across samples; a run
    passes only if every case passes.
 9. **PEP 8, 79 columns**, enforced by `ruff` through `uv run`. Dependencies
