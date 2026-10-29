@@ -532,5 +532,37 @@
     "name": "whole-app",
     "id": 14,
     "source": "mamute"
+  },
+  {
+    "task_type": "dummy_file",
+    "version": 1,
+    "prompt": "Create the file AGENT_OK.md at the root of the checkout. It holds one line and nothing else: written by the agent",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "service": "db",
+          "user": "root",
+          "password": "",
+          "database": "mamute_development"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "answer-flow__answer-appears"
+      ],
+      "routes": []
+    },
+    "scorers": ["functional_parity"],
+    "name": "dummy-file",
+    "id": 15,
+    "source": "mamute"
   }
 ]

@@ -77,6 +77,18 @@ STACK_PROJECT_PREFIX = _text("STACK_PROJECT_PREFIX")
 OPENCODE_MODEL = _text("OPENCODE_MODEL")
 OPENCODE_VERSION = _text("OPENCODE_VERSION")
 
+# --- the model that answers, and the credential its provider reads. -------
+# Inspect's `openai-api` provider takes both from the process environment,
+# and derives their names from the service segment of the model string
+# (`openai-api/<service>/<model>` reads `<SERVICE>_API_KEY` and
+# `<SERVICE>_BASE_URL`), so these are the variable names themselves, passed
+# through to the eval untouched.
+ANSWER_MODEL = _text("BENCH_ANSWER_MODEL")
+MODEL_ENV = {
+    "OPENCODE_GO_API_KEY": _text("OPENCODE_GO_API_KEY"),
+    "OPENCODE_GO_BASE_URL": _text("OPENCODE_GO_BASE_URL"),
+}
+
 # --- the model the score phase is labelled with. It answers nothing, but
 # Inspect requires one; `mockllm/model` makes that explicit in the log. ----
 SCORE_MODEL = _text("BENCH_SCORE_MODEL")

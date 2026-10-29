@@ -56,9 +56,14 @@ def for_scoring(manifest_id: int) -> list[Sample]:
 
 
 def for_solving(
-    manifest_id: int, run: str, opencode_model: str
+    manifest_id: int, run: str, opencode_model: str, model_target: str
 ) -> list[Sample]:
-    """One sample for the manifest: the agent works on the tree once."""
+    """One sample for the manifest: the agent works on the tree once.
+
+    `model_target` is recorded, not used: it is the model that answers the
+    agent's calls, and it is what a score has to be attributed to — the
+    CLI's own model name is only the wire format.
+    """
     chosen = load_manifest(manifest_id)
     commit = pin(chosen["source"])
     return [
@@ -71,6 +76,7 @@ def for_solving(
                 manifest_id=manifest_id,
                 run=run,
                 opencode_model=opencode_model,
+                model_target=model_target,
             ),
         )
     ]

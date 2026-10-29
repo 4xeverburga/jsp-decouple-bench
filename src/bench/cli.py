@@ -107,6 +107,7 @@ def solve(
         {
             "BENCH_CHECKOUT": str(workspace),
             "BENCH_SAMPLE_ENV": str(sample_env(slug)),
+            **settings.MODEL_ENV,
         },
         model,
         extra,
@@ -193,7 +194,10 @@ def _parser() -> argparse.ArgumentParser:
     task.set_defaults(handler=_task)
     task.add_argument("--manifest", type=int, required=True)
     task.add_argument(
-        "--model", required=True, help="provider/model that answers the agent"
+        "--model",
+        default=settings.ANSWER_MODEL,
+        help="provider/model that answers the agent; the default is the one "
+        "BENCH_ANSWER_MODEL names",
     )
     task.add_argument(
         "--opencode-model",

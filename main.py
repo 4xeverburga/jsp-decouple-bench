@@ -15,7 +15,7 @@ cases they are graded on, so one sample per case serves either.
 
     inspect eval main.py@oneshot_decoupling \
         -T manifest_id=14 -T phase=score -T run=<id> \
-        -T opencode_model=anthropic/claude-sonnet-4-5 \
+        -T opencode_model=opencode-go/deepseek-v4.1-flash \
         -T model_target=mockllm/model \
         --model mockllm/model
 """
@@ -76,6 +76,8 @@ async def capture_solution(state: TaskState) -> None:
         {
             "agent": "inspect_swe.opencode",
             "opencode_model": state.metadata["opencode_model"],
+            # The CLI's name is only the wire format; this is what answered.
+            "model": state.metadata["model_target"],
             "manifest_id": state.metadata["manifest_id"],
         },
     )
@@ -141,12 +143,17 @@ def _manifest_task(
         if run is None:
             raise ValueError("solve phase requires run")
         return Task(
-            dataset=samples.for_solving(manifest_id, run, opencode_model),
+            dataset=samples.for_solving(
+                manifest_id, run, opencode_model, model_target
+            ),
             solver=opencode(
                 cwd=settings.checkout(),
                 opencode_model=opencode_model,
                 version=settings.OPENCODE_VERSION,
                 model_aliases=_aliases(opencode_model, model_target),
+                # The bridge answers whatever credential the CLI presents;
+                # the provider still wants one to consider itself ready.
+                env={"OPENCODE_API_KEY": "sk-none"},
             ),
             cleanup=capture_solution,
             description=kind["description"],
@@ -200,6 +207,32 @@ def oneshot_decoupling(
         run,
         opencode_model,
         "oneshot_decoupling",
+        model_target,
+    )
+
+
+@task
+def dummy_file(
+    manifest_id: int,
+    phase: str,
+    run: str,
+    opencode_model: str,
+    model_target: str,
+) -> Task:
+    """Smoke test only: one new file, no app work.
+
+    The tree comes back with exactly one added file and nothing else
+    changed, so `functional_parity` — which only observes the running app —
+    is green by construction. The signal is the run's `diff.patch`: it is
+    the only place that says whether the agent acted at all. A green parity
+    here says the pipeline works, not that an agent can modernize anything.
+    """
+    return _manifest_task(
+        manifest_id,
+        phase,
+        run,
+        opencode_model,
+        "dummy_file",
         model_target,
     )
 
