@@ -34,6 +34,24 @@ CONTAINER_FILES = (
 )
 
 
+# Where the CLI keeps its session database and log, inside the sandbox.
+AGENT_STATE = "/root/.local/share/opencode"
+
+
+def keep_agent(run_id: str, archive: bytes) -> Path:
+    """The agent's own record of the run, as it left it.
+
+    Neither the database nor the log survives the container, and they are
+    the only place a run's tool calls are written down: the eval log keeps
+    the work order and the scores, not what the agent did between them.
+    """
+    target = location(run_id) / "agent"
+    target.mkdir(parents=True, exist_ok=True)
+    path = target / "opencode.tar"
+    path.write_bytes(archive)
+    return path
+
+
 def materialise(run_id: str, repo: Path, pin: str) -> Path:
     """The pinned tree without container files, as a baseline commit."""
     tree = settings.WORKSPACES / run_id

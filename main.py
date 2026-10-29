@@ -20,6 +20,7 @@ cases they are graded on, so one sample per case serves either.
         --model mockllm/model
 """
 
+import base64
 import os
 import sys
 import uuid
@@ -28,6 +29,7 @@ from pathlib import Path
 from inspect_ai import Task, task
 from inspect_ai.model import Model, get_model
 from inspect_ai.solver import Generate, Solver, TaskState, solver
+from inspect_ai.util import sandbox as host_sandbox
 from inspect_swe import opencode
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -70,8 +72,9 @@ def submitted_tree() -> Solver:
 
 async def capture_solution(state: TaskState) -> None:
     """Keep the tree the agent left, so a score can be re-run without it."""
+    run = state.metadata["run"]
     solves.capture(
-        state.metadata["run"],
+        run,
         Path(settings.checkout()),
         {
             "agent": "inspect_swe.opencode",
@@ -81,6 +84,32 @@ async def capture_solution(state: TaskState) -> None:
             "manifest_id": state.metadata["manifest_id"],
         },
     )
+    await _keep_agent(run)
+
+
+async def _keep_agent(run: str) -> None:
+    """Copy the CLI's session record out before the sandbox is removed.
+
+    The library hands the agent's stdout back in memory and drops it after
+    the run, and the eval log holds the work order and the scores but not
+    the tool calls in between, so this is the only way a finished run can
+    be read afterwards.
+    """
+    try:
+        box = host_sandbox()
+        done = await box.exec(
+            [
+                "sh",
+                "-c",
+                f"cd {solves.AGENT_STATE} && "
+                "tar -cf - log opencode.db | base64 -w0",
+            ]
+        )
+    except Exception:  # no sandbox left, or nothing to copy
+        return
+    if done.returncode != 0 or not done.stdout.strip():
+        return
+    solves.keep_agent(run, base64.b64decode(done.stdout))
 
 
 # OpenCode 2.x starts a managed background service before it answers, and in a
