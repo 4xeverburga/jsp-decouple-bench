@@ -4,7 +4,7 @@
     "project_id": "caelum/mamute",
     "source": "https://github.com/4xeverburga/mamute.git",
     "branch": "dataset/stack-template",
-    "commit_sha": "e3fecfec42e7c2eab2c2741e92dea411b460a9b7",
+    "commit_sha": "089d2531c823fa32f8f0fcd69864282f3982dccd",
     "license": "Apache-2.0",
     "description": "Q&A (Stack Overflow clone). VRaptor 4, 49 JSPs, 78 tag files.",
     "entrypoint": "compose.yaml",

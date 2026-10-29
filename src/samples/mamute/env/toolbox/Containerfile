@@ -5,10 +5,38 @@
 # agent is not installed here.
 FROM maven:3.8.6-openjdk-8
 
+# The JDK's own bin dir first, and — because the agent's shell is given a
+# PATH of /usr/local/bin:/usr/bin:/bin, which this ENV does not reach —
+# symlinks for the JDK tools the base image leaves out of /usr/local/bin:
+# javap and friends answer "command not found" otherwise.
+ENV JAVA_HOME=/usr/local/openjdk-8
+ENV PATH=/usr/local/openjdk-8/bin:${PATH}
+RUN for tool in jar jarsigner javap jcmd jdb jps jrunscript jstack; do \
+      ln -sf "/usr/local/openjdk-8/bin/$tool" "/usr/local/bin/$tool"; \
+    done
+
+# A mysql client. The app's database is a sidecar on this network, and
+# reading its schema is part of understanding what a flow persists.
+#
+# Two traps, both fixed here: the image ships stale package lists (so it
+# asks for versions that are gone), and bullseye-security indexes versions
+# the mirror no longer carries (404). The client comes from the main repo,
+# which still has it, and it is only ever a client.
+RUN rm -rf /var/lib/apt/lists/* \
+ && sed -i '/debian-security/d' /etc/apt/sources.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends mariadb-client \
+ && rm -rf /var/lib/apt/lists/*
+RUN for tool in mysql mysqldump; do \
+      ln -sf "/usr/bin/$tool" "/usr/local/bin/$tool"; \
+    done
+
 # Node 16: grunt 0.4-era toolchain. Static tarball from nodejs.org.
 RUN wget -qO- https://nodejs.org/dist/v16.20.2/node-v16.20.2-linux-x64.tar.gz \
       | tar -xz -C /opt
 ENV PATH=/opt/node-v16.20.2-linux-x64/bin:${PATH}
-ENV JAVA_HOME=/usr/local/openjdk-8
+RUN for tool in node npm npx; do \
+      ln -sf "/opt/node-v16.20.2-linux-x64/bin/$tool" "/usr/local/bin/$tool"; \
+    done
 
 WORKDIR /workspace
