@@ -23,11 +23,15 @@ SOLVES = ROOT / "out" / "solves"
 WORKSPACES = ROOT / "out" / "workspaces"
 
 # The stack is the bench's, not the tree's: none of these reach the agent.
+# `.dockerignore` is deliberately NOT here: the build context is this very
+# tree, so that file is what keeps `target/` and `node_modules/` out of it.
 CONTAINER_FILES = (
     "Dockerfile",
     "Containerfile",
     "compose.yaml",
     "compose.yml",
+    "docker-compose.yml",
+    "docker-compose.yaml",
     "entrypoint.sh",
     "bootstrap.sh",
     ".env",
@@ -49,6 +53,9 @@ def materialise(run_id: str, repo: Path, pin: str) -> Path:
     subprocess.run(["tar", "-x", "-C", str(tree)], input=archive, check=True)
     for name in CONTAINER_FILES:
         (tree / name).unlink(missing_ok=True)
+    # Variants a sample may carry: docker-compose-it.yml, -override, ...
+    for variant in tree.glob("docker-compose*"):
+        variant.unlink()
     git = ["git", "-C", str(tree), "-c", "user.name=bench"]
     git += ["-c", "user.email=bench@localhost"]
     subprocess.run([*git, "init", "-q"], check=True)
