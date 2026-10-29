@@ -18,7 +18,7 @@ import re
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeout
 
-from src.bench.settings import CASE_TIMEOUT_MS
+from settings import CASE_TIMEOUT_MS
 
 ARRANGE_EMAIL = "author@bench.test"
 ARRANGE_PASSWORD = "bench-author-pass"

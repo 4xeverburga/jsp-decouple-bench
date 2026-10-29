@@ -26,16 +26,15 @@ from pathlib import Path
 
 from dotenv import dotenv_values
 
-from . import settings, solves
+import settings
+
+from . import solves
 from .compose import sample_env
 from .seeds import manifest as load_manifest
 from .seeds import manifests as all_manifests
 from .seeds import pin
-from .settings import OPENCODE_MODEL, ROOT
 
-TASKS = ROOT / "main.py"
-LOGS = ROOT / "out" / "evals"
-MODEL = "mockllm/model"
+TASKS = settings.ROOT / "main.py"
 EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
 
 
@@ -51,7 +50,7 @@ def _eval(
     logs: str,
     env: dict[str, str],
     model: str,
-    extra: tuple[str, ...] = (),
+    extra: tuple[str, ...],
 ) -> None:
     """One `inspect eval`; `model` answers the agent's bridged calls."""
     argv = [
@@ -67,7 +66,9 @@ def _eval(
         "--log-dir",
         logs,
     ]
-    subprocess.run(argv, cwd=ROOT, env={**os.environ, **env}, check=True)
+    subprocess.run(
+        argv, cwd=settings.ROOT, env={**os.environ, **env}, check=True
+    )
 
 
 def _spec(manifest_id: int) -> str:
@@ -82,7 +83,7 @@ def solve(
     opencode_model: str,
     run: str,
     logs: str,
-    extra: tuple[str, ...] = (),
+    extra: tuple[str, ...],
 ) -> None:
     """Let OpenCode work on a tree cut from the pin, in its own workspace."""
     chosen = load_manifest(manifest_id)
@@ -127,6 +128,12 @@ def score(manifest_id: int, run: str, logs: str) -> None:
             f"manifest_id={manifest_id}",
             "-T",
             "phase=score",
+            "-T",
+            f"run={run}",
+            "-T",
+            f"opencode_model={settings.OPENCODE_MODEL}",
+            "-T",
+            f"model_target={settings.SCORE_MODEL}",
             "--max-samples",
             "1",
         ],
@@ -135,7 +142,8 @@ def score(manifest_id: int, run: str, logs: str) -> None:
             **{k: v for k, v in credentials.items() if v is not None},
             "BENCH_CHECKOUT": str(tree),
         },
-        MODEL,
+        settings.SCORE_MODEL,
+        (),
     )
 
 
@@ -189,7 +197,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     task.add_argument(
         "--opencode-model",
-        default=OPENCODE_MODEL,
+        default=settings.OPENCODE_MODEL,
         help="provider/model OpenCode formats its requests for",
     )
     task.add_argument(
@@ -204,19 +212,23 @@ def _parser() -> argparse.ArgumentParser:
         help="effort the answering model is asked to spend on reasoning",
     )
     task.add_argument("--run", help="reuse a run id instead of minting one")
-    task.add_argument("--logs", default=str(LOGS), help="Inspect log dir")
+    task.add_argument(
+        "--logs", default=str(settings.LOGS), help="Inspect log dir"
+    )
 
     graded = verbs.add_parser("score", help="grade a tree a solve kept")
     graded.set_defaults(handler=_score_verb)
     graded.add_argument("--manifest", type=int, required=True)
     graded.add_argument("--run", required=True)
-    graded.add_argument("--logs", default=str(LOGS), help="Inspect log dir")
+    graded.add_argument(
+        "--logs", default=str(settings.LOGS), help="Inspect log dir"
+    )
 
     listed = verbs.add_parser("manifests", help="list them and their cases")
     listed.set_defaults(handler=_manifests)
     return parser
 
 
-def main(argv: list[str] | None = None) -> None:
+def main(argv: list[str]) -> None:
     args = _parser().parse_args(argv)
     args.handler(args)

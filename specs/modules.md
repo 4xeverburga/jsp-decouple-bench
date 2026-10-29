@@ -5,6 +5,7 @@
 ```
 jsp-decouple-bench/
 ├── main.py                  # the @task types AND the command line
+├── settings.py              # EVERY parameter, read from .env; no defaults
 ├── pyproject.toml, uv.lock  # dependencies live here and nowhere else
 ├── AGENTS.md                # the supervisor's contract
 ├── ROADMAP.md               # direction
@@ -34,8 +35,12 @@ jsp-decouple-bench/
 | `compose.py` | where a sample's scoring stack and solve workspace are |
 | `stack.py` | starts and removes a case's compose project from the host |
 | `solves.py` | a run id, its tree and its diff |
-| `settings.py` | paths, and the environment read when asked |
 | `scorers/` | one package per gate, plus `metrics.all_must_pass` |
+
+`settings.py` sits at the repository root, not in `src/bench`, because every
+module imports it and it must not depend on the package it configures. It
+reads `.env` once and exposes the parameters as module values; a missing key
+is an error, never a fallback.
 
 Inspect owns the agent's sandbox, the run lifecycle and the logs. The bench
 keeps what no framework supplies: the work order, the case corpus, the delta
@@ -48,7 +53,8 @@ main.py → cli → solves, stack, compose, seeds, settings
         → scorers → stack, settings   (a scorer never imports another scorer)
 ```
 
-- `settings` and `seeds` are leaves.
+- `settings` and `seeds` are leaves. `settings` is importable from anywhere
+  because the repository root is on `sys.path` at every entry point.
 - Only `stack.py` talks to `docker compose` for scoring; scorers ask it for
   a running stack and never shell out themselves.
 - Only `main.py` imports `inspect_swe`: the agent is the one place the

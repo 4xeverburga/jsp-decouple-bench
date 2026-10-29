@@ -10,6 +10,8 @@ this file is not for you.
 |---|---|
 | the code under test, its pin and stack entrypoint | `seeds/sources.json` |
 | the graded cases and the work order | `seeds/manifests.json` |
+| every parameter: timeouts, viewport, locale, models, paths | `settings.py` |
+| the values of those parameters | `.env` (untracked, from `.env.example`) |
 | the answer key: flows and goldens | `src/samples/<sample>/cases/` |
 | the stack, Containerfile, .env, OpenTelemetry collector | `src/samples/<sample>/env/` |
 | starting and removing a case's stack | `src/bench/stack.py` |
@@ -48,10 +50,21 @@ modules and the lifecycle.
    passes only if every case passes.
 9. **PEP 8, 79 columns**, enforced by `ruff` through `uv run`. Dependencies
    live in `pyproject.toml` and `uv.lock`, nowhere else.
+10. **No defaults, no optional parameters, one place for configuration.**
+    A function takes every value it needs as a required argument: no `= x`
+    in a signature, no `None` that quietly means "use the usual", no
+    `os.environ.get(name, fallback)`. Configuration lives in `settings.py`
+    at the repository root and nowhere else; it reads `.env`, which is the
+    only source of parameters. A missing key is an error with the key's
+    name, never a fallback that hides a broken setup.
+    Only the per-run inputs (`BENCH_CHECKOUT`, `BENCH_BASE_URL`,
+    `BENCH_SAMPLE_ENV`) come from the process environment, because they
+    change from run to run and the driver sets them per invocation.
 
 ## Running one
 
 ```bash
+cp .env.example .env        # once per checkout; settings.py reads nothing else
 export BENCH_CHECKOUT=/abs/checkout BENCH_BASE_URL=http://localhost:8080
 export APP_HTTP_PORT=8080 MAMUTE_PUBLIC_URL=$BENCH_BASE_URL
 

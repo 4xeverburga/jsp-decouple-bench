@@ -19,13 +19,9 @@ import uuid
 from contextlib import asynccontextmanager
 from threading import Timer
 
-from . import settings
-from .compose import sample_env, scoring_compose
+import settings
 
-# The first build downloads the whole dependency set into an empty ~/.m2.
-BUILD_TIMEOUT_S = 1800
-# After the build: how long the services get to become healthy.
-HEALTHY_TIMEOUT_S = 600
+from .compose import sample_env, scoring_compose
 
 
 def _say(line: str) -> None:
@@ -34,7 +30,8 @@ def _say(line: str) -> None:
 
 class Stack:
     def __init__(self, slug: str) -> None:
-        self.project = f"bench-{slug}-{uuid.uuid4().hex[:8]}"
+        prefix = settings.STACK_PROJECT_PREFIX
+        self.project = f"{prefix}{slug}-{uuid.uuid4().hex[:8]}"
         self._compose = scoring_compose(slug)
         self._env = {
             **os.environ,
@@ -77,7 +74,7 @@ class Stack:
             process.kill()
 
     def up(self) -> None:
-        self._stream(("up", "-d", "--build"), BUILD_TIMEOUT_S)
+        self._stream(("up", "-d", "--build"), settings.STACK_BUILD_TIMEOUT_S)
         self._await_ready()
 
     def _states(self) -> list[dict]:
@@ -98,7 +95,7 @@ class Stack:
         `up --wait` is no use here: it fails when a one-shot service exits,
         even successfully, and the stacks have one.
         """
-        deadline = time.monotonic() + HEALTHY_TIMEOUT_S
+        deadline = time.monotonic() + settings.STACK_HEALTHY_TIMEOUT_S
         last = 0.0
         while time.monotonic() < deadline:
             waiting = []
@@ -114,11 +111,13 @@ class Stack:
                     waiting.append(f"{name}={svc['Health'] or state}")
             if not waiting:
                 return
-            if time.monotonic() - last > 15:
+            if time.monotonic() - last > settings.STACK_REPORT_INTERVAL_S:
                 _say(f"waiting for {', '.join(waiting)}")
                 last = time.monotonic()
-            time.sleep(3)
-        raise RuntimeError(f"stack not ready after {HEALTHY_TIMEOUT_S}s")
+            time.sleep(settings.STACK_POLL_INTERVAL_S)
+        raise RuntimeError(
+            f"stack not ready after {settings.STACK_HEALTHY_TIMEOUT_S}s"
+        )
 
     def down(self) -> None:
         subprocess.run(

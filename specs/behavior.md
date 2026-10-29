@@ -11,10 +11,16 @@ uv run python main.py score --manifest <id> --run <run_id>   # score a kept tree
 `main.py` is also the file Inspect loads (`inspect eval main.py@<task type>`),
 so the same work can be driven by hand with two `inspect eval` calls.
 
-Run environment (all required, no defaults): `BENCH_CHECKOUT` (the tree under
-test), `BENCH_BASE_URL`, `APP_HTTP_PORT` and the sample's own public-URL
-variable (`MAMUTE_PUBLIC_URL` for mamute). Credentials come from the sample's
-`env/.env`, which `score` exports.
+Parameters (all required, no defaults) come from `.env` at the repository
+root, which `settings.py` reads and nothing else does: the browser, the
+viewport, the locale, the clock, the timeouts and the model names. Copy
+`.env.example` to `.env` once per checkout.
+
+Run inputs come from the process environment, because they change per
+invocation: `BENCH_CHECKOUT` (the tree under test), `BENCH_BASE_URL`,
+`APP_HTTP_PORT` and the sample's own public-URL variable (`MAMUTE_PUBLIC_URL`
+for mamute). Credentials come from the sample's `env/.env`, which `score`
+exports.
 
 ## The unit of work
 

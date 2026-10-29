@@ -15,12 +15,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from .settings import ROOT
-
-SOLVES = ROOT / "out" / "solves"
-
-
-WORKSPACES = ROOT / "out" / "workspaces"
+import settings
 
 # The stack is the bench's, not the tree's: none of these reach the agent.
 # `.dockerignore` is deliberately NOT here: the build context is this very
@@ -41,7 +36,7 @@ CONTAINER_FILES = (
 
 def materialise(run_id: str, repo: Path, pin: str) -> Path:
     """The pinned tree without container files, as a baseline commit."""
-    tree = WORKSPACES / run_id
+    tree = settings.WORKSPACES / run_id
     if tree.exists():
         shutil.rmtree(tree)
     tree.mkdir(parents=True)
@@ -65,7 +60,7 @@ def materialise(run_id: str, repo: Path, pin: str) -> Path:
 
 
 def location(run_id: str) -> Path:
-    return SOLVES / run_id
+    return settings.SOLVES / run_id
 
 
 def capture(run_id: str, checkout: Path, record: dict) -> Path:

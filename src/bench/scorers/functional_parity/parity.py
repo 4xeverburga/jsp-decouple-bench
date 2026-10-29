@@ -18,7 +18,8 @@ import asyncio
 from inspect_ai.scorer import CORRECT, INCORRECT, Score, Target, scorer
 from inspect_ai.solver import TaskState
 
-from ... import settings
+import settings
+
 from ...stack import running
 from ..metrics import all_must_pass
 from . import db

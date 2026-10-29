@@ -11,7 +11,8 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from ... import settings
+import settings
+
 from .artifacts import normalize
 
 
@@ -61,11 +62,14 @@ def play(slug: str, case: str) -> dict:
     base_url = settings.base_url()
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
+        browser = playwright.chromium.launch(headless=settings.HEADLESS)
         context = browser.new_context(
-            viewport={"width": 1280, "height": 800},
-            locale="en-US",
-            timezone_id="UTC",
+            viewport={
+                "width": settings.VIEWPORT_WIDTH,
+                "height": settings.VIEWPORT_HEIGHT,
+            },
+            locale=settings.LOCALE,
+            timezone_id=settings.TIMEZONE_ID,
         )
         page = context.new_page()
         try:

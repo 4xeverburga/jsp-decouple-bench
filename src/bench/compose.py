@@ -6,7 +6,8 @@ sample tree: the agent gets a checkout with no container files in it.
 
 from pathlib import Path
 
-from . import settings
+import settings
+
 from .seeds import source as source_record
 
 

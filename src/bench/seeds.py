@@ -2,11 +2,11 @@
 
 import json
 
-from .settings import SEEDS
+import settings
 
 
 def _seed(name: str) -> list[dict]:
-    return json.loads((SEEDS / name).read_text())
+    return json.loads((settings.SEEDS / name).read_text())
 
 
 def task_type(kind: str) -> dict:

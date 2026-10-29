@@ -14,7 +14,9 @@ feature boundary, `oneshot_decoupling` names the whole app, and both list the
 cases they are graded on, so one sample per case serves either.
 
     inspect eval main.py@oneshot_decoupling \
-        -T manifest_id=14 -T phase=score \
+        -T manifest_id=14 -T phase=score -T run=<id> \
+        -T opencode_model=anthropic/claude-sonnet-4-5 \
+        -T model_target=mockllm/model \
         --model mockllm/model
 """
 
@@ -30,11 +32,8 @@ from inspect_swe import opencode
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from src.bench import (  # noqa: E402
-    samples,
-    settings,
-    solves,
-)
+import settings  # noqa: E402
+from src.bench import samples, solves  # noqa: E402
 from src.bench.compose import solve_compose  # noqa: E402
 from src.bench.scorers.functional_parity import parity  # noqa: E402
 from src.bench.seeds import manifest as load_manifest  # noqa: E402
@@ -84,9 +83,9 @@ async def capture_solution(state: TaskState) -> None:
 
 # OpenCode 2.x starts a managed background service before it answers, and in a
 # bare sandbox that service never comes up (`Unexpected server error`, or a
-# hang on its fixed port). 1.x talks to the bridge directly. Pin it; override
-# only with a version that has been shown to work in the sandbox.
-OPENCODE_VERSION = os.environ.get("BENCH_OPENCODE_VERSION", "1.14.42")
+# hang on its fixed port). 1.x talks to the bridge directly. The pinned
+# version lives in `.env` (`OPENCODE_VERSION`); change it only to one that
+# has been shown to work in the sandbox.
 
 
 def _aliases(
@@ -105,7 +104,9 @@ def _aliases(
     """
     if not model_target:
         return None
-    session = os.environ.get("OPENCODE_SESSION_ID", str(uuid.uuid4()))
+    session = os.environ.get("OPENCODE_SESSION_ID")
+    if session is None:
+        session = uuid.uuid4().hex
     model = get_model(
         model_target,
         default_headers={"x-opencode-session": session},
@@ -117,10 +118,10 @@ def _aliases(
 def _manifest_task(
     manifest_id: int,
     phase: str,
-    run: str | None,
+    run: str,
     opencode_model: str,
     expected_type: str,
-    model_target: str = "",
+    model_target: str,
 ) -> Task:
     chosen = load_manifest(manifest_id)
     if chosen["task_type"] != expected_type:
@@ -144,7 +145,7 @@ def _manifest_task(
             solver=opencode(
                 cwd=settings.checkout(),
                 opencode_model=opencode_model,
-                version=OPENCODE_VERSION,
+                version=settings.OPENCODE_VERSION,
                 model_aliases=_aliases(opencode_model, model_target),
             ),
             cleanup=capture_solution,
@@ -169,9 +170,9 @@ def _manifest_task(
 def decouple_slice(
     manifest_id: int,
     phase: str,
-    run: str | None = None,
-    opencode_model: str = settings.OPENCODE_MODEL,
-    model_target: str = "",
+    run: str,
+    opencode_model: str,
+    model_target: str,
 ) -> Task:
     """Run the solve or score phase for a decouple_slice manifest."""
     return _manifest_task(
@@ -188,9 +189,9 @@ def decouple_slice(
 def oneshot_decoupling(
     manifest_id: int,
     phase: str,
-    run: str | None = None,
-    opencode_model: str = settings.OPENCODE_MODEL,
-    model_target: str = "",
+    run: str,
+    opencode_model: str,
+    model_target: str,
 ) -> Task:
     """Run the solve or score phase for an oneshot_decoupling manifest."""
     return _manifest_task(
@@ -206,4 +207,4 @@ def oneshot_decoupling(
 if __name__ == "__main__":
     from src.bench.cli import main
 
-    main()
+    main(sys.argv[1:])
