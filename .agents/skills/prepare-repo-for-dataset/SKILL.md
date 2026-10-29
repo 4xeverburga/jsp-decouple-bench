@@ -15,6 +15,11 @@ description: >
 
 # Prepare a repo for the dataset
 
+> **Partly stale.** The Makefile-era commands still quoted below (`make
+> db-init`, `make task`, `HARNESS_CMD`, `bench.db`) are retired: `main.py`
+> is the command line now, and `specs/` is the source of truth. The
+> invariants in §1–§3 still hold as written.
+
 Run this **before any authoring work** on a candidate repo (before
 `authoring-bench-tests`, before baselines, before environments). It
 establishes the two invariants every later phase depends on: traceable
@@ -131,13 +136,12 @@ the pristine upstream state. A rewritten history destroys that.
   convention|password)|harness|golden|graded|decoupl|the task' -- .
   ```
   must be empty apart from upstream code that happens to use the words
-  (`evaluate`, `Task`, vendored `benchmark/` dirs). Remember the template
-  and every copied file land in this tree: `templates/compose.template.yaml`
-  and `templates/README.md` may carry authoring instructions, but the
-  `compose.yaml` you commit may not — keep the copied file reading like a
-  normal application's compose file. Re-pin after scrubbing (`make
-  db-init` picks the new `commit_sha` up from `seeds/sources.json`); a
-  scrub that is not in the pinned commit changes nothing for the agent.
+  (`evaluate`, `Task`, vendored `benchmark/` dirs). Authoring instructions
+  never land in this tree: the stack is the bench's
+  (`src/samples/<slug>/env/`), so there is no compose file here for them
+  to ride in on, and whatever you do add reads like a normal
+  application's. Re-pin after scrubbing; a scrub that is not in the pinned
+  commit changes nothing for the agent.
 - **The pin must be the tip of its branch, and its history must be
   unreachable.** Provisioning clones **one commit deep** (`--depth 1
   --branch <branch>`) into the run's sandbox, so the checkout has no
@@ -185,36 +189,26 @@ agent eval depend on the environment behaving identically.
   that are gitignored but regenerable), keep those steps documented and
   working — a fresh clone must reach a running app via the runbook.
 
-### The stack shape (compose template)
+### The stack is the bench's, not the pin's
 
-Every sample commits the same stack shape at its pin, copied from
-`templates/compose.template.yaml` in the bench repo and adapted. It is
-what makes `network_isolation` a real assertion instead of a description
-of whatever the app happens to look like.
+Nothing about how the app runs is committed here. The scoring stack, the
+Containerfile, the `.env` and the OpenTelemetry collector live in the bench
+under `src/samples/<slug>/env/`, and `solves.materialise` refuses a pin
+that carries one (§1). `src/samples/mamute/env/` is the reference shape
+until a second sample has one.
 
-- **One repository, one application.** `front` and `back` are built from
-  the same context. The sample is not two projects: it is one app whose
-  data side can be isolated, so the frontend can be refactored later
-  without the data side moving.
-- **Keep the names**: services `front`, `back`, `db`; networks `api`
-  (`front` <-> `back`) and `data` (`back` <-> `db`). The gate's
-  vocabulary is these names; inventing new ones breaks the contract.
-- **At the pin, `front` is attached to BOTH `api` and `data`.** The
-  pristine app is server-rendered and reaches the database directly, so
-  the isolation assertion must be **false** on the pinned commit. If you
-  "fix" it while preparing the sample, the sample has no task left in it
-  and the gate is vacuous. `dataset-ready-check` §2 verifies this.
-- **Only `front` publishes a host port.** The harness reads the database
-  with `compose exec`, so every extra published port is surface with no
-  purpose. Publish it from `APP_HTTP_PORT` (a neutral name — see §1 on
-  vocabulary), never from a name that mentions the runner.
-- **No `network_mode:`**, neither `host` nor `service:`.
-- **Add services, never networks.** A collector or sidecar joins `api` or
-  `data`; a new top-level network is a contract change and belongs in the
-  template first.
-- **Commit it at the pin** before any golden is captured: the gate reads
-  the contract from `git show <commit_sha>:compose.yaml`, never from the
-  worktree, so the file must be in the pinned commit.
+- **One repository, one application.** The app is one project; the bench
+  builds its one service from the tree under test, with the database as a
+  sidecar. The sample is not two projects.
+- **The sample's world is the bench's `solve.yaml`**: the toolchain, a
+  writable checkout at `settings.SOLVE_ROOT`, and the database reachable by
+  service name. What the pin may assume is only that contract.
+- **Neutral names.** Whatever the bench publishes a port for, it does so
+  from a name that says nothing about who sets it (`APP_HTTP_PORT`), and
+  the pin may not mention the runner at all — see §1 on vocabulary.
+- **The app's own build inputs stay in the tree**: `local-repo/`, vendored
+  jars, `pom.xml`, the sources. That is what makes a fresh clone buildable;
+  none of it describes a stack.
 
 ## 3. Install the OpenTelemetry agent (trace base)
 
@@ -332,13 +326,11 @@ auditing is the network: a sandbox hides files, not reachable services.
       (build → boot → healthcheck) on the current tree.
 - [ ] No dependency versions changed (`git diff` on build manifests is
       empty apart from intentional, documented changes).
-- [ ] `compose.yaml` follows `templates/compose.template.yaml`: services
-      `front`/`db` (plus `back` when the work lands), networks `api` and
-      `data`, only `front` publishes, no `network_mode:`, and at the pin
-      `front` is attached to **both** `api` and `data`.
-- [ ] The stack shape is in the pinned commit: `git show
-      <commit_sha>:compose.yaml` renders, and on the pristine tree
-      `network_isolation` **fails** while `functional_parity` passes.
+- [ ] `compose.yaml` follows the check in §1: the pin carries no stack
+      file, and the scoring stack is the bench's (`src/samples/<slug>/env/`).
+- [ ] On the pristine pin `functional_parity` **passes** (the app still
+      behaves as its goldens say). The gate scores the tree the run left,
+      on the stack the bench starts.
 - [ ] OpenTelemetry Java agent installed, version pinned and checksummed,
       configured via `OTEL_*` in `.env`, collector (if any) declared in
       `compose.yaml`, app still boots with it and with the collector
@@ -363,6 +355,9 @@ auditing is the network: a sandbox hides files, not reachable services.
 - Tidying the pin's `compose.yaml` so `front` no longer touches `data` —
   that deletes the task: a no-op run would then pass isolation, and the
   gate could no longer tell a working agent from one that did nothing.
+- Installing the OTel agent by editing the app's `pom.xml`/source — it
+  changes the pinned environment under existing goldens; it belongs in the
+  bench's `env/Containerfile`, from outside the app.
 - Committing generated artifacts that belong in `.gitignore`, or
   gitignoring things the runbook needs (e.g. tracked `.env` with
   synthetic credentials — see `authoring-bench-tests`).
@@ -373,7 +368,9 @@ auditing is the network: a sandbox hides files, not reachable services.
 - Shipping the template's authoring markers into the sample. `ADAPT`
   comments, "the gate reads this file", "the task: remove this" are
   written for whoever prepares the sample and are a giveaway to whoever
-  reads it. Scrub them from the copied file, keep them in
-  `templates/README.md`.
+  reads it. Scrub them, and keep them in the bench, never in the tree.
+- Committing the stack into the pin "because the app needs one to run".
+  The bench starts it; a pin that carries a `Containerfile`, a
+  `compose.yaml` or an `.env` is refused at the first solve.
 - Naming a sample's variables after the runner (`BENCH_HTTP_PORT`). A
   port name is documentation: it says who sets it and why.

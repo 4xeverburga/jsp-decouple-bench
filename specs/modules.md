@@ -11,7 +11,7 @@ jsp-decouple-bench/
 ├── ROADMAP.md               # direction
 ├── specs/                   # modules.md, behavior.md
 ├── seeds/                   # sources.json, task_types.json, manifests.json
-├── templates/               # how a sample's compose stack is shaped
+├── src/samples/<slug>/env/  # the stack: compose, Containerfile, .env, OTel
 ├── out/                     # gitignored; ALL output
 │   ├── solves/<run_id>/     # record.json, diff.patch, tree/
 │   ├── workspaces/<run_id>/ # the tree an agent is given

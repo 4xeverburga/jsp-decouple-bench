@@ -22,6 +22,60 @@ invocation: `BENCH_CHECKOUT` (the tree under test), `BENCH_BASE_URL`,
 for mamute). Credentials come from the sample's `env/.env`, which `score`
 exports.
 
+### By hand, with `inspect eval`
+
+The driver is convenience, not a requirement: both phases are ordinary
+Inspect tasks and `main.py` is the file that defines them. What it carries
+between the two runs is a run id and the tree that id names, so a hand-run
+pair has to pass the same `-T` values — seven of them, no defaults — or the
+log stops describing what happened.
+
+**Score** is standalone. It starts the stack itself and reads only the tree:
+
+```bash
+export BENCH_CHECKOUT=$PWD/out/solves/<run_id>/tree
+export APP_HTTP_PORT=8090 BENCH_BASE_URL=http://localhost:8090
+set -a; . src/samples/mamute/env/.env; set +a   # the sample's credentials
+uv run inspect eval main.py@decouple_slice \
+  -T manifest_id=3 -T phase=score -T run=<run_id> \
+  -T agent=opencode -T agent_model=opencode-go/deepseek-v4.1-flash \
+  -T agent_version=1.19.5 -T model_target=mockllm/model \
+  --model mockllm/model --max-samples 1
+```
+
+`agent`/`agent_model`/`agent_version`/`model_target` are labels in this
+phase; `--model` is the model Inspect demands, and `BENCH_SCORE_MODEL` is
+what the driver passes there. One sample at a time: the cases share the
+published port.
+
+**Solve** needs what the driver would have prepared:
+
+1. a workspace cut from the pin — `solves.materialise`, which also refuses a
+   pin that carries a stack file;
+2. `BENCH_SAMPLE_ENV`, the sample's `env/`, for the sandbox's `solve.yaml`;
+3. `SOLVE_ROOT`, and the answering model's credentials (`settings.MODEL_ENV`).
+
+```bash
+export RUN=$(uv run python -c 'import uuid; print(uuid.uuid4().hex)')
+uv run python -c "from pathlib import Path; import settings; \
+from src.bench import solves; from src.bench.seeds import pin; \
+solves.materialise('$RUN', Path(settings.checkout()), pin('mamute'))"
+export BENCH_CHECKOUT=$PWD/out/workspaces/$RUN
+export BENCH_SAMPLE_ENV=$PWD/src/samples/mamute/env SOLVE_ROOT=/workspace
+set -a; . .env; set +a                          # ANSWER_MODEL's keys
+uv run inspect eval main.py@decouple_slice \
+  -T manifest_id=3 -T phase=solve -T run=$RUN \
+  -T agent=opencode -T agent_model=opencode-go/deepseek-v4.1-flash \
+  -T agent_version=1.19.5 \
+  -T model_target=openai-api/opencode-go/deepseek-v4.1-flash \
+  --model openai-api/opencode-go/deepseek-v4.1-flash
+```
+
+A solve keeps its own tree under `out/solves/<run_id>/` — the task's cleanup
+hook writes it, not the driver — so the score command above can follow it
+with nothing in between. Run side by side, this is also the only place a
+stale `BENCH_CHECKOUT` shows: the score phase trusts it.
+
 ## The unit of work
 
 A **manifest** (`seeds/manifests.json`) names one source, one task type, the
@@ -35,11 +89,14 @@ task type.
 
 ## 1. Solve
 
-1. Cut a workspace from the pinned commit with the stack's container files
-   removed (`solves.materialise`), as a one-commit git repo.
+1. Cut a workspace from the pinned commit (`solves.materialise`), as a
+   one-commit git repo. The pin must carry no stack file: the stack is the
+   bench's, and a pin that still has one is refused, not scrubbed.
 2. Inspect boots the **solve sandbox** from `env/solve.yaml`: the sample's
    toolchain, the workspace writable, and the database as a sidecar.
-3. OpenCode runs inside it with `work_order(manifest)` as its prompt.
+3. The agent runs inside it with `work_order(manifest)` as its prompt:
+   `AGENT` in `.env`, one entry of `src/bench/agents.py`, bridged so that
+   `BENCH_ANSWER_MODEL` is what answers.
 4. On cleanup, `solves.capture` writes `out/solves/<run_id>/`: `record.json`,
    `diff.patch` (new files included) and `tree/`.
 

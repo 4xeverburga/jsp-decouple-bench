@@ -13,6 +13,11 @@ description: >
 
 # Dataset-ready check for a sample
 
+> **Partly stale.** The commands below (`make db-init`, `make task`,
+> `make gate`, `bench.db`, `SAMPLE_SANDBOX`, `HARNESS_CMD`) are retired —
+> `main.py` is the command line and `specs/` is the source of truth. The
+> `network_isolation` checks describe a gate that no longer exists.
+
 Run this against ONE sample (slug from `bench.db`). Every check must pass;
 a sample that fails any check is not publishable, because every agent
 score produced on it would be meaningless. Write the result to
@@ -53,10 +58,10 @@ working copy and nothing can be learned by looking around the sandbox.
   usability problem.
 - `grep -rE '/home/|/usr/lib/jvm' compose.yaml Dockerfile .env* scripts/`
   is empty. Only docker + make are needed on the host.
-- `compose.yaml` follows `templates/compose.template.yaml`: services
-  `front` and `db` (plus `back` once the work lands), networks `api` and
-  `data`, only `front` publishes a host port, no `network_mode:`. At the
-  pin `front` is attached to **both** networks — check 2 depends on it.
+- The scoring stack is the bench's (`src/samples/<slug>/env/`) and the
+  pin carries no compose file — `solves.materialise` refuses one. The old
+  shape check (`front`/`db`, networks `api`/`data`) died with
+  `network_isolation`.
 
 ### 2. No-op self-check (the most important check)
 The two gates must **disagree** on an untouched tree, and that
@@ -69,7 +74,7 @@ reproducible, isolation proves the task is still undone.
 - `network_isolation` must **fail**, on the `front:isolated_from_db`
   sub-check: the pinned `front` still shares `data` with `db`. A `pass`
   here means the sample ships pre-decoupled and grades nothing — re-pin
-  to the monolithic shape (see `templates/README.md`).
+  to the monolithic shape (see `prepare-repo-for-dataset`).
 - If parity fails on an untouched tree, **the sample, the environment or
   the golden is wrong, not an agent**. Fix the cause (pinning, seed,
   flow) — never loosen a comparison or an `ignore_columns` list to pass.

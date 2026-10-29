@@ -80,16 +80,24 @@ STACK_POLL_INTERVAL_S = _integer("STACK_POLL_INTERVAL_S")
 STACK_REPORT_INTERVAL_S = _integer("STACK_REPORT_INTERVAL_S")
 STACK_PROJECT_PREFIX = _text("STACK_PROJECT_PREFIX")
 
-# --- the agent, and the model that answers its bridged calls. -------------
-OPENCODE_MODEL = _text("OPENCODE_MODEL")
-OPENCODE_VERSION = _text("OPENCODE_VERSION")
+# --- the agent the solve phase runs. Three values that describe ONE
+# agent, so switching AGENT means taking its version and its wire model
+# along: `src/bench/agents.py` is what each name means. -------------------
+AGENT = _text("AGENT")
+# The wire name: the string the CLI formats its requests for. It must be
+# one its own catalogue knows (this is what refuses a name before any
+# request is made), and it is NOT the model that answers.
+AGENT_MODEL = _text("AGENT_MODEL")
+AGENT_VERSION = _text("AGENT_VERSION")
 
 # --- the model that answers, and the credential its provider reads. -------
 # Inspect's `openai-api` provider takes both from the process environment,
 # and derives their names from the service segment of the model string
 # (`openai-api/<service>/<model>` reads `<SERVICE>_API_KEY` and
 # `<SERVICE>_BASE_URL`), so these are the variable names themselves, passed
-# through to the eval untouched.
+# through to the eval untouched. They follow the ANSWERER, not the agent:
+# changing `BENCH_ANSWER_MODEL` to another provider means adding that
+# provider's two variables here and in `.env`.
 ANSWER_MODEL = _text("BENCH_ANSWER_MODEL")
 MODEL_ENV = {
     "OPENCODE_GO_API_KEY": _text("OPENCODE_GO_API_KEY"),

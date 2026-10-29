@@ -32,8 +32,8 @@ STACK_FILE = re.compile(
 )
 
 
-# Where the CLI keeps its session database and log, inside the sandbox.
-AGENT_STATE = "/root/.local/share/opencode"
+# Where the CLI keeps its session database and log is the agent's own
+# business: `agents.state(name)` says where, this module only copies it.
 
 
 def _refuse_stack_files(tree: Path) -> None:
@@ -60,7 +60,7 @@ def keep_agent(run_id: str, archive: bytes) -> Path:
     """
     target = location(run_id) / "agent"
     target.mkdir(parents=True, exist_ok=True)
-    path = target / "opencode.tar"
+    path = target / "session.tar"
     path.write_bytes(archive)
     return path
 

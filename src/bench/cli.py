@@ -12,7 +12,7 @@ file is:
 - the solve workspace, cut from the pin, which must carry no stack file.
 
 Everything else is Inspect's own CLI (`inspect view`, `inspect log`) or
-ruff, and `README.md` shows the two commands by hand.
+ruff, and `specs/behavior.md` shows the two commands by hand.
 """
 
 from __future__ import annotations
@@ -80,12 +80,14 @@ def _spec(manifest_id: int) -> str:
 def solve(
     manifest_id: int,
     model: str,
-    opencode_model: str,
+    agent: str,
+    agent_model: str,
+    agent_version: str,
     run: str,
     logs: str,
     extra: tuple[str, ...],
 ) -> None:
-    """Let OpenCode work on a tree cut from the pin, in its own workspace."""
+    """Let the agent work on a tree cut from the pin, in its own workspace."""
     chosen = load_manifest(manifest_id)
     slug = chosen["source"]
     workspace = solves.materialise(run, Path(settings.checkout()), pin(slug))
@@ -99,7 +101,11 @@ def solve(
             "-T",
             f"run={run}",
             "-T",
-            f"opencode_model={opencode_model}",
+            f"agent={agent}",
+            "-T",
+            f"agent_model={agent_model}",
+            "-T",
+            f"agent_version={agent_version}",
             "-T",
             f"model_target={model}",
         ],
@@ -120,6 +126,9 @@ def score(manifest_id: int, run: str, logs: str) -> None:
     tree = solves.tree(run)
     if not tree.is_dir():
         raise SystemExit(f"no tree for run {run}: {tree} is missing")
+    # What produced this tree, from the run's own record: a re-score of last
+    # week's run must not be labelled with today's `.env`.
+    record = solves.read(run)
     slug = load_manifest(manifest_id)["source"]
     env_dir = sample_env(slug)
     credentials = dotenv_values(env_dir / ".env")
@@ -133,7 +142,11 @@ def score(manifest_id: int, run: str, logs: str) -> None:
             "-T",
             f"run={run}",
             "-T",
-            f"opencode_model={settings.OPENCODE_MODEL}",
+            f"agent={record['agent']}",
+            "-T",
+            f"agent_model={record['agent_model']}",
+            "-T",
+            f"agent_version={record['agent_version']}",
             "-T",
             f"model_target={settings.SCORE_MODEL}",
             "--max-samples",
@@ -160,7 +173,9 @@ def _task(args: argparse.Namespace) -> None:
     solve(
         args.manifest,
         args.model,
-        args.opencode_model,
+        args.agent,
+        args.agent_model,
+        args.agent_version,
         run,
         args.logs,
         tuple(extra),
@@ -201,9 +216,19 @@ def _parser() -> argparse.ArgumentParser:
         "BENCH_ANSWER_MODEL names",
     )
     task.add_argument(
-        "--opencode-model",
-        default=settings.OPENCODE_MODEL,
-        help="provider/model OpenCode formats its requests for",
+        "--agent",
+        default=settings.AGENT,
+        help="which CLI agent solves it: a name in src/bench/agents.py",
+    )
+    task.add_argument(
+        "--agent-model",
+        default=settings.AGENT_MODEL,
+        help="the wire model that agent formats its requests for",
+    )
+    task.add_argument(
+        "--agent-version",
+        default=settings.AGENT_VERSION,
+        help="the version of that agent to install in the sandbox",
     )
     task.add_argument(
         "--model-arg",

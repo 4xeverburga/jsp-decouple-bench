@@ -17,10 +17,20 @@ What is done, what is next, and what is parked. Decisions of record live in
    - list controller and DAO methods in `OTEL_INSTRUMENTATION_METHODS_INCLUDE`
      so plain function calls show up in the base.
 2. **A full task end to end** on a real agent, then `audit-agent-trace`
-   before any score is quoted.
+   before any score is quoted. **Only one combination has ever finished a
+   run here: `opencode` 1.19.5, answered by
+   `opencode-go/deepseek-v4.1-flash`.** Nothing else is proven — not
+   another OpenCode model, not another agent.
 3. **Stacks for the other samples.** `online-study-system` and `openclinica`
    have cases but no scoring stack, so neither can be scored yet. Each needs
    `compose.yaml`, `Containerfile`, `.env` and the OpenTelemetry agent.
+4. **Prove the other agents.** `src/bench/agents.py` registers `opencode`,
+   `codex`, `claude` and `gemini`, and `--agent` selects one, but only
+   `opencode` has run. Each of the others needs: a version whose own
+   catalogue knows the wire name (`AGENT_MODEL`), its session directory
+   confirmed against `agents.state()`, and a first run read before any
+   score from it is quoted. What differs is the wire name, the bridge
+   prefix and where the CLI writes its record.
 
 ## Parked
 
@@ -45,3 +55,9 @@ What is done, what is next, and what is parked. Decisions of record live in
 - OpenTelemetry in the mamute stack.
 - `network_isolation` retired: with one scoring service there is no network
   contract left to grade.
+- Solve is agent-agnostic: `AGENT`/`AGENT_MODEL`/`AGENT_VERSION` and
+  `--agent`, one registry entry per CLI agent. Only `opencode` is verified
+  (see Next 2 and 4).
+- `templates/` deleted: the stack lives in `src/samples/<slug>/env/`, so
+  there is no compose to copy into a pin — and a pin that carries one is
+  refused at the first solve.

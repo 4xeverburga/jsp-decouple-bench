@@ -56,13 +56,19 @@ def for_scoring(manifest_id: int) -> list[Sample]:
 
 
 def for_solving(
-    manifest_id: int, run: str, opencode_model: str, model_target: str
+    manifest_id: int,
+    run: str,
+    agent: str,
+    agent_model: str,
+    agent_version: str,
+    model_target: str,
 ) -> list[Sample]:
     """One sample for the manifest: the agent works on the tree once.
 
-    `model_target` is recorded, not used: it is the model that answers the
-    agent's calls, and it is what a score has to be attributed to — the
-    CLI's own model name is only the wire format.
+    The agent trio is recorded, not used: it names what ran, the version of
+    it, and the model name it asked the bridge for. `model_target` is what
+    actually answered, and it is what a score has to be attributed to — the
+    wire name is only the format of the request.
     """
     chosen = load_manifest(manifest_id)
     commit = pin(chosen["source"])
@@ -75,7 +81,9 @@ def for_solving(
                 _metadata(chosen, commit),
                 manifest_id=manifest_id,
                 run=run,
-                opencode_model=opencode_model,
+                agent=agent,
+                agent_model=agent_model,
+                agent_version=agent_version,
                 model_target=model_target,
             ),
         )

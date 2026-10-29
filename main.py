@@ -15,8 +15,8 @@ cases they are graded on, so one sample per case serves either.
 
     inspect eval main.py@oneshot_decoupling \
         -T manifest_id=14 -T phase=score -T run=<id> \
-        -T opencode_model=opencode-go/deepseek-v4.1-flash \
-        -T model_target=mockllm/model \
+        -T agent=opencode -T agent_model=opencode-go/deepseek-v4.1-flash \
+        -T agent_version=1.19.5 -T model_target=mockllm/model \
         --model mockllm/model
 """
 
@@ -30,12 +30,11 @@ from inspect_ai import Task, task
 from inspect_ai.model import Model, get_model
 from inspect_ai.solver import Generate, Solver, TaskState, solver
 from inspect_ai.util import sandbox as host_sandbox
-from inspect_swe import opencode
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import settings  # noqa: E402
-from src.bench import samples, solves  # noqa: E402
+from src.bench import agents, samples, solves  # noqa: E402
 from src.bench.compose import solve_compose  # noqa: E402
 from src.bench.scorers.functional_parity import parity  # noqa: E402
 from src.bench.seeds import manifest as load_manifest  # noqa: E402
@@ -73,27 +72,30 @@ def submitted_tree() -> Solver:
 async def capture_solution(state: TaskState) -> None:
     """Keep the tree the agent left, so a score can be re-run without it."""
     run = state.metadata["run"]
+    agent = state.metadata["agent"]
     solves.capture(
         run,
         Path(settings.checkout()),
         {
-            "agent": "inspect_swe.opencode",
-            "opencode_model": state.metadata["opencode_model"],
+            "agent": agent,
+            "agent_model": state.metadata["agent_model"],
+            "agent_version": state.metadata["agent_version"],
             # The CLI's name is only the wire format; this is what answered.
             "model": state.metadata["model_target"],
             "manifest_id": state.metadata["manifest_id"],
         },
     )
-    await _keep_agent(run)
+    await _keep_agent(run, agent)
 
 
-async def _keep_agent(run: str) -> None:
+async def _keep_agent(run: str, agent: str) -> None:
     """Copy the CLI's session record out before the sandbox is removed.
 
     The library hands the agent's stdout back in memory and drops it after
     the run, and the eval log holds the work order and the scores but not
     the tool calls in between, so this is the only way a finished run can
-    be read afterwards.
+    be read afterwards. Where that record lives is the agent's own
+    business: `agents.state(name)` says.
     """
     try:
         box = host_sandbox()
@@ -101,8 +103,7 @@ async def _keep_agent(run: str) -> None:
             [
                 "sh",
                 "-c",
-                f"cd {solves.AGENT_STATE} && "
-                "tar -cf - log opencode.db | base64 -w0",
+                f"cd {agents.state(agent)} && tar -cf - . | base64 -w0",
             ]
         )
     except Exception:  # no sandbox left, or nothing to copy
@@ -112,45 +113,35 @@ async def _keep_agent(run: str) -> None:
     solves.keep_agent(run, base64.b64decode(done.stdout))
 
 
-# OpenCode 2.x starts a managed background service before it answers, and in a
-# bare sandbox that service never comes up (`Unexpected server error`, or a
-# hang on its fixed port). 1.x talks to the bridge directly. The pinned
-# version lives in `.env` (`OPENCODE_VERSION`); change it only to one that
-# has been shown to work in the sandbox.
+# The answering provider's gateway rejects a request that carries no session
+# header, and the id is only there so one run's calls group together. A
+# provider that does not know the header ignores it.
+SESSION_HEADER = "x-opencode-session"
 
 
-def _aliases(
-    opencode_model: str, model_target: str
-) -> dict[str, Model] | None:
-    """Route the name OpenCode asks for to the model that answers.
+def _answer_model(model_target: str) -> Model:
+    """The model that answers the agent's calls, whatever they were named.
 
-    The bridge declines any model name it does not know (`Add ... to
-    model_aliases`), and the agent's model string is only the wire format:
-    the answer comes from the eval's model. Alias both spellings so the
-    shape of the string the CLI sends cannot matter.
-
-    The alias is a Model instance, not a name: resolving a bare string builds
-    a model without the args the eval was given, and a gateway that needs a
-    routing header rejects that one.
+    A Model instance, not a name: resolving a bare string builds a model
+    without the args the eval was given, and a gateway that needs a routing
+    header rejects that one.
     """
-    if not model_target:
-        return None
     session = os.environ.get("OPENCODE_SESSION_ID")
     if session is None:
         session = uuid.uuid4().hex
-    model = get_model(
+    return get_model(
         model_target,
-        default_headers={"x-opencode-session": session},
+        default_headers={SESSION_HEADER: session},
     )
-    bare = opencode_model.rsplit("/", 1)[-1]
-    return {bare: model, opencode_model: model}
 
 
 def _manifest_task(
     manifest_id: int,
     phase: str,
     run: str,
-    opencode_model: str,
+    agent: str,
+    agent_model: str,
+    agent_version: str,
     expected_type: str,
     model_target: str,
 ) -> Task:
@@ -173,16 +164,19 @@ def _manifest_task(
             raise ValueError("solve phase requires run")
         return Task(
             dataset=samples.for_solving(
-                manifest_id, run, opencode_model, model_target
+                manifest_id,
+                run,
+                agent,
+                agent_model,
+                agent_version,
+                model_target,
             ),
-            solver=opencode(
-                cwd=settings.SOLVE_ROOT,
-                opencode_model=opencode_model,
-                version=settings.OPENCODE_VERSION,
-                model_aliases=_aliases(opencode_model, model_target),
-                # The bridge answers whatever credential the CLI presents;
-                # the provider still wants one to consider itself ready.
-                env={"OPENCODE_API_KEY": "sk-none"},
+            solver=agents.solver_for(
+                agent,
+                _answer_model(model_target),
+                agent_model,
+                agent_version,
+                settings.SOLVE_ROOT,
             ),
             cleanup=capture_solution,
             description=kind["description"],
@@ -207,7 +201,9 @@ def decouple_slice(
     manifest_id: int,
     phase: str,
     run: str,
-    opencode_model: str,
+    agent: str,
+    agent_model: str,
+    agent_version: str,
     model_target: str,
 ) -> Task:
     """Run the solve or score phase for a decouple_slice manifest."""
@@ -215,7 +211,9 @@ def decouple_slice(
         manifest_id,
         phase,
         run,
-        opencode_model,
+        agent,
+        agent_model,
+        agent_version,
         "decouple_slice",
         model_target,
     )
@@ -226,7 +224,9 @@ def oneshot_decoupling(
     manifest_id: int,
     phase: str,
     run: str,
-    opencode_model: str,
+    agent: str,
+    agent_model: str,
+    agent_version: str,
     model_target: str,
 ) -> Task:
     """Run the solve or score phase for an oneshot_decoupling manifest."""
@@ -234,7 +234,9 @@ def oneshot_decoupling(
         manifest_id,
         phase,
         run,
-        opencode_model,
+        agent,
+        agent_model,
+        agent_version,
         "oneshot_decoupling",
         model_target,
     )
@@ -245,7 +247,9 @@ def dummy_file(
     manifest_id: int,
     phase: str,
     run: str,
-    opencode_model: str,
+    agent: str,
+    agent_model: str,
+    agent_version: str,
     model_target: str,
 ) -> Task:
     """Smoke test only: one new file, no app work.
@@ -260,7 +264,9 @@ def dummy_file(
         manifest_id,
         phase,
         run,
-        opencode_model,
+        agent,
+        agent_model,
+        agent_version,
         "dummy_file",
         model_target,
     )
