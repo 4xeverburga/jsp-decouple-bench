@@ -12,6 +12,10 @@
       "compose_file": "compose.yaml",
       "default_service": "front"
     },
+    "solve": {
+      "toolchain": "JDK 8, Maven and Node 16 toolchain",
+      "database": "a MySQL service named db, reachable on port 3306 as root with an empty password, database mamute_development. Use that host, not localhost."
+    },
     "target_url": "http://localhost:8090",
     "technologies": [
       "java7",
@@ -50,6 +54,10 @@
     "description": "Clinical data management. Spring MVC 3.2, 807 JSPs (bounded flow only).",
     "entrypoint": null,
     "target_url": "http://localhost:8089/OpenClinica",
+    "solve": {
+      "toolchain": "JDK 8, Maven and Tomcat 9 toolchain",
+      "database": "a PostgreSQL service named db, reachable on port 5432 as clinica with password clinica, database openclinica. Use that host, not localhost."
+    },
     "technologies": [
       "java7",
       "jsp",

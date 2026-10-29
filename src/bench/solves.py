@@ -20,6 +20,43 @@ from .settings import ROOT
 SOLVES = ROOT / "out" / "solves"
 
 
+WORKSPACES = ROOT / "out" / "workspaces"
+
+# The stack is the bench's, not the tree's: none of these reach the agent.
+CONTAINER_FILES = (
+    "Dockerfile",
+    "Containerfile",
+    "compose.yaml",
+    "compose.yml",
+    "entrypoint.sh",
+    "bootstrap.sh",
+    ".env",
+    ".env.example",
+)
+
+
+def materialise(run_id: str, repo: Path, pin: str) -> Path:
+    """The pinned tree without container files, as a baseline commit."""
+    tree = WORKSPACES / run_id
+    if tree.exists():
+        shutil.rmtree(tree)
+    tree.mkdir(parents=True)
+    archive = subprocess.run(
+        ["git", "-C", str(repo), "archive", pin],
+        capture_output=True,
+        check=True,
+    ).stdout
+    subprocess.run(["tar", "-x", "-C", str(tree)], input=archive, check=True)
+    for name in CONTAINER_FILES:
+        (tree / name).unlink(missing_ok=True)
+    git = ["git", "-C", str(tree), "-c", "user.name=bench"]
+    git += ["-c", "user.email=bench@localhost"]
+    subprocess.run([*git, "init", "-q"], check=True)
+    subprocess.run([*git, "add", "-A"], check=True)
+    subprocess.run([*git, "commit", "-qm", "baseline"], check=True)
+    return tree
+
+
 def location(run_id: str) -> Path:
     return SOLVES / run_id
 

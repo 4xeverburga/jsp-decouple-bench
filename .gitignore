@@ -1,9 +1,10 @@
 # generated output — never a source of truth
 out/
 
-# secrets. Sample credentials live in <sample>/.env (also untracked);
-# .env.example is the tracked template.
+# secrets. The root .env is never tracked. A sample's env/.env is tracked
+# because its values are synthetic (see src/samples/<sample>/env/).
 .env
+!src/samples/*/env/.env
 
 # python
 __pycache__/

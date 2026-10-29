@@ -8,8 +8,7 @@ is ours, and it is all this file is:
 - a run id, which names `out/solves/<id>/`;
 - the checkout the scoring phase needs, derived from that id, so a stale
   one cannot quietly grade the previous run's tree;
-- the Compose sidecar `sandbox_compose` writes into the tree, removed
-  after scoring.
+- the solve workspace, cut from the pin with its container files removed.
 
 Everything else is Inspect's own CLI (`inspect view`, `inspect log`) or
 ruff, and `README.md` shows the two commands by hand.
@@ -24,17 +23,18 @@ import subprocess
 import uuid
 from pathlib import Path
 
-from . import solves
+from dotenv import dotenv_values
+
+from . import settings, solves
+from .compose import sample_env
 from .seeds import manifest as load_manifest
 from .seeds import manifests as all_manifests
-from .seeds import source as source_record
-from .settings import ROOT
+from .seeds import pin
+from .settings import OPENCODE_MODEL, ROOT
 
 TASKS = ROOT / "main.py"
 LOGS = ROOT / "out" / "evals"
 MODEL = "mockllm/model"
-SANDBOX = ROOT / "src" / "bench" / "compose.solve.yaml"
-SIDECAR = ".bench-inspect-compose.yaml"
 
 
 def _tool(name: str) -> list[str]:
@@ -43,19 +43,21 @@ def _tool(name: str) -> list[str]:
     return [found] if found else ["uv", "run", name]
 
 
-def _eval(spec: str, args: list[str], logs: str, env: dict[str, str]) -> None:
-    """One `inspect eval`, with the model that is never asked anything.
-
-    The agent is a command inside the sandbox, so no model is in the loop;
-    `eval` still requires one, hence the mock.
-    """
+def _eval(
+    spec: str,
+    args: list[str],
+    logs: str,
+    env: dict[str, str],
+    model: str,
+) -> None:
+    """One `inspect eval`; `model` answers the agent's bridged calls."""
     argv = [
         *_tool("inspect"),
         "eval",
         spec,
         *args,
         "--model",
-        MODEL,
+        model,
         "--display",
         "plain",
         "--log-dir",
@@ -70,14 +72,13 @@ def _spec(manifest_id: int) -> str:
     return f"{TASKS.name}@{chosen['task_type']}"
 
 
-def _sidecar(slug: str, tree: Path) -> Path:
-    """Where `sandbox_compose` drops its copy: beside the source's file."""
-    compose_file = source_record(slug)["stack"]["compose_file"]
-    return (tree / compose_file).with_name(SIDECAR)
-
-
-def solve(manifest_id: int, agent: str, run: str, logs: str) -> None:
-    """Hand the prompt to the agent, in the workspace built for it."""
+def solve(
+    manifest_id: int, model: str, opencode_model: str, run: str, logs: str
+) -> None:
+    """Let OpenCode work on a tree cut from the pin, in its own workspace."""
+    chosen = load_manifest(manifest_id)
+    slug = chosen["source"]
+    workspace = solves.materialise(run, Path(settings.checkout()), pin(slug))
     _eval(
         _spec(manifest_id),
         [
@@ -88,10 +89,14 @@ def solve(manifest_id: int, agent: str, run: str, logs: str) -> None:
             "-T",
             f"run={run}",
             "-T",
-            f"agent={agent}",
+            f"opencode_model={opencode_model}",
         ],
         logs,
-        {"BENCH_SANDBOX": str(SANDBOX)},
+        {
+            "BENCH_CHECKOUT": str(workspace),
+            "BENCH_SAMPLE_ENV": str(sample_env(slug)),
+        },
+        model,
     )
 
 
@@ -100,30 +105,33 @@ def score(manifest_id: int, run: str, logs: str) -> None:
     tree = solves.tree(run)
     if not tree.is_dir():
         raise SystemExit(f"no tree for run {run}: {tree} is missing")
-    chosen = load_manifest(manifest_id)
-    sidecar = _sidecar(chosen["source"], tree)
-    try:
-        _eval(
-            _spec(manifest_id),
-            [
-                "-T",
-                f"manifest_id={manifest_id}",
-                "-T",
-                "phase=score",
-                "--max-samples",
-                "1",
-            ],
-            logs,
-            {"BENCH_CHECKOUT": str(tree)},
-        )
-    finally:
-        sidecar.unlink(missing_ok=True)
+    slug = load_manifest(manifest_id)["source"]
+    env_dir = sample_env(slug)
+    credentials = dotenv_values(env_dir / ".env")
+    _eval(
+        _spec(manifest_id),
+        [
+            "-T",
+            f"manifest_id={manifest_id}",
+            "-T",
+            "phase=score",
+            "--max-samples",
+            "1",
+        ],
+        logs,
+        {
+            **{k: v for k, v in credentials.items() if v is not None},
+            "BENCH_CHECKOUT": str(tree),
+            "BENCH_SAMPLE_ENV": str(env_dir),
+        },
+        MODEL,
+    )
 
 
 def _task(args: argparse.Namespace) -> None:
     run = args.run or uuid.uuid4().hex
     print(f"run: {run}", flush=True)
-    solve(args.manifest, args.agent, run, args.logs)
+    solve(args.manifest, args.model, args.opencode_model, run, args.logs)
     score(args.manifest, run, args.logs)
     print(f"tree: {solves.tree(run)}")
 
@@ -153,7 +161,14 @@ def _parser() -> argparse.ArgumentParser:
     task = verbs.add_parser("task", help="solve and score one manifest")
     task.set_defaults(handler=_task)
     task.add_argument("--manifest", type=int, required=True)
-    task.add_argument("--agent", default="true", help="the command it runs")
+    task.add_argument(
+        "--model", required=True, help="provider/model that answers the agent"
+    )
+    task.add_argument(
+        "--opencode-model",
+        default=OPENCODE_MODEL,
+        help="provider/model OpenCode formats its requests for",
+    )
     task.add_argument("--run", help="reuse a run id instead of minting one")
     task.add_argument("--logs", default=str(LOGS), help="Inspect log dir")
 

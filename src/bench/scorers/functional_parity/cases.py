@@ -1,7 +1,7 @@
 """Playing one case: its flow, its golden, and the difference.
 
-A case is a directory in this package's `corpus/` holding `flow.py` (drives
-the app with Playwright) and `expect.json` (the frozen artifacts and the
+A case is a directory under `src/samples/<sample>/cases/`. Its `flow.py` drives
+the app with Playwright and `expect.json` (the frozen artifacts and the
 database delta). The golden is read as JSON; the flow is loaded by path,
 because a case is data: adding one must not mean touching Python.
 """
@@ -14,8 +14,6 @@ from uuid import uuid4
 from ... import settings
 from .artifacts import normalize
 
-CORPUS = Path(__file__).with_name("corpus")
-
 
 def load(path: Path, name: str):
     """A module from its file: no package layout to satisfy."""
@@ -26,7 +24,8 @@ def load(path: Path, name: str):
 
 
 def golden(slug: str, case: str) -> dict:
-    return json.loads((CORPUS / slug / case / "expect.json").read_text())
+    golden_file = settings.SAMPLES / slug / "cases" / case / "expect.json"
+    return json.loads(golden_file.read_text())
 
 
 def _screenshot(page, slug: str, case: str) -> str | None:
@@ -56,7 +55,7 @@ def play(slug: str, case: str) -> dict:
     """
     from playwright.sync_api import sync_playwright
 
-    case_dir = CORPUS / slug / case
+    case_dir = settings.SAMPLES / slug / "cases" / case
     flow = load(case_dir / "flow.py", f"flow_{case.replace('-', '_')}")
     expect = golden(slug, case)["artifacts"]
     base_url = settings.base_url()

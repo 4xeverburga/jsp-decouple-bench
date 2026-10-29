@@ -1,8 +1,7 @@
-"""functional_parity: the gate, its corpus, and the machinery under both.
+"""functional_parity: the gate, and the machinery that grades a case.
 
-A case is a functional-parity test, so it lives inside the package that
-grades it — flow, golden, and the `corpus/` they sit in. Nothing outside
-this package reads the corpus layout.
+Cases are data in `src/samples/<sample>/cases/`; this package only plays them.
+Nothing else reads the case layout.
 
 - `parity.py`    the scorer: browser artifacts and database rows, compared
 - `cases.py`     play a case's flow, read its frozen golden

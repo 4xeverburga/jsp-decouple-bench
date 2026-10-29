@@ -50,4 +50,11 @@ def pin(slug: str) -> str:
 def work_order(chosen: dict) -> str:
     """The two data fields the agent reads — no routes, no case names."""
     kind = task_type(chosen["task_type"])
-    return f"{kind['base_prompt'].rstrip()}\n\n{chosen['prompt'].rstrip()}\n"
+    solve = source(chosen["source"]).get("solve", {})
+    try:
+        base = kind["base_prompt"].format(**solve)
+    except KeyError as missing:
+        raise ValueError(
+            f"source {chosen['source']!r} has no solve {missing.args[0]!r}"
+        ) from None
+    return f"{base.rstrip()}\n\n{chosen['prompt'].rstrip()}\n"

@@ -57,7 +57,9 @@ def for_scoring(manifest_id: int) -> list[Sample]:
     ]
 
 
-def for_solving(manifest_id: int, run: str) -> list[Sample]:
+def for_solving(
+    manifest_id: int, run: str, opencode_model: str
+) -> list[Sample]:
     """One sample for the manifest: the agent works on the tree once."""
     chosen = load_manifest(manifest_id)
     commit = pin(chosen["source"])
@@ -70,6 +72,7 @@ def for_solving(manifest_id: int, run: str) -> list[Sample]:
                 _metadata(chosen, commit),
                 manifest_id=manifest_id,
                 run=run,
+                opencode_model=opencode_model,
             ),
         )
     ]

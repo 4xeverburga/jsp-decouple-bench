@@ -528,7 +528,7 @@
         "/question/watched/{question.id}"
       ]
     },
-    "scorers": ["functional_parity", "network_isolation"],
+    "scorers": ["functional_parity"],
     "name": "whole-app",
     "id": 14,
     "source": "mamute"

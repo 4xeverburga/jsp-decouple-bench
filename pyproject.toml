@@ -4,7 +4,9 @@ version = "1.0.0"
 description = "Falsifiable benchmark for decoupling legacy JSP frontends with REST APIs"
 requires-python = "==3.13.*"
 dependencies = [
+    "anthropic>=2.3.0",
     "inspect-ai==0.3.286",
+    "inspect-swe>=0.2.72",
     "playwright==1.63.0",
     "python-dotenv==1.2.4",
     "pyyaml==6.0.3",

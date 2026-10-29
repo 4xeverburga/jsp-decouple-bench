@@ -1,0 +1,109 @@
+# Mamute — development stack.
+#
+# One host port is configurable, so the app can run on any free port without
+# editing this file:
+#   APP_HTTP_PORT   host port for the app   (default 8090)
+#
+# The database publishes nothing: it is reached from inside the `data`
+# network only.
+#
+# Credentials come from this folder's .env (synthetic and deterministic).
+#
+# Networks:
+#   api    front <-> back
+#   data   back <-> db
+# `front` is on both today: the app is still server-rendered and reads the
+# database directly.
+#
+# Traces: the app runs under the OpenTelemetry Java agent and exports to
+# `collector`, which writes them to the `traces` volume. Nothing waits on the
+# collector's health, so a dead one cannot change what the app does.
+name: mamute
+
+networks:
+  api: {}
+  data: {}
+
+services:
+  collector:
+    image: otel/opentelemetry-collector-contrib:0.140.0
+    networks:
+      - api
+    # the named volume is root-owned; the image's default user is not
+    user: "0"
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otel/config.yaml:ro
+      - traces:/traces
+
+  db:
+    image: mysql:5.7
+    networks:
+      - data
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "true"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  front:
+    x-default: true
+    build:
+      context: ${BENCH_CHECKOUT:?set BENCH_CHECKOUT to the tree to score}
+      dockerfile: ${BENCH_SAMPLE_ENV:?set by the bench}/Containerfile
+    networks:
+      - api
+      - data
+    depends_on:
+      db:
+        condition: service_healthy
+      collector:
+        condition: service_started
+    ports:
+      - "${APP_HTTP_PORT:-8090}:8080"
+    volumes:
+      - ./entrypoint.sh:/workspace/entrypoint.sh:ro
+    environment:
+      # fail fast instead of booting with empty credentials
+      MAMUTE_ADMIN_USER: ${MAMUTE_ADMIN_USER:?set .env (cp from .env.example)}
+      MAMUTE_ADMIN_PASSWORD: ${MAMUTE_ADMIN_PASSWORD:?set .env (cp from .env.example)}
+      MAMUTE_PUBLIC_URL: ${MAMUTE_PUBLIC_URL:-http://localhost:${APP_HTTP_PORT:-8090}}
+      # The app runs in Maven's JVM (exec:java), so that is where the agent goes.
+      MAVEN_OPTS: -javaagent:/opt/otel/javaagent.jar
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:?set .env (cp from .env.example)}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:?set .env (cp from .env.example)}
+      OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:?set .env (cp from .env.example)}
+      OTEL_METRICS_EXPORTER: ${OTEL_METRICS_EXPORTER:?set .env (cp from .env.example)}
+      OTEL_LOGS_EXPORTER: ${OTEL_LOGS_EXPORTER:?set .env (cp from .env.example)}
+      OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:?set .env (cp from .env.example)}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?set .env (cp from .env.example)}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8080/"]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+      start_period: 240s
+
+  # One-shot: rotates the first-boot seeded moderator to the .env admin
+  # credentials. Exits 0; `compose up --wait` treats a successful exit as done.
+  bootstrap:
+    image: mysql:5.7
+    networks:
+      - data
+    depends_on:
+      front:
+        condition: service_healthy
+    volumes:
+      - ./bootstrap.sh:/bootstrap.sh:ro
+    entrypoint: ["bash", "/bootstrap.sh"]
+    environment:
+      MAMUTE_ADMIN_USER: ${MAMUTE_ADMIN_USER:?set .env (cp from .env.example)}
+      MAMUTE_ADMIN_PASSWORD: ${MAMUTE_ADMIN_PASSWORD:?set .env (cp from .env.example)}
+
+volumes:
+  db-data:
+  traces:

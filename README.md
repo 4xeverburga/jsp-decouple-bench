@@ -26,16 +26,13 @@ Export the run environment once per shell:
 export BENCH_CHECKOUT=/abs/checkout
 export BENCH_BASE_URL=http://localhost:8080
 export APP_HTTP_PORT=8080 MAMUTE_PUBLIC_URL=$BENCH_BASE_URL
-export BENCH_AGENT_IMAGE=<image the agent runs in>
-set -a; . "$BENCH_CHECKOUT/.env"; set +a
 ```
 
 Run the manifest task. The agent runs first; every assigned scorer runs
 automatically afterward against the saved tree, with one run ID for both:
 
 ```bash
-uv run python main.py task --manifest 3 \
-  --agent 'opencode run --auto --model opencode-go/deepseek-v4.1-flash#high "$(cat)"'
+uv run python main.py task --manifest 3 --model anthropic/claude-sonnet-4-5
 ```
 
 `main.py` is also the file Inspect loads (`inspect eval main.py@<task type>`),
@@ -63,11 +60,9 @@ is the `@task` name, and `manifests` prints it):
 RUN=$(python3 -c 'import uuid;print(uuid.uuid4().hex)')
 
 # solve: the agent, in the workspace built for it
-BENCH_SANDBOX=src/bench/compose.solve.yaml \
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=solve -T run=$RUN \
-  -T agent='opencode run --auto --model opencode-go/deepseek-v4.1-flash#high "$(cat)"' \
-  --model mockllm/model --display plain --log-dir out/evals
+  --model anthropic/claude-sonnet-4-5 --display plain --log-dir out/evals
 
 # score: the tree it left, on the sample's own stack
 BENCH_CHECKOUT=$PWD/out/solves/$RUN/tree \
@@ -79,9 +74,7 @@ uv run inspect eval main.py@decouple_slice \
 Three things to keep straight, all of which the driver does for you: `$RUN`
 must be the same in both commands; `BENCH_CHECKOUT` must be *that* run's
 tree — Inspect does not check, so a stale path grades the previous tree in
-silence; and scoring leaves `out/solves/$RUN/tree/.bench-inspect-compose.yaml`
-behind, so remove it (`rm -f`) or a later capture sees a tree you did not
-produce.
+silence.
 
 ## The agent
 
@@ -106,9 +99,10 @@ different numbers and should never share a label. Until then
 - **functional_parity** — boots the stack, plays each case, compares browser
   artifacts (including normalized DOM) *and* database deltas. It passes only
   if every case passes.
-- **network_isolation** — compares the submitted topology with the pinned
-  contract. The whole-app manifest assigns it; it must fail on an untouched
-  tree because the pristine app reads the database directly.
+- **trace_similarity** — not built yet. Every sample's stack already emits
+  OpenTelemetry traces (see the sample's `env/otel-collector.yaml`); the
+  scorer will compare their shape with the pristine app's, which is how a
+  REST call, an FFI call and a plain function call tell apart.
 
 Only `decouple_slice` and `oneshot_decoupling` are task types; scorer IDs are
 independent of task type.
@@ -121,27 +115,27 @@ src/bench/
   cli.py                  task, score, manifests — the run id they share
   seeds.py                sources, manifests, the work order
   samples.py              (source, case) pairs
-  compose.py              source Compose setup and topology comparison
+  compose.py              the scoring stack and the solve workspace, per sample
   solves.py               a run id, its tree and its diff
   settings.py             paths and the environment, read when asked
-  compose.solve.yaml      isolated agent workspace
   scorers/
-    functional_parity/    the gate, the corpus, and what grades it
+    functional_parity/    the gate, and what grades a case
       parity.py           the scorer: artifacts and rows, compared
       cases.py            play a flow, read a golden
       db.py               table snapshots through sandbox("db")
       delta.py            the delta algorithm, copied verbatim
       tabular.py          TSV parsing shared by every SQL adapter
       artifacts.py        the normalizer (base URL, clocks, inline styles)
-      corpus/<source>/<case>/  flow.py + expect.json
-    topology.py           network_isolation
     metrics.py            all_must_pass
+src/samples/<sample>/
+  env/                    compose.yaml, Containerfile, .env, solve.yaml,
+                          otel-collector.yaml (where the stack emits traces)
+  cases/                  the graded flows and their goldens
 ```
 
 `delta.py` is copied rather than reimplemented on purpose: the goldens were
 produced by it, so rewriting it would quietly change what "matches" means.
-A case is a functional-parity test, so the corpus lives inside that package
-— nothing outside it reads the layout.
+A case lives in `src/samples/<sample>/cases/`; the scorer only plays it.
 
 ## Not done yet
 

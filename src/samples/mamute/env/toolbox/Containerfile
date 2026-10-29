@@ -1,0 +1,14 @@
+# Agent toolbox: the JDK 8, Maven and Node 16 toolchain the mamute app runs on.
+#
+# No Docker in here: the app runs natively in this container and its database
+# is a sidecar. inspect_swe copies the opencode binary in at run time, so the
+# agent is not installed here.
+FROM maven:3.8.6-openjdk-8
+
+# Node 16: grunt 0.4-era toolchain. Static tarball from nodejs.org.
+RUN wget -qO- https://nodejs.org/dist/v16.20.2/node-v16.20.2-linux-x64.tar.gz \
+      | tar -xz -C /opt
+ENV PATH=/opt/node-v16.20.2-linux-x64/bin:${PATH}
+ENV JAVA_HOME=/usr/local/openjdk-8
+
+WORKDIR /workspace

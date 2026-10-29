@@ -12,6 +12,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SEEDS = ROOT / "seeds"
 
+# One folder per sample: `<slug>/cases/` is the answer key, `<slug>/env/` the
+# stack. Kept out of `bench/` because samples are data and there will be many.
+SAMPLES = ROOT / "src" / "samples"
+
 # What a failing case leaves behind: a screenshot of the page it ended on.
 # The name carries a random suffix, so two runs of the same case cannot land
 # on one file and a pass can never erase a failure's picture.
@@ -28,9 +32,8 @@ def base_url() -> str:
     return os.environ["BENCH_BASE_URL"]
 
 
-def sandbox() -> Path:
-    return Path(os.environ["BENCH_SANDBOX"])
-
+# OpenCode's provider client; the bridge still answers with the eval's model.
+OPENCODE_MODEL = "anthropic/claude-sonnet-4-5"
 
 FRONT_SERVICE = "front"
 

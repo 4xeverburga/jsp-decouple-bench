@@ -10,8 +10,8 @@ this file is not for you.
 |---|---|
 | the code under test, its pin and stack entrypoint | `seeds/sources.json` |
 | the graded cases and the work order | `seeds/manifests.json` |
-| the answer key: flows and goldens | `src/bench/scorers/functional_parity/corpus/` |
-| the shared stack template and checks | `templates/compose.template.yaml`, `src/bench/compose.py` |
+| the answer key: flows and goldens | `src/samples/<sample>/cases/` |
+| the stack, Containerfile and .env | `src/samples/<sample>/env/` |
 | the verdicts | `src/bench/scorers/` |
 
 Inspect owns the sandbox, the run lifecycle, teardown and the logs. The bench
@@ -34,9 +34,8 @@ delta algorithm, and the shape rules.
    No time-, locale- or host-dependent behaviour anywhere.
 6. **Credentials come from the source's `.env`**, never from a prompt, a case
    or a flow.
-7. **The pin is the contract.** `network_isolation` reads
-   `git show <pin>:compose.yaml`, never the worktree: an agent that publishes a
-   port must not widen the allowance it is graded against.
+7. **The bench owns the stack.** Compose, Containerfile and `.env` live in
+   `src/samples/<sample>/env/`, never in the tree the agent gets.
 8. **A gate never averages.** `all_must_pass` reduces across samples; a run
    passes only if every case passes.
 9. **PEP 8, 79 columns**, enforced by `ruff` through `uv run`. Dependencies
@@ -47,13 +46,11 @@ delta algorithm, and the shape rules.
 ```bash
 export BENCH_CHECKOUT=/abs/checkout BENCH_BASE_URL=http://localhost:8080
 export APP_HTTP_PORT=8080 MAMUTE_PUBLIC_URL=$BENCH_BASE_URL
-export BENCH_AGENT_IMAGE=<image the agent runs in>
-set -a; . "$BENCH_CHECKOUT/.env"; set +a
 
-uv run python main.py task --manifest 3 --agent '<the agent command>'
+uv run python main.py task --manifest 3 --model anthropic/claude-sonnet-4-5
 ```
 
-The command runs the agent, then every scorer assigned to the manifest.
+The solve runs OpenCode, then every scorer assigned to the manifest.
 `out/solves/<run id>/` keeps the tree, diff and a record of what ran.
 
 There is no Makefile, and nothing here is built, so `main.py` is the whole
@@ -64,8 +61,7 @@ expansion. `README.md` shows the two `inspect eval` calls it wraps.
 
 ## Before a score is quoted
 
-- For a manifest assigning both scorers, parity green **and** isolation red
-   on a no-op run is the healthy pin. If parity is red, the source or the
+- On a no-op run parity must be green. If it is red, the source or the
    environment is wrong and no score on it means anything.
 - read the trace: what the agent actually read, and whether any path left its
   checkout. A run that found the goldens is not a score, it is a leak.
