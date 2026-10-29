@@ -43,6 +43,20 @@ What is done, what is next, and what is parked. Decisions of record live in
   long, silent download.
 - **Re-prove gate sensitivity** on the host-driven scorer with the
   `broken-vote` tree.
+- **A browser in the agent's toolbox — deliberately absent.** The solve
+  sandbox has no Playwright, no Chromium and none of the libraries one needs
+  (`libnss3`, `libatk`, `libgbm` are all missing), and its Node 16 is below
+  the `>=20` that Playwright 1.63 declares, so the agent cannot install one
+  either. The scorer's browser runs on the host and drives the published
+  port; parity compares outcomes (`dom_*`, counts, the DB delta), never
+  pixels, so a browser would add nothing to judging. What it costs the
+  agent is the *wiring* check: the graded flows drive select2 and the
+  `up-down-vote.js` widget, which `curl` cannot exercise, and the flow's
+  `_normalize()` strips `<script>`/`<style>`, so a clean DOM diff does not
+  prove the page still works. Revisit if failures cluster on broken AJAX
+  wiring rather than on logic: a separate toolbox image, Node 20 beside the
+  grunt-era 16, the EOL-bullseye apt traps, roughly +500 MB per solve
+  build.
 - **`.agents/skills/` still describe the old Makefile CLI** and need the same
   pass the specs just had.
 
