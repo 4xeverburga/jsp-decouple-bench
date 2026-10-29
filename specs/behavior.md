@@ -1,229 +1,121 @@
-# SPEC — `behavior.md` (verbs, lifecycle, gates)
+# SPEC — `behavior.md` (verbs, lifecycle, scorers)
 
-Two verbs, plus two support verbs. Nothing else is public.
+Three verbs, all through `main.py`:
 
 ```bash
-make db-init                                    # build bench.db from schema + seeds
-make task  MANIFEST_ID=<n> SAMPLE_SANDBOX=<abs empty folder> HARNESS=<l> HARNESS_CMD='<cmd>'  # → run_id
-make gate  GATE_ID=<id> RUN_ID=<run_id> [GATE_VERSION=<n>]             # → value
-make case-capture MANIFEST_ID=<n> CASE=<c> SAMPLE_SANDBOX=<abs empty folder>  # golden
+uv run python main.py manifests                              # list them
+uv run python main.py task  --manifest <id> --model <p/m>    # solve, then score
+uv run python main.py score --manifest <id> --run <run_id>   # score a kept tree
 ```
 
-Re-pinning is seed data, not a verb: edit `sample.commit_sha` in
-`seeds/sources.json` and run `make db-init`, which is the only writer of
-`bench.db`.
+`main.py` is also the file Inspect loads (`inspect eval main.py@<task type>`),
+so the same work can be driven by hand with two `inspect eval` calls.
 
-The harness is a command, not a name: `HARNESS_CMD` / `--harness-cmd` on
-every run, with the prompt on stdin. `HARNESS` is only the label recorded
-with the run. Both are required: there is no default agent in `.env`.
-Everything is also reachable directly via `python3 main.py …`, which is the
-stable interface; the Makefile is a convenience wrapper with no logic.
+Run environment (all required, no defaults): `BENCH_CHECKOUT` (the tree under
+test), `BENCH_BASE_URL`, `APP_HTTP_PORT` and the sample's own public-URL
+variable (`MAMUTE_PUBLIC_URL` for mamute). Credentials come from the sample's
+`env/.env`, which `score` exports.
 
-## 1. `task` — start a run
+## The unit of work
 
-Inputs: a **manifest**, named by `MANIFEST_ID` — the single row that
-carries sample + task type + version + prompt + adapter bindings + case
-scope — and the **sandbox**: the folder allocated to this run, absolute,
-absent or empty.
+A **manifest** (`seeds/manifests.json`) names one source, one task type, the
+cases it is graded on, and the scorers assigned to it. A **sample** is one
+`(source, case)` pair, id `slug@commit:case`; scoring gives every sample its
+own stack because the goldens were captured on a pristine database.
 
-There is no sample+name lookup with a "latest version" tie-break: a run
-names exactly one manifest row, and `make manifests` prints the ids. The
-manifest is the unit of work, so nothing else has to be passed to identify
-what the agent is being asked for.
+Task types differ only in their work order: `decouple_slice` names one feature
+boundary, `oneshot_decoupling` the whole app. Scorer ids are independent of
+task type.
 
-`SAMPLE_SANDBOX` holds one checkout and nothing else. It is *not* a
-provenance claim: the commit comes from `SAMPLE.commit_sha` and the
-repository from `SAMPLE.source`, both via the manifest. Nothing may be
-cloned beside the agent's tree — a sibling is a place to look for the
-answer — so a non-empty sandbox is refused rather than reused.
+## 1. Solve
 
-Steps:
+1. Cut a workspace from the pinned commit with the stack's container files
+   removed (`solves.materialise`), as a one-commit git repo.
+2. Inspect boots the **solve sandbox** from `env/solve.yaml`: the sample's
+   toolchain, the workspace writable, and the database as a sidecar.
+3. OpenCode runs inside it with `work_order(manifest)` as its prompt.
+4. On cleanup, `solves.capture` writes `out/solves/<run_id>/`: `record.json`,
+   `diff.patch` (new files included) and `tree/`.
 
-1. Load manifest → sample → pin. Resolve bindings.
-2. Allocate `run_id = uuid4().hex`, create `out/runs/<run_id>/`.
-3. Insert `TASK_RUN` (`started_at`, `harness`, `environment`).
-4. **Provision the sandbox.** Ensure the bench's bare mirror
-   `out/cache/<slug>.git` has `SAMPLE.commit_sha`, fetching
-   `SAMPLE.source` only if it does not. Clone the pin out of the mirror
-   into `SAMPLE_SANDBOX`, detach at the pin, then delete the remote, every
-   ref (branches, tags) and the reflog. Verify: HEAD == pin, no refs, no
-   remote, clean tree. `SAMPLE.entrypoint` and the credentials file must be
-   carried by the pin, else abort (`PreconditionError`).
-5. Resolve the harness (`--harness`, default `command`) and run it with
-   the **filled prompt**: the manifest prompt verbatim, with
-   `cwd = out/runs/<run_id>/sample`. The agent is told nothing else — see
-   §5.
-6. Capture `diff.patch` = `git diff` of that checkout against the pin
-   (empty if the agent changed nothing).
-7. Write `out/runs/<run_id>/task.json` and `harness.json`
-   (`{harness, exit_code, duration_s, cost_usd, tokens, log,
-   diff_bytes, diff_empty}` plus the manifest snapshot and preconditions).
-8. Print the `run_id` on stdout and nothing else. Exit 0.
+The agent never has the docker socket, this repository or the supervisor's
+home. A non-zero agent exit is recorded, not raised.
 
-The runner does **not** start the stack. The run is finished when the
-harness returns; gates are independent and never decide that. A non-zero
-harness exit is recorded, not raised.
+## 2. Score
 
-## 2. `gate` — evaluate a run
+Scoring has **no Inspect sandbox**. For each case the scorer, on the host:
 
-Inputs: a gate id (plus optional version) and a `run_id`.
+1. starts a fresh compose project from `env/compose.yaml`, built from
+   `BENCH_CHECKOUT`, and waits until every service is healthy or a one-shot
+   exited 0 (`stack.running`);
+2. snapshots the case's tables, plays `flow.py` with Playwright, snapshots
+   again;
+3. compares and scores;
+4. removes the project (`down -v`), even on failure.
 
-Steps:
+Samples run one at a time (`--max-samples 1`): they share the published port.
+`stack.py` streams `docker compose` output as `[stack]` lines, because a first
+build is minutes long and silent otherwise.
 
-1. Load run → manifest → sample → bindings → case scope.
-2. Start the stack from `SAMPLE.entrypoint` inside the run's own checkout
-   (`out/runs/<run_id>/sample`), using the sample's own `compose.yaml` and
-   `.env`. The harness injects
-   an override: project name `bench-<run_id>`, allocated host ports,
-   fixed healthcheck wait. The app is up when healthchecks pass.
-   Gates that only read declarations (`network_isolation`) skip this step
-   entirely and render the compose files instead.
-3. Evaluate, write `out/runs/<run_id>/gates/<gate_id>.json`.
-4. Tear the stack down (`down -v`) unless `KEEP_STACK=1`.
-5. Print the result JSON on stdout. Exit 0 on `pass`, 1 on `fail`,
-   2 on `error`, 3 on `pending`.
+## 3. Scorers
 
-### Result document
+A scorer never averages. `all_must_pass` reduces across a manifest's samples:
+**the manifest passes only if every case passes.** A scorer that returns
+`error` did not measure and is never averaged with a pass.
 
-```json
-{
-  "gate_id": "functional_parity",
-  "gate_version": 1,
-  "run_id": "3f2c…",
-  "value": 1.0,
-  "verdict": "pass",
-  "threshold": 0.999,
-  "direction": "maximize",
-  "duration_s": 812.4,
-  "measured_at": "2026-10-27T10:11:12Z",
-  "details": [{"case": "vote-flow__upvote-increments-count", "verdict": "pass"}]
-}
-```
+### `functional_parity`
 
-`verdict` ∈ `pass | fail | error | pending`. `value` is normalised to
-`[0,1]`, or `null` when the gate cannot measure. A gate **never**
-averages: `pass` requires every sub-check to pass.
+Per case:
 
-There is no ordering between gates and no composite score. Three gates
-exist today; more will be added (RL environments consume them
-individually).
+1. `before` = snapshot of the case's tables;
+2. play the flow through Chromium, getting its artifacts dict;
+3. `after` = snapshot; per table compute `inserted/updated/deleted` with the
+   case's `key_columns` and `ignore_columns`;
+4. compare the delta with `expect.json.db`, order-insensitively;
+5. compare each artifact with `expect.json.artifacts` after normalization;
+6. on any difference, keep the screenshot under `out/evidence/<slug>/`.
 
-## 3. The three gates
+The shot is always staged and only promoted on failure: the failure can be
+DB-only, with the page looking right, so the flow cannot know in advance.
 
-### `functional_parity` — direction `maximize`, threshold `1.0`
+Sensitivity is part of the contract: removing the `votes.save(...)` call from
+the vote controller must fail both vote cases on the `Vote` family of tables.
 
-For every case in `scope_json.cases`:
+### `trace_similarity` — **not built**
 
-1. reset the stack (`down -v && up --wait`), so ids are deterministic;
-2. `DatabasePort.dump` of the case's tables → **before**;
-3. run `flow.py` through `BrowserPort`, getting its artifacts dict;
-4. `DatabasePort.dump` → **after**; compute
-   `inserted/updated/deleted` per table with `key_columns` /
-   `ignore_columns` applied;
-5. compare, order-insensitively, against `expect.json.db`;
-6. compare each artifact listed in `case.json.e2e.artifacts` against
-   `expect.json.artifacts` (exact string match; DOM is normalised by
-   `flow.py` itself);
-7. **log the case** to `out/runs/<run_id>/cases/<case>.json` (verdict,
-   detail, artifacts, actual DB delta). This is the only way another gate
-   may observe a case's outcome — the corpus stays private to this gate.
+Intent: compare the spans a case produces with a base captured from the
+pristine app, to tell whether calls inside the application are REST, FFI or
+plain function calls. The stack already emits the spans (see
+`src/samples/<slug>/env/otel-collector.yaml`); the scorer and the base are on
+`ROADMAP.md`. It must never fabricate a score: without a base it is
+`pending`, not a pass.
 
-`value = passed_cases / total_cases`. A case that throws is `error` for
-that case and forces the gate to `fail` (not `error`) if other cases
-were measurable; if *no* case could run, the gate is `error`.
+`network_isolation` and `topology` are retired. The scoring stack is a single
+`front` service with no network contract to grade.
 
-### `network_isolation` — direction `maximize`, threshold `1.0`
-
-Asserts the stack's **declared** topology conforms to the sample's pinned
-shape (`templates/compose.template.yaml`): the work was done and no
-hidden dependency was introduced.
-
-**Static.** No container is started. Both files are rendered with
-`compose config` (about 0.1 s) — the contract from
-`git show <commit_sha>:compose.yaml`, the submission from the worktree —
-and the two documents are compared. Reading the worktree for the contract
-would let an agent widen the allowance it is measured against.
-
-Assertions:
-
-- no service uses `network_mode:` (`host` or `service:`);
-- every service attaches only to networks the pin declares;
-- every service publishes only the ports the pin declares for it;
-- `db` attaches to `data` only;
-- `front` shares no network with `db` — this is the task.
-
-`value = passed_assertions / total_assertions`.
-
-The pinned shape attaches `front` to both networks (the pristine app is
-server-rendered and talks to the database directly), so on an untouched
-tree this gate **fails** while `functional_parity` **passes**. That
-disagreement is the point: parity proves the goldens still reproduce,
-isolation proves the work has not been done yet. One repository, one
-application: `front` and `back` are built from the same context, so the
-data side is isolatable and the frontend can be refactored later.
-
-Known limit (v1): outbound egress is *not* blocked or measured; the gate
-reads shape, not traffic. Blocking egress belongs to the runner's
-network policy, not to a gate.
-
-### `trace_similarity` — **pending**
-
-Intent: capture OpenTelemetry traces for a run and compare them with an
-oracle (possibly an LLM) to detect calls that would violate the new
-decomposition — e.g. a controller still reaching into a view layer, or a
-new cross-module call that did not exist before.
-
-v1 ships the contract only: if `out/runs/<run_id>/traces.json` is
-missing, or `config.TRACE_ORACLE` is `none`, the gate writes
-`{"value": null, "verdict": "pending"}`. It must never fabricate a score.
-`traces.json` shape (produced by a trace adapter, not by this gate):
-
-```json
-{"resource": {"service.name": "mamute"},
- "spans": [{"name": "POST /voto/positivo", "trace_id": "…",
-            "parent_id": null, "attributes": {"http.method": "POST"}}]}
-```
-
-## 4. Parallel runs
-
-Two runs may execute concurrently on the same machine, even on the same
-sample checkout, without sharing mutable state:
-
-| resource | why it cannot collide |
-|---|---|
-| files | every path is `out/runs/<uuid4>/…`; no timestamps, no reuse |
-| writes | `os.replace()` of a temp file in the same directory (atomic) |
-| docker | project name `bench-<run_id>`; no shared containers/volumes |
-| ports | each run reserves free host ports (`src/run/net.py`) and injects them as a compose override |
-| sqlite | WAL mode, one short transaction per write, no long-lived writer |
-
-Two runs on the **same checkout** are still serialised by the sample
-itself (both would mutate the same worktree). Run them on separate
-clones; the bench never locks the sample.
-
-## 5. Isolation — the agent must not know
-
-An evaluated agent must not be able to tell it is being evaluated:
+## 4. Isolation — the agent must not know
 
 | never given to the agent | why |
 |---|---|
-| this repo (`bench.db`, `seeds/`, `specs/`, `src/`) | it contains the prompts, gates and corpus |
-| `scope_json` (routes, case names) | it is the answer key's index |
+| this repository (`seeds/`, `specs/`, `src/`, `out/`) | prompts, scorers and corpus |
+| routes, case names (the manifest's `scope`) | the answer key's index |
 | `expect.json`, `images/` | the answer key itself |
-| env vars branded `BENCH_*` | the agent may print its environment |
+| docker, compose, a container runtime | would say where it is running |
 
-`HarnessTask` holds only `prompt` and `cwd`, so this is structural, not a
-convention. The prompt is the manifest prompt verbatim, phrased as a work
-request in the product — no "benchmark", "golden", "parity", "case" or
-"evaluation" vocabulary. Enforcing OS-level isolation of the spawned
-environment is the **supervisor's** job: it owns this repo and hands the
-agent nothing but a checkout and a prompt.
+The work order is a task type's contract plus the manifest's ask, and nothing
+else. It uses no "benchmark", "golden", "case", "evaluation", "sandbox",
+"container", "docker" or "compose". The toolchain is simply "already
+installed here".
 
-## 6. Determinism
+## 5. Determinism
 
-- locale `en-US`, timezone `UTC`, viewport `1280x800` — from
-  `config.py`, copied into every browser context.
-- credentials come from the sample's `.env` (never from a case file, and
-  never hardcoded in `flow.py`).
-- ids come from a freshly reset stack (`requires_db_reset`).
-- nothing depends on wall-clock time or host locale.
+- `en-US`, `UTC`, `1280x800`, a fresh database per sample;
+- credentials from the sample's `.env`, never a prompt, case or flow;
+- nothing depends on wall-clock time or host locale;
+- ports and the clock are per run, so anything absolute in a golden is a bug.
+
+## 6. Before a score is quoted
+
+- on a no-op run `functional_parity` must be green; if it is red the source or
+  the environment is wrong;
+- read the agent's trace for anything that left its checkout
+  (`audit-agent-trace`): a run that found the goldens is a leak, not a score.

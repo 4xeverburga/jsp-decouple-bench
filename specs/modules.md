@@ -4,215 +4,97 @@
 
 ```
 jsp-decouple-bench/
-├── Makefile                  # thin wrapper, no logic
-├── README.md                 # what this is + the two commands
-├── AGENTS.md                 # contract for an evaluated agent
-├── ROADMAP.md                # decisions of record
-├── main.py                   # CLI entrypoint (argparse only)
-├── config.py                 # EVERY tunable, path and env read
-├── schema.sql                # DDL for bench.db
-├── bench.db                  # git-tracked registry
-├── .env.example              # synthetic, deterministic credentials
-├── specs/                    # er.md, modules.md, behavior.md
-├── seeds/                    # row data loaded by `make db-init`
-│   ├── technologies.json
-│   ├── samples.json
-│   ├── task_types.json
-│   └── manifests.json
-├── out/                      # gitignored; ALL output
-│   └── runs/<run_id>/
+├── main.py                  # the @task types AND the command line
+├── pyproject.toml, uv.lock  # dependencies live here and nowhere else
+├── AGENTS.md                # the supervisor's contract
+├── ROADMAP.md               # direction
+├── specs/                   # modules.md, behavior.md
+├── seeds/                   # sources.json, task_types.json, manifests.json
+├── templates/               # how a sample's compose stack is shaped
+├── out/                     # gitignored; ALL output
+│   ├── solves/<run_id>/     # record.json, diff.patch, tree/
+│   ├── workspaces/<run_id>/ # the tree an agent is given
+│   ├── evals/               # Inspect logs
+│   └── evidence/<slug>/     # a failing case's screenshot
 └── src/
-    ├── errors.py
-    ├── store/                # sqlite: connection + repositories
-    ├── run/                  # run_id, paths, net, sample checkout, compose stack
-    ├── tasks/                # the task implementation (scope is data)
-    ├── gates/                # gate implementations (+ functional_parity/cases/)
-    ├── env/                  # environment adapters: start, drive, inspect a sample
-    └── harness/              # agent harnesses: hand the prompt to an agent
+    ├── bench/               # the harness
+    └── samples/<slug>/      # one folder per sample; there will be many
+        ├── cases/<case>/    # the answer key: case.json, flow.py, expect.json
+        └── env/             # compose.yaml, Containerfile, .env, solve.yaml,
+                             # otel-collector.yaml, toolbox/
 ```
+
+## `src/bench`
+
+| module | owns |
+|---|---|
+| `cli.py` | `task`, `score`, `manifests`; the run id the two phases share |
+| `seeds.py` | sources, manifests, task types, and `work_order()` |
+| `samples.py` | `(source, case)` pairs as Inspect `Sample`s |
+| `compose.py` | where a sample's scoring stack and solve workspace are |
+| `stack.py` | starts and removes a case's compose project from the host |
+| `solves.py` | a run id, its tree and its diff |
+| `settings.py` | paths, and the environment read when asked |
+| `scorers/` | one package per gate, plus `metrics.all_must_pass` |
+
+Inspect owns the agent's sandbox, the run lifecycle and the logs. The bench
+keeps what no framework supplies: the work order, the case corpus, the delta
+algorithm and the shape rules.
 
 ## Dependency rule
 
 ```
-main.py → tasks ─→ env.ports → env.adapters → (subprocess)
-        → gates ─→ env.ports → env.adapters → (subprocess)
-        → tasks ─→ harness.ports → harness.adapters → (the agent)
-             ↓
-           src.run, src.store, config
+main.py → cli → solves, stack, compose, seeds, settings
+        → scorers → stack, settings   (a scorer never imports another scorer)
 ```
 
-- **Nothing imports upward.** An adapter never imports a gate; a gate
-  never imports another gate; **a gate never imports `src.harness`** — a
-  gate judges a tree, it does not run an agent.
-- `src/tasks` and `src/gates` talk to a sample's runtime **only** through
-  the protocols in `src/env/ports.py`. A gate that needs a browser asks
-  for `BrowserPort`; it does not import Playwright.
-- `src/tasks` is the only module that talks to `src/harness`.
-- `config.py` is a leaf: every other module may import it, it imports
-  nothing local.
+- `settings` and `seeds` are leaves.
+- Only `stack.py` talks to `docker compose` for scoring; scorers ask it for
+  a running stack and never shell out themselves.
+- Only `main.py` imports `inspect_swe`: the agent is the one place the
+  evaluated party enters the code.
+- Nothing under `src/samples/` is Python the bench imports. A flow is loaded
+  **by path**, so adding a case never means touching `src/bench`.
 
-## `src/tasks` — the task
+## `src/bench/scorers/functional_parity/`
 
-One implementation. `decouple_slice` and `oneshot_decoupling` differ only
-in the manifest's case scope, which is data, so the registry maps both
-names to `Task`:
+The gate and the machinery that grades a case; nothing else reads the case
+layout.
 
-```python
-class Task:
-    def prepare(
-        self, ctx: RunContext, harness: HarnessPort
-    ) -> HarnessResult: ...
-```
-
-`prepare` asserts the sample checkout, hands the prompt to the **harness**,
-reads the resulting diff back from git, and records the run. It does not
-start the stack, and it never edits the sample itself.
-
-## `src/gates` — gates
-
-One package per `GATE.gate_id`, each exporting `GATE`:
-
-| package | capability used | status |
-|---|---|---|
-| `functional_parity/` | `StackPort`, `BrowserPort`, `DatabasePort` | implemented |
-| `network_isolation/` | `StackPort` | implemented |
-| `trace_similarity/` | trace file + oracle | **pending** (emits `verdict: "pending"`) |
-
-Each implements `src/gates/ports.py::GateInputPort`:
-
-```python
-class GateInputPort(Protocol):
-    def evaluate(self, ctx: RunContext) -> GateResult: ...
-```
-
-A gate receives the run context (sample, manifest, bindings, paths) and
-returns a `GateResult`; `src/run/artifacts.py` serialises it. Gates never
-write to the DB.
-
-## `src/env` — environment adapters
-
-`env/ports.py` declares what the bench needs from a sample's **runtime**:
-
-| port | methods |
+| file | role |
 |---|---|
-| `StackPort` | `up()`, `down()`, `reset()`, `ps()`, `inspect()`, `declared()`, `exec_()` |
-| `BrowserPort` | `run_case(flow_path, base_url, e2e)`, `capture_case(...)` |
-| `DatabasePort` | `list_tables()`, `dump()`, `dump_many()` |
+| `parity.py` | the scorer: browser artifacts and database rows, compared |
+| `cases.py` | play a case's flow, read its golden, stage a screenshot |
+| `delta.py` | before/after table deltas — copied verbatim, because the goldens were produced by it |
+| `db.py` | table snapshots through the case's stack (`compose exec`) |
+| `tabular.py` | the TSV parser every SQL client shares |
+| `artifacts.py` | the normalizer: base URL, clocks, inline styles |
 
-`env/adapters/` holds implementations, one directory per **technology**,
-never per sample:
+## `src/samples/<slug>/cases/<case>/`
 
 ```
-env/adapters/
-├── compose/stack.py        # any sample with a compose.yaml      → StackPort
-├── playwright/browser.py   # chromium, pinned locale/tz/viewport  → BrowserPort
-├── mysql/db.py             # mysql client inside the db service   → DatabasePort
-├── postgres/db.py          # psql inside the db service           → DatabasePort
-├── h2/db.py                # H2 via an explicit command           → DatabasePort
-├── shell/db.py             # any SQL-over-stdin command           → DatabasePort
-└── tabular.py              # shared TSV parsing
+case.json      # e2e contract + db contract (hand-written)
+expect.json    # frozen golden (captured, never hand-written)
+flow.py        # Playwright flow: `run(page, base_url) -> artifacts`
+images/        # screenshots from the golden capture (review only)
 ```
 
-Adapters are **reused across samples**; the per-run map from capability
-to concrete adapter is `TASK_MANIFEST.bindings_json` (see `er.md`). That
-is the whole point: `mysql@1` serves `mamute` and `online-study-system`
-without either sample being mentioned in `src/`.
+`case.json` names the routes, the artifacts compared and, per table, the
+`key_columns` and `ignore_columns` of the delta. Credentials are read from
+the environment, never written in a case or a flow.
 
-`src/env/registry.py` resolves `"mysql@1"` → the adapter class, raises
-`UnknownAdapterError` otherwise, and checks the adapter declares the capability
-the binding claims.
+## `src/samples/<slug>/env/`
 
-## `src/harness` — agent harnesses
+The stack is the bench's, never the tree's: the agent gets a checkout with no
+container files in it (`solves.CONTAINER_FILES` strips them).
 
-The **other** meaning of "harness": the thing that runs the **agent**. It
-receives the prompt and does the work.
-
-```python
-@dataclass(frozen=True)
-class HarnessTask:
-    prompt: str  # TASK_MANIFEST.prompt — the whole of it
-    cwd: Path  # the sample checkout, already pinned
-
-    def render(self) -> str: ...  # exactly what the agent reads
-
-
-class HarnessPort(Protocol):
-    name: str
-
-    def run(self, task: HarnessTask, log_dir: Path) -> HarnessResult: ...
-```
-
-| adapter | meaning |
+| file | role |
 |---|---|
-| `command` | the only one: any agent CLI, prompt on stdin, command from `--harness-cmd` (`HARNESS_CMD=` through make) |
-
-Rules:
-
-1. **The agent must not know it is being evaluated.** `render()` returns
-   the manifest prompt verbatim — no routes, no case names, no goldens,
-   no "benchmark" vocabulary. `HarnessTask` holds only `prompt` and `cwd`,
-   so verification metadata (`scope_json`) cannot leak, structurally.
-2. **The agent's environment is not branded.** `command` adds nothing to
-   the environment it spawns. The prompt copy it keeps lives in the run
-   directory for the supervisor, and no such path is handed to the agent.
-3. **The supervisor is the only party that knows about grading.** It owns
-   this repo and spawns environments for agents; an agent may never have
-   access to `bench.db`, `seeds/` or the case corpus.
-4. The harness is chosen **per run** (`--harness`), not per sample:
-   comparing agents is the point. Its name is recorded in `TASK_RUN.harness`.
-5. The harness's own claims are never trusted: the diff is read back from
-   git and written to `out/runs/<run_id>/diff.patch`.
-6. `HarnessResult` carries `exit_code`, `duration_s`, `cost_usd`, `tokens`,
-   `log_path`; cost flows into `TASK_RUN.estimated_cost_usd`.
-
-## `src/gates/functional_parity/cases/`
-
-The corpus belongs to the gate that consumes it: **a case is a
-functional-parity test**, so it lives inside that package.
-
-```
-src/gates/functional_parity/cases/<sample>/<case>/
-├── case.json      # e2e contract + db contract (hand-written)
-├── expect.json    # frozen golden (generated by `make case-capture`)
-├── flow.py        # Playwright flow — the single source of truth
-└── images/        # screenshots from the golden capture (review only)
-```
-
-`case.json`:
-
-```json
-{
-  "sample": "mamute",
-  "case": "vote-flow__upvote-increments-count",
-  "e2e": {"routes": [...], "locale": "en-US", "timezone_id": "UTC",
-          "viewport": {"width": 1280, "height": 800},
-          "auth": "mixed", "credentials": "env:MAMUTE_ADMIN_USER,MAMUTE_ADMIN_PASSWORD",
-          "requires_db_reset": true, "artifacts": ["vote_count_before", "..."]},
-  "db":  {"tables": [{"name": "Vote", "key_columns": ["id"],
-                      "ignore_columns": ["createdAt"]}]}
-}
-```
-
-`expect.json` is **generated** by `make case-capture`, never hand-written.
-
-Nothing outside `functional_parity` knows these paths (`corpus.py` owns
-them); the `browser` adapter receives a **flow path**, never a case name.
-Other gates read a case's logged result — `out/runs/<run_id>/cases/
-<case>.json` — never the corpus. That is the cross-gate interface from
-`er.md`.
+| `compose.yaml`, `Containerfile` | the scoring stack, built from the tree under test |
+| `.env` | synthetic, deterministic credentials and `OTEL_*`; tracked on purpose |
+| `otel-collector.yaml` | receives spans, writes `/traces/traces.jsonl` |
+| `solve.yaml`, `toolbox/` | the agent's workspace: toolchain, a writable checkout, a database |
 
 ## `out/`
-
-```
-out/runs/<run_id>/
-├── task.json                 # manifest snapshot + preconditions + diff
-├── cases/<case>.json         # per-case result — the cross-gate interface
-├── gates/functional_parity.json
-├── gates/network_isolation.json
-├── gates/trace_similarity.json
-├── diff.patch
-├── images/                   # per-run screenshots (review only)
-└── traces.json               # OTel capture, when an adapter provides it
-```
 
 `out/` is gitignored in full; nothing under it is a source of truth.
