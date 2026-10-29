@@ -18,10 +18,13 @@ cases they are graded on, so one sample per case serves either.
         --model mockllm/model
 """
 
+import os
 import sys
+import uuid
 from pathlib import Path
 
 from inspect_ai import Task, task
+from inspect_ai.model import Model, get_model
 from inspect_ai.solver import Generate, Solver, TaskState, solver
 from inspect_swe import opencode
 
@@ -79,12 +82,45 @@ async def capture_solution(state: TaskState) -> None:
     )
 
 
+# OpenCode 2.x starts a managed background service before it answers, and in a
+# bare sandbox that service never comes up (`Unexpected server error`, or a
+# hang on its fixed port). 1.x talks to the bridge directly. Pin it; override
+# only with a version that has been shown to work in the sandbox.
+OPENCODE_VERSION = os.environ.get("BENCH_OPENCODE_VERSION", "1.14.42")
+
+
+def _aliases(
+    opencode_model: str, model_target: str
+) -> dict[str, Model] | None:
+    """Route the name OpenCode asks for to the model that answers.
+
+    The bridge declines any model name it does not know (`Add ... to
+    model_aliases`), and the agent's model string is only the wire format:
+    the answer comes from the eval's model. Alias both spellings so the
+    shape of the string the CLI sends cannot matter.
+
+    The alias is a Model instance, not a name: resolving a bare string builds
+    a model without the args the eval was given, and a gateway that needs a
+    routing header rejects that one.
+    """
+    if not model_target:
+        return None
+    session = os.environ.get("OPENCODE_SESSION_ID", str(uuid.uuid4()))
+    model = get_model(
+        model_target,
+        default_headers={"x-opencode-session": session},
+    )
+    bare = opencode_model.rsplit("/", 1)[-1]
+    return {bare: model, opencode_model: model}
+
+
 def _manifest_task(
     manifest_id: int,
     phase: str,
     run: str | None,
     opencode_model: str,
     expected_type: str,
+    model_target: str = "",
 ) -> Task:
     chosen = load_manifest(manifest_id)
     if chosen["task_type"] != expected_type:
@@ -108,6 +144,8 @@ def _manifest_task(
             solver=opencode(
                 cwd=settings.checkout(),
                 opencode_model=opencode_model,
+                version=OPENCODE_VERSION,
+                model_aliases=_aliases(opencode_model, model_target),
             ),
             cleanup=capture_solution,
             description=kind["description"],
@@ -133,10 +171,16 @@ def decouple_slice(
     phase: str,
     run: str | None = None,
     opencode_model: str = settings.OPENCODE_MODEL,
+    model_target: str = "",
 ) -> Task:
     """Run the solve or score phase for a decouple_slice manifest."""
     return _manifest_task(
-        manifest_id, phase, run, opencode_model, "decouple_slice"
+        manifest_id,
+        phase,
+        run,
+        opencode_model,
+        "decouple_slice",
+        model_target,
     )
 
 
@@ -146,10 +190,16 @@ def oneshot_decoupling(
     phase: str,
     run: str | None = None,
     opencode_model: str = settings.OPENCODE_MODEL,
+    model_target: str = "",
 ) -> Task:
     """Run the solve or score phase for an oneshot_decoupling manifest."""
     return _manifest_task(
-        manifest_id, phase, run, opencode_model, "oneshot_decoupling"
+        manifest_id,
+        phase,
+        run,
+        opencode_model,
+        "oneshot_decoupling",
+        model_target,
     )
 
 

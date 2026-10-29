@@ -7,6 +7,7 @@ dependencies = [
     "anthropic>=2.3.0",
     "inspect-ai==0.3.286",
     "inspect-swe>=0.2.72",
+    "openai>=3.41.0",
     "playwright==1.63.0",
     "python-dotenv==1.2.4",
     "pyyaml==6.0.3",

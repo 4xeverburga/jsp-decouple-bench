@@ -36,6 +36,7 @@ from .settings import OPENCODE_MODEL, ROOT
 TASKS = ROOT / "main.py"
 LOGS = ROOT / "out" / "evals"
 MODEL = "mockllm/model"
+EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
 
 
 def _tool(name: str) -> list[str]:
@@ -50,6 +51,7 @@ def _eval(
     logs: str,
     env: dict[str, str],
     model: str,
+    extra: tuple[str, ...] = (),
 ) -> None:
     """One `inspect eval`; `model` answers the agent's bridged calls."""
     argv = [
@@ -59,6 +61,7 @@ def _eval(
         *args,
         "--model",
         model,
+        *extra,
         "--display",
         "plain",
         "--log-dir",
@@ -74,7 +77,12 @@ def _spec(manifest_id: int) -> str:
 
 
 def solve(
-    manifest_id: int, model: str, opencode_model: str, run: str, logs: str
+    manifest_id: int,
+    model: str,
+    opencode_model: str,
+    run: str,
+    logs: str,
+    extra: tuple[str, ...] = (),
 ) -> None:
     """Let OpenCode work on a tree cut from the pin, in its own workspace."""
     chosen = load_manifest(manifest_id)
@@ -91,6 +99,8 @@ def solve(
             f"run={run}",
             "-T",
             f"opencode_model={opencode_model}",
+            "-T",
+            f"model_target={model}",
         ],
         logs,
         {
@@ -98,6 +108,7 @@ def solve(
             "BENCH_SAMPLE_ENV": str(sample_env(slug)),
         },
         model,
+        extra,
     )
 
 
@@ -131,7 +142,19 @@ def score(manifest_id: int, run: str, logs: str) -> None:
 def _task(args: argparse.Namespace) -> None:
     run = args.run or uuid.uuid4().hex
     print(f"run: {run}", flush=True)
-    solve(args.manifest, args.model, args.opencode_model, run, args.logs)
+    extra: list[str] = []
+    for arg in args.model_arg:
+        extra += ["-M", arg]
+    if args.reasoning_effort:
+        extra += ["--reasoning-effort", args.reasoning_effort]
+    solve(
+        args.manifest,
+        args.model,
+        args.opencode_model,
+        run,
+        args.logs,
+        tuple(extra),
+    )
     score(args.manifest, run, args.logs)
     print(f"tree: {solves.tree(run)}")
 
@@ -168,6 +191,17 @@ def _parser() -> argparse.ArgumentParser:
         "--opencode-model",
         default=OPENCODE_MODEL,
         help="provider/model OpenCode formats its requests for",
+    )
+    task.add_argument(
+        "--model-arg",
+        action="append",
+        default=[],
+        help="native model argument for --model, repeatable (key=value)",
+    )
+    task.add_argument(
+        "--reasoning-effort",
+        choices=EFFORTS,
+        help="effort the answering model is asked to spend on reasoning",
     )
     task.add_argument("--run", help="reuse a run id instead of minting one")
     task.add_argument("--logs", default=str(LOGS), help="Inspect log dir")
