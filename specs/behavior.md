@@ -76,6 +76,36 @@ hook writes it, not the driver — so the score command above can follow it
 with nothing in between. Run side by side, this is also the only place a
 stale `BENCH_CHECKOUT` shows: the score phase trusts it.
 
+## Agents and answerers
+
+Two independent choices, joined by the bridge:
+
+| | configured by | what it decides |
+|---|---|---|
+| **agent** | `AGENT`, `AGENT_MODEL`, `AGENT_VERSION` (`--agent…`) | which CLI drives, the system prompt and tool set it uses, and the model name it asks the bridge for |
+| **answerer** | `BENCH_ANSWER_MODEL`, `BENCH_MODEL_ENV` (`--model`) | which model generates the tokens, and so what a score is attributed to |
+
+Any agent can be answered by any model: `agents.aliases()` maps the name the
+CLI sends onto the `Model` the eval built. Two constraints survive that:
+
+- the **wire model** must exist in the CLI's own catalogue. The CLI checks it
+  before sending anything, so a version that predates the slug refuses it and
+  no alias can rescue it (opencode 1.14.42 vs `deepseek-v4.1-flash`);
+- the **answerer's provider** must have its credentials named in
+  `BENCH_MODEL_ENV` and set in `.env`. The agent needs none of its own: its
+  sandbox gets a dummy credential and the bridge answers.
+
+`BENCH_MODEL_ENV` is what keeps a new provider out of the code: it lists the
+variable names the provider reads — one `*_API_KEY` for an Inspect provider,
+`<SERVICE>_API_KEY` + `<SERVICE>_BASE_URL` for an OpenAI-compatible gateway,
+nothing for `mockllm` — and `settings.MODEL_ENV` forwards exactly those. Each
+named variable is required; an empty list is a real answer, an absent one is
+an error.
+
+What is proven: `opencode` 1.19.5 answered by
+`opencode-go/deepseek-v4.1-flash`. `codex`, `claude` and `gemini` are
+registered and selectable; `ROADMAP.md` says what proving one takes.
+
 ## The unit of work
 
 A **manifest** (`seeds/manifests.json`) names one source, one task type, the

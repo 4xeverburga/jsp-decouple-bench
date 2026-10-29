@@ -46,6 +46,21 @@ def _flag(name: str) -> bool:
     return _text(name) == "1"
 
 
+def _names(name: str) -> list[str]:
+    """A required list of variable names, possibly empty.
+
+    Absent is an error like any other key, but an empty value is a real
+    answer: a mock or local model needs no credential at all.
+    """
+    value = _ENV.get(name)
+    if value is None:
+        raise KeyError(
+            f"{name} is missing from {ENV_FILE}: copy .env.example to .env "
+            f"and fill it in (empty is allowed, absent is not)"
+        )
+    return value.split()
+
+
 # --- storage. Relative to the repository root; never a per-run choice. -----
 SEEDS = ROOT / "seeds"
 SAMPLES = ROOT / "src" / "samples"
@@ -90,19 +105,16 @@ AGENT = _text("AGENT")
 AGENT_MODEL = _text("AGENT_MODEL")
 AGENT_VERSION = _text("AGENT_VERSION")
 
-# --- the model that answers, and the credential its provider reads. -------
-# Inspect's `openai-api` provider takes both from the process environment,
-# and derives their names from the service segment of the model string
-# (`openai-api/<service>/<model>` reads `<SERVICE>_API_KEY` and
-# `<SERVICE>_BASE_URL`), so these are the variable names themselves, passed
-# through to the eval untouched. They follow the ANSWERER, not the agent:
-# changing `BENCH_ANSWER_MODEL` to another provider means adding that
-# provider's two variables here and in `.env`.
+# --- the model that answers, and the variables its provider reads. --------
+# WHICH variables those are is `.env`'s business (`BENCH_MODEL_ENV`), not
+# this file's: a provider reads its credential from the process environment
+# under a name of its own — one `*_API_KEY` for Inspect's native providers,
+# `<SERVICE>_API_KEY` + `<SERVICE>_BASE_URL` for an OpenAI-compatible
+# gateway — so they are passed through untouched. A new answerer is two
+# lines in `.env` and nothing here. They follow the ANSWERER, not the agent:
+# the agent's own sandbox gets a dummy credential and the bridge answers.
 ANSWER_MODEL = _text("BENCH_ANSWER_MODEL")
-MODEL_ENV = {
-    "OPENCODE_GO_API_KEY": _text("OPENCODE_GO_API_KEY"),
-    "OPENCODE_GO_BASE_URL": _text("OPENCODE_GO_BASE_URL"),
-}
+MODEL_ENV = {name: _text(name) for name in _names("BENCH_MODEL_ENV")}
 
 # --- the model the score phase is labelled with. It answers nothing, but
 # Inspect requires one; `mockllm/model` makes that explicit in the log. ----

@@ -13,6 +13,7 @@ this file is not for you.
 | every parameter: timeouts, viewport, locale, models, paths | `settings.py` |
 | the values of those parameters | `.env` (untracked, from `.env.example`) |
 | the CLI agents the solve can run, and what each needs | `src/bench/agents.py` |
+| the model that answers, and the variables its provider reads | `BENCH_ANSWER_MODEL`, `BENCH_MODEL_ENV` in `.env` |
 | the answer key: flows and goldens | `src/samples/<sample>/cases/` |
 | the stack, Containerfile, .env, OpenTelemetry collector | `src/samples/<sample>/env/` |
 | starting and removing a case's stack | `src/bench/stack.py` |
