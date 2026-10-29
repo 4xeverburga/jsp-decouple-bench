@@ -147,7 +147,7 @@ def _manifest_task(
                 manifest_id, run, opencode_model, model_target
             ),
             solver=opencode(
-                cwd=settings.checkout(),
+                cwd=settings.SOLVE_ROOT,
                 opencode_model=opencode_model,
                 version=settings.OPENCODE_VERSION,
                 model_aliases=_aliases(opencode_model, model_target),

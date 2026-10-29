@@ -107,6 +107,7 @@ def solve(
         {
             "BENCH_CHECKOUT": str(workspace),
             "BENCH_SAMPLE_ENV": str(sample_env(slug)),
+            "SOLVE_ROOT": settings.SOLVE_ROOT,
             **settings.MODEL_ENV,
         },
         model,

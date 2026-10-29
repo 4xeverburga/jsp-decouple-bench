@@ -55,6 +55,13 @@ SOLVES = OUT / "solves"
 WORKSPACES = OUT / "workspaces"
 LOGS = OUT / "evals"
 
+# --- the solve workspace, as the sandbox sees it. -------------------------
+# Every sample's `env/solve.yaml` mounts the checkout here and the agent
+# starts here. It is deliberately not the host path: that one spells this
+# repository's name, and a `pwd` is enough to send an agent looking for it.
+# One name for every sample, so a new toolbox inherits it.
+SOLVE_ROOT = "/workspace"
+
 # --- determinism. The goldens were captured with these; not a preference. --
 LOCALE = _text("BENCH_LOCALE")
 TIMEZONE_ID = _text("BENCH_TIMEZONE_ID")

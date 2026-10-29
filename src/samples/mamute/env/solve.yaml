@@ -21,8 +21,8 @@ services:
     init: true
     command: tail -f /dev/null
     volumes:
-      - ${BENCH_CHECKOUT:?set BENCH_CHECKOUT to the tree to solve in}:${BENCH_CHECKOUT}
-    working_dir: ${BENCH_CHECKOUT}
+      - ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}:${SOLVE_ROOT:?set SOLVE_ROOT}
+    working_dir: ${SOLVE_ROOT:?set SOLVE_ROOT}
 
   db:
     image: mysql:5.7
