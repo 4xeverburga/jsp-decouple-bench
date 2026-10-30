@@ -36,9 +36,12 @@ _TIMESTAMP_RE = re.compile(
 # A revision plus the moment it was built — what a footer stamp renders
 # (`Changeset: a9ddda25ceca 2026-10-30 05:33 +0000`). Every case rebuilds the
 # image, so this value can never be part of a golden: it is provenance, not
-# behaviour.
+# behaviour. The revision is a commit id OR the property reference the build
+# failed to substitute (`${changeSet}`), which is a stable string but leaves
+# the build time beside it — only the whole stamp, time included, may go.
 _BUILD_RE = re.compile(
-    r"\b[0-9a-f]{7,40}\s+\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}"
+    r"(?:\b[0-9a-f]{7,40}\b|\$\{[^}]+\})"
+    r"\s+\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}"
     r"(?::\d{2})?\s*[+-]\d{4}\b"
 )
 # A bare calendar date — `2026-10-30` or the `30-Oct-2026` a legacy form

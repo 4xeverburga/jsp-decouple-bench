@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import uuid
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dotenv import dotenv_values
 
@@ -33,7 +34,7 @@ from . import solves
 from .compose import sample_env
 from .seeds import manifest as load_manifest
 from .seeds import manifests as all_manifests
-from .seeds import pin
+from .seeds import pin, source
 
 TASKS = settings.ROOT / "main.py"
 EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
@@ -43,6 +44,22 @@ def _tool(name: str) -> list[str]:
     """A console script this venv provides, or uv as the fallback."""
     found = shutil.which(name)
     return [found] if found else ["uv", "run", name]
+
+
+def _published(slug: str) -> dict[str, str]:
+    """Where a sample's stack answers, and the port it answers on.
+
+    One seed field answers both: `target_url` is the address the flows
+    drive — context path included — and its port is the host port the
+    stack has to publish for that address to reach the app. Deriving the
+    two together is what stops the URL a case is played against from
+    drifting away from the port compose binds.
+    """
+    url = source(slug)["target_url"]
+    port = urlsplit(url).port
+    if port is None:
+        raise SystemExit(f"source {slug} target_url has no port: {url}")
+    return {"BENCH_BASE_URL": url, "APP_HTTP_PORT": str(port)}
 
 
 def _eval(
@@ -156,6 +173,7 @@ def score(manifest_id: int, run: str, logs: str) -> None:
         logs,
         {
             **{k: v for k, v in credentials.items() if v is not None},
+            **_published(slug),
             "BENCH_CHECKOUT": str(tree),
         },
         settings.SCORE_MODEL,
@@ -168,9 +186,10 @@ def capture(manifest_id: int, cases: list[str]) -> None:
 
     `BENCH_CHECKOUT` names the sample's repository here, as it does for
     `task`: the pin is cut from it and only then becomes the tree the
-    stack builds. `BENCH_BASE_URL` is the address the stack will publish,
-    exactly as it is for scoring, because the golden is normalized against
-    it.
+    stack builds. The address the stack publishes — `BENCH_BASE_URL`, and
+    the `APP_HTTP_PORT` that serves it — comes from the source's
+    `target_url`, exactly as it does for scoring, because the golden is
+    normalized against it.
     """
     chosen = load_manifest(manifest_id)
     slug = chosen["source"]
@@ -185,8 +204,10 @@ def capture(manifest_id: int, cases: list[str]) -> None:
         commit,
     )
     # From here the stack must build the pinned tree, not the worktree the
-    # pin came from — same env the scorer is given.
+    # pin came from — same env the scorer is given, down to the address it
+    # publishes on, because the golden is normalized against that URL.
     os.environ["BENCH_CHECKOUT"] = str(tree)
+    os.environ.update(_published(slug))
     credentials = dotenv_values(sample_env(slug) / ".env")
     for key, value in credentials.items():
         if value is not None:

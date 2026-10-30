@@ -1,19 +1,19 @@
 ---
-name: authoring-bench-tests
+name: bench-case-principles
 description: >
   Principles and review checklist for the cases of a sample in this
   benchmark: self-containment, per-sample env, the DB delta pattern,
   Playwright determinism, and what makes a case tamper-proof. Use when
   reviewing or writing `case.json` / `flow.py`, or when a case is flaky.
-  The step-by-step procedure for adding a case is `test-slice`.
+  The step-by-step procedure for adding a case is `add-bench-case`.
 ---
 
-# Authoring bench tests — principles
+# Bench case principles — what a good case is
 
 A case is a *functional-parity test*: `case.json` + `flow.py` + the golden
 `expect.json`, under `src/samples/<sample>/cases/<slice>__<behavior>/`. A bad
 case poisons every agent score run against it. This skill is the "why and
-what good looks like"; **`test-slice` is the "how"** (procedure, capture,
+what good looks like"; **`add-bench-case` is the "how"** (procedure, capture,
 manifest wiring). `dataset-ready-check` rejects samples that deviate.
 
 **Prerequisite — `prepare-repo-for-dataset`:** the sample must already be
@@ -70,7 +70,7 @@ offsets and unrelated rows cancel out.
 
 `flow.py` is the single source of truth; `main.py capture` and the gate
 both run it through the same code (`cases.drive`). Concrete patterns are
-in `test-slice` §3; the invariants:
+in `add-bench-case` §3; the invariants:
 
 - `locale="en-US"`, `timezone_id="UTC"`, viewport `1280x800` — from
   `settings.py` (`.env`), never the host.
@@ -107,7 +107,7 @@ golden.
 - [ ] `locale`, `timezone_id`, `viewport` present in `case.json`.
 - [ ] Every declared table is one the flow actually touches; and no table
       the flow touches is missing from `db.tables`.
-- [ ] Contributes to the slice's controller coverage (`test-slice`).
+- [ ] Contributes to the slice's controller coverage (`add-bench-case`).
 
 ## Anti-patterns
 

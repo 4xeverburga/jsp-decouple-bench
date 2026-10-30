@@ -16,7 +16,7 @@ description: >
 # Prepare a repo for the dataset
 
 Run this **before any authoring work** on a candidate repo (before
-`authoring-bench-tests`, before baselines, before environments). It
+`bench-case-principles`, before baselines, before environments). It
 establishes the two invariants every later phase depends on: traceable
 history and a runnable project.
 
@@ -302,7 +302,6 @@ After the sample's cases are ready, set `commit_sha` in
 
 ```bash
 export BENCH_CHECKOUT=$PWD/../<sample>    # the repo the pin is cut from
-export BENCH_BASE_URL=http://localhost:<port> APP_HTTP_PORT=<port>
 uv run python main.py task --manifest <n> --agent opencode
 ```
 
@@ -332,10 +331,11 @@ prompt and the tree are the two channels we control.
 
 `settings.py` reads `.env` and raises on a missing key, by name — there are
 no defaults, so a half-configured checkout fails on the first command
-instead of producing a quietly different run. `BENCH_CHECKOUT` and
-`BENCH_BASE_URL` are the only values from the process environment: they
-change per invocation and the driver sets them.
-`audit-agent-trace` looks for that.
+instead of producing a quietly different run. Only `BENCH_CHECKOUT`,
+`BENCH_SAMPLE_ENV` and the address a stack publishes change per
+invocation, and the driver derives all three (the address from the
+source's `target_url`): nothing about a run has to be remembered and
+exported by hand.
 
 ## Checklist (all must be true before authoring starts)
 
@@ -397,7 +397,7 @@ change per invocation and the driver sets them.
   bench's `env/Containerfile`, from outside the app.
 - Committing generated artifacts that belong in `.gitignore`, or
   gitignoring things the runbook needs (e.g. tracked `.env` with
-  synthetic credentials — see `authoring-bench-tests`).
+  synthetic credentials — see `bench-case-principles`).
 - Believing a detached HEAD hides history. It hides the *names* (remote,
   branches, tags, reflog); the commit objects and their parents are still
   there, and one `git log` prints the commit message that says "eval

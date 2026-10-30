@@ -580,5 +580,38 @@
     "name": "dummy-file",
     "id": 15,
     "source": "mamute"
+  },
+  {
+    "task_type": "dummy_file",
+    "version": 1,
+    "prompt": "Create the file AGENT_OK.md at the root of the checkout. It holds one line and nothing else: written by the agent",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "postgres@1",
+        "options": {
+          "dialect": "postgres",
+          "service": "db",
+          "database": "openclinica",
+          "user": "clinica",
+          "password": "clinica"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "subject-flow__subject-creation"
+      ],
+      "routes": []
+    },
+    "scorers": ["functional_parity"],
+    "name": "dummy-file-openclinica",
+    "id": 16,
+    "source": "openclinica"
   }
 ]

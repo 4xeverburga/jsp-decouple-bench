@@ -61,15 +61,15 @@ modules and the lifecycle.
     only source of parameters. A missing key is an error with the key's
     name, never a fallback that hides a broken setup.
     Only the per-run inputs (`BENCH_CHECKOUT`, `BENCH_BASE_URL`,
-    `BENCH_SAMPLE_ENV`) come from the process environment, because they
-    change from run to run and the driver sets them per invocation.
+    `BENCH_SAMPLE_ENV`) come from the process environment, and the driver
+    derives each of them per invocation: the address a stack publishes is
+    the source's `target_url`, never something the caller remembered.
 
 ## Running one
 
 ```bash
 cp .env.example .env        # once per checkout; settings.py reads nothing else
-export BENCH_CHECKOUT=/abs/checkout BENCH_BASE_URL=http://localhost:8080
-export APP_HTTP_PORT=8080 MAMUTE_PUBLIC_URL=$BENCH_BASE_URL
+export BENCH_CHECKOUT=/abs/checkout
 
 uv run python main.py task --manifest 3 --model anthropic/claude-sonnet-4-5
 ```
@@ -89,7 +89,8 @@ grades a kept tree again without paying for the agent.
 from the pinned tree: one stack per case, the flow played once, the rows
 snapshotted before and after, written to `expect.json` beside the
 `flow.py` that drove it. It reads `BENCH_CHECKOUT` (the sample's
-repository, as `task` does) and `BENCH_BASE_URL`, like scoring.
+repository, as `task` does) and publishes on the source's `target_url`,
+like scoring.
 
 There is no Makefile and nothing is built: `main.py` is the whole command
 line (`task`, `score`, `capture`, `manifests`) and also the file Inspect

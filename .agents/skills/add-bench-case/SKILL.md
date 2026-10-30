@@ -1,5 +1,5 @@
 ---
-name: test-slice
+name: add-bench-case
 description: >
   Add a new behavior case to a sample in this benchmark: pick the behavior,
   author the Playwright flow (case.json + flow.py), freeze the golden
@@ -10,7 +10,7 @@ description: >
   "capture a golden delta", or "test another slice of <sample>".
 ---
 
-# Test slice — add one behavior case to a sample
+# Add a bench case — one behavior, one slice
 
 A **slice** is a feature boundary (`vote-flow`); a **case** is one
 observable behavior of it. One case = one directory, named
@@ -97,12 +97,10 @@ the same ones so a reviewer can see them.
 Rules (all hard-won — violating any of these cost a debug cycle):
 
 - **Self-contained arrange**: sign up / create entities in-flow with
-  deterministic fixed credentials; act with the seeded actor whose
-  credentials come from `os.environ` only. `main.py capture` and
-  `main.py score` both inject the sample's `src/samples/<sample>/env/.env`
-  into the process environment, so the flow reads
-  `os.environ["MAMUTE_ADMIN_PASSWORD"]` — never a literal password, never
-  a value from the tree.
+  deterministic fixed credentials; act with the seeded actor, whose
+  credentials come from `os.environ` only (`capture` and `score` inject
+  the sample's `env/.env`). Why a literal must never appear is
+  `bench-case-principles` §"Self-containment".
 - **Wait for submit navigations explicitly**:
   `with page.expect_navigation(wait_until="load"): page.click(...)` —
   `click` + `wait_for_load_state` races the redirect.
@@ -133,10 +131,9 @@ Start from a sibling case's table list for the same slice, then let the
 capture correct it empirically: it snapshots exactly the tables you
 declared, and a table you forgot simply does not appear in the delta.
 Key columns come from `DESCRIBE <table>` (`\d` in psql) — join tables in
-mamute use `tags_id`/`watchers_id`, not `Tag_id`/`Watcher_id`. Ignore
-every volatile column (all timestamps, counters not asserted on).
-Exclude auth plumbing (e.g. `UserSession`) deliberately and say why in
-`notes`.
+mamute use `tags_id`/`watchers_id`, not `Tag_id`/`Watcher_id`. What counts
+as volatile, and what to exclude on purpose, is `bench-case-principles`
+§"The delta pattern".
 
 The client runs **inside the `db` service** of the case's stack, and the
 dialect is the manifest's (`bindings.db.options.dialect`, `mysql` or
@@ -146,14 +143,13 @@ dialect is the manifest's (`bindings.db.options.dialect`, `mysql` or
 
 The stack is the bench's (`src/samples/<sample>/env/`), so the sample
 must have one before a case can be captured. `BENCH_CHECKOUT` names the
-sample's **repository** (the pin is cut from it) and `BENCH_BASE_URL` the
-address its stack will publish:
+sample's **repository** (the pin is cut from it); the address its stack
+publishes is the source's `target_url` in `seeds/sources.json`, which the
+driver derives — never export a port or a URL by hand:
 
 ```bash
 cd jsp-decouple-bench
 BENCH_CHECKOUT=$PWD/../mamute \
-BENCH_BASE_URL=http://localhost:8090 \
-APP_HTTP_PORT=8090 \
   uv run python main.py capture --manifest 3 \
     --case vote-flow__upvote-increments-count
 ```
@@ -167,8 +163,9 @@ write `expect.json` = `{sample, case, sample_commit, captured_at, db:
 is dropped: a capture is a run that passed by definition.
 
 **Never hand-edit `expect.json`.** If a case fails on an untouched tree,
-re-capture from the pristine pin *and understand why it differed* before
-accepting the new golden.
+the environment or a normalizer rule is wrong — re-capture from the
+pristine pin, and understand *why* it differed first
+(`bench-case-principles` §"The golden is generated").
 
 ### 6. Determinism gate (mandatory)
 
@@ -176,15 +173,16 @@ Run the capture a second time and diff. `captured_at` is provenance and
 is the only field allowed to move:
 
 ```bash
-git stash list >/dev/null   # (state check, nothing to do)
 uv run python main.py capture --manifest 3 --case <case>   # again
 git diff -U0 -- src/samples/<sample>/cases/<case>/expect.json \
   | grep '^[+-]' | grep -v captured_at   # must print nothing
 ```
 
-Ids are stable because every fresh boot replays the same seed. If anything
-else differs, the environment is not deterministic; stop and fix that
-first — do not "accept" the second golden.
+If anything else differs, the environment — or a normalization rule — is
+not deterministic; stop and fix that first, never "accept" the second
+golden. Two captures inside the same minute prove less than they look
+like: a volatile value with a minute's resolution hides in both (an
+openclinica golden once kept the build *time* for exactly that reason).
 
 ### 7. Prove the controller is fully covered (mandatory)
 

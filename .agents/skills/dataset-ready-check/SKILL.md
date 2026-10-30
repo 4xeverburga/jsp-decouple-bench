@@ -20,7 +20,7 @@ agent score produced on it would be meaningless. Write the result to
 **Prerequisites:** `prepare-repo-for-dataset` is done (history protected,
 runnable, no origin pointer, OTel agent installed in the bench's
 `Containerfile`), the sample has a stack in `src/samples/<slug>/env/`, and
-the cases were authored with `test-slice`.
+the cases were authored with `add-bench-case`.
 
 **What the commands are now.** The bench is `main.py` (verbs `task`,
 `score`, `capture`, `manifests`) driven with `uv run`, and `specs/` is the
@@ -34,12 +34,11 @@ the only gate, `trace_similarity` is not built yet (`ROADMAP.md`).
 cd jsp-decouple-bench
 
 # 1. the stack builds and the app boots from the pin, then a golden is frozen
-BENCH_CHECKOUT=$PWD/../<sample> BENCH_BASE_URL=http://localhost:<port> \
-  APP_HTTP_PORT=<port> uv run python main.py capture --manifest <n>
+BENCH_CHECKOUT=$PWD/../<sample> uv run python main.py capture --manifest <n>
 
 # 2. an untouched tree replays green (see §3 for the tree + run id)
-BENCH_CHECKOUT=$PWD/out/solves/<run>/tree BENCH_BASE_URL=http://localhost:<port> \
-  APP_HTTP_PORT=<port> uv run python main.py score --manifest <n> --run <run>
+BENCH_CHECKOUT=$PWD/out/solves/<run>/tree \
+  uv run python main.py score --manifest <n> --run <run>
 
 # 3. a real agent, end to end (optional here; mandatory before quoting a score)
 uv run python main.py task --manifest <n> --agent opencode
@@ -75,7 +74,6 @@ The scored artifact is a kept tree, so the no-op check needs one. Cut the
 pin, keep it as a run, keep its diff empty:
 
 ```bash
-PORT=8090
 uv run python - <<'PY'
 import json, shutil
 from pathlib import Path
@@ -94,7 +92,6 @@ shutil.copytree(tree, target / "tree")
 PY
 
 BENCH_CHECKOUT=$PWD/out/solves/noop-mamute/tree \
-BENCH_BASE_URL=http://localhost:$PORT APP_HTTP_PORT=$PORT \
   uv run python main.py score --manifest <n> --run noop-mamute
 ```
 

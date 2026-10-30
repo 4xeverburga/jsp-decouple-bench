@@ -17,10 +17,14 @@ viewport, the locale, the clock, the timeouts and the model names. Copy
 `.env.example` to `.env` once per checkout.
 
 Run inputs come from the process environment, because they change per
-invocation: `BENCH_CHECKOUT` (the tree under test), `BENCH_BASE_URL`,
-`APP_HTTP_PORT` and the sample's own public-URL variable (`MAMUTE_PUBLIC_URL`
-for mamute). Credentials come from the sample's `env/.env`, which `score`
-exports.
+invocation: `BENCH_CHECKOUT` (the tree under test) and `BENCH_SAMPLE_ENV`
+(the sample's `env/`). The address a stack publishes is not one of them
+any more: `BENCH_BASE_URL` and the `APP_HTTP_PORT` that serves it are
+derived by the driver from the source's `target_url` in
+`seeds/sources.json` — one field, so the URL a case is played against
+cannot drift from the port compose binds — and the sample's own
+public-URL variable (`MAMUTE_PUBLIC_URL`) defaults to it. Credentials come
+from the sample's `env/.env`, which `score` exports.
 
 ### By hand, with `inspect eval`
 
@@ -34,7 +38,7 @@ log stops describing what happened.
 
 ```bash
 export BENCH_CHECKOUT=$PWD/out/solves/<run_id>/tree
-export APP_HTTP_PORT=8090 BENCH_BASE_URL=http://localhost:8090
+export BENCH_BASE_URL=http://localhost:8090 APP_HTTP_PORT=8090   # the seed's target_url
 set -a; . src/samples/mamute/env/.env; set +a   # the sample's credentials
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=score -T run=<run_id> \
