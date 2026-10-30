@@ -16,6 +16,7 @@ jsp-decouple-bench/
 │   ├── solves/<run_id>/     # record.json, diff.patch, tree/
 │   ├── workspaces/<run_id>/ # the tree an agent is given
 │   ├── evals/               # Inspect logs
+│   ├── traces/<slug>/       # a case's spans, taken before `down -v`
 │   └── evidence/<slug>/     # a failing case's screenshot
 └── src/
     ├── bench/               # the harness

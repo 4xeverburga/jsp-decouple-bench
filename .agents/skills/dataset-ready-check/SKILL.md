@@ -142,32 +142,40 @@ A gate that cannot fail proves nothing.
   §Coverage). Re-measure rather than trusting the recorded claim for the
   slice you are reviewing.
 
-### 7. OpenTelemetry trace base (for `trace_similarity`)
-`trace_similarity` compares the traces of a finished run against a base
-taken from the pristine app, so the sample must emit a stable one.
-- The app container starts with the OTel Java agent attached
-  (`docker compose exec <service> ps -ef | grep javaagent` — `front` at
-  the pin, both `front` and `back` after the split — or the JVM flags in
-  `docker inspect`); jar version pinned, checksum verified in the image
-  build, no download at boot.
-- Config comes only from `OTEL_*` variables in the sample's `.env`
+### 7. OpenTelemetry traces (for `trace_similarity`)
+
+`trace_similarity` compares a finished run's spans with a base taken from
+the pristine app, so every case must leave a usable trace behind. The
+scorer now keeps them: after the flow it copies the collector's file to
+`out/traces/<slug>/<case>-<hash>.jsonl` before `down -v` deletes the
+volume (`settings.TRACES`, `STACK_TRACES_SERVICE`, `STACK_TRACES_FILE`,
+`TRACE_FLUSH_WAIT_S`).
+
+- The app container starts with the OTel Java agent attached — the JVM
+  flag the launcher honours (`MAVEN_OPTS` when the app runs in Maven's
+  JVM, `JAVA_TOOL_OPTIONS` otherwise). Jar version pinned, checksum
+  verified at image build, nothing downloaded at boot.
+- Config comes only from `OTEL_*` in the sample's `.env`
   (`OTEL_SERVICE_NAME=<slug>`, sampler `always_on`, metrics and logs
-  exporters `none`). Any collector/sidecar is **declared in
-  `compose.yaml`**, attached to `api` or `data` and publishing no port,
-  so `front:networks` stays the gate's only failing sub-check (check 2).
-- The app boots and passes its healthcheck with the collector stopped
-  (the agent fails open; a missing collector must not break the sample).
-- Attaching the agent changes no behaviour: check 2 is green **with the
-  agent on**, same case results as without it.
-- Replaying one case's flow yields spans for the server request, the
-  covered controller's handler methods, the DB calls and, where the flow
-  renders a JSP, the render. Run the flow twice: the span **tree shape**
-  (names, parentage, `http.method`/route attributes) is identical; only
-  ids and timestamps differ.
-- Until the trace adapter exists, `trace_similarity` correctly reports
-  `pending` / exit 3 (ROADMAP §2.3). Record the span evidence in the
-  report instead of a gate verdict; once the adapter lands, the gate must
-  move off `pending` on a no-op run.
+  exporters `none`).
+- The collector is a service of the sample's own `compose.yaml`, named
+  `collector`, publishing no port, writing `/traces/traces.jsonl` on a
+  named volume. Renaming either is a sample defect, not a scorer case.
+- The app boots and passes its healthcheck with the collector stopped:
+  the agent fails open.
+- Attaching the agent changes nothing observable: check 2 is green
+  **with the agent on**, same results as without it.
+- **Every case of every manifest leaves a non-empty
+  `out/traces/<slug>/<case>-*.jsonl`.** A missing file fails this check:
+  the stack was removed before the spans flushed, or the collector never
+  wrote. Check the file, not the log line.
+- Replaying one case twice gives the same span **tree shape** (names,
+  parentage, `http.method`/route); only ids and timestamps differ. Diff
+  two runs' `out/traces` files to prove it.
+- The scorer itself is still `pending` (ROADMAP Next 1). What this check
+  proves today is that the base is *capturable*: a pristine no-op run
+  produces one trace per case. When the scorer lands, that run becomes
+  the frozen base and the gate must move off `pending`.
 
 ### 8. Docs
 - The sample's `AGENTS.md` runbook is copy-paste correct: build → boot →
@@ -189,7 +197,7 @@ taken from the pristine app, so the sample must emit a stable one.
 | 4. Determinism | pass/fail | 2 runs, recapture clean |
 | 5. Answer key hidden | pass/fail | |
 | 6. Registry, cases, coverage | pass/fail | <controller>: methods N/N |
-| 7. OTel trace base | pass/fail | spans/case, tree stable |
+| 7. OTel traces | pass/fail | a trace per case, tree stable |
 | 8. Docs | pass/fail | |
 ```
 

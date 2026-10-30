@@ -142,8 +142,11 @@ Scoring has **no Inspect sandbox**. For each case the scorer, on the host:
    exited 0 (`stack.running`);
 2. snapshots the case's tables, plays `flow.py` with Playwright, snapshots
    again;
-3. compares and scores;
-4. removes the project (`down -v`), even on failure.
+3. copies the collector's span file out to `out/traces/<slug>/`, waiting
+   out its export batch, because `down -v` deletes the volume — best
+   effort, so a missing trace never turns a verdict into an error;
+4. compares and scores;
+5. removes the project (`down -v`), even on failure.
 
 Samples run one at a time (`--max-samples 1`): they share the published port.
 `stack.py` streams `docker compose` output as `[stack]` lines, because a first

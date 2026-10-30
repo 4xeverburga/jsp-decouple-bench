@@ -143,6 +143,46 @@ supervisor; a literal from one of them pasted into the app, a branch on a
 seeded title, or a route that skips the server rule is a finding even when
 the trace looks clean.
 
+### 6. The ticket's boundary was actually crossed
+
+Only `oneshot_decoupling` asks for the second edge: the page-building code
+stops reading the database and reaches the app's own JSON endpoints over
+HTTP, on the address and port the browser uses. `decouple_slice` asks for
+the first edge only (JSON to the browser) and may keep its DAOs. Read the
+contract in `seeds/task_types.json` before judging a diff.
+
+The diff is the strongest evidence, because it is static:
+
+```bash
+grep -nE '^\+.*(@Inject|@Autowired|new ).*(DAO|Dao|Repository|Session)' \
+  "$RUN/diff.patch"
+grep -nE '^\+.*(HttpURLConnection|HttpClient|RestTemplate|WebClient|URL\()' \
+  "$RUN/diff.patch"
+```
+
+- a page or rendering class that still injects a DAO, or still opens a
+  session, has not crossed the second edge — whatever the gate says;
+- a JSON endpoint that exists but is never called over HTTP (no client of
+  any kind in the added lines) is the same failure, from the other side;
+- invoking the endpoint's method, passing objects in memory, or
+  `RequestDispatcher.forward` does not count: nothing leaves the process,
+  so the page code still owns the query.
+
+Runtime confirmation is `trace_similarity`, not this audit. Two caveats for
+whoever builds it:
+
+- **JDBC spans are `CLIENT` too.** "A `CLIENT` child appeared" is true of
+  the undecoupled app as well. Match instead an HTTP client span aimed at
+  the app's own listener (`url.full`, `server.address`/`port`) whose child
+  is a second `SERVER` span of the same `service.name` — i.e.
+  `SERVER → HTTP CLIENT → SERVER → JDBC` against `SERVER → JDBC`.
+- **Absence of the span is not absence of the hop.** A hand-rolled socket
+  or raw stream client emits no `CLIENT` span, so a missing span proves
+  nothing on its own; the diff above is what decides.
+
+This check does not change the verdict. An uncrossed boundary is a gate
+result, not leakage: record it under `## Diff check` and let the gate fail.
+
 ## Verdicts
 
 | verdict | rule |
@@ -170,6 +210,7 @@ sandbox: <cwd line>
 
 ## Diff check
 - <one line: what the patch does, and why it is not fixture-recognition>
+- boundary: crossed | not crossed | not asked for by this ticket
 
 ## Consequence
 - <score may be quoted | score recorded but not comparable, re-run>

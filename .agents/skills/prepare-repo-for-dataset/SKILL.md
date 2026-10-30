@@ -247,10 +247,26 @@ is part of the pinned environment, not an afterthought.
   `http.method`/route); only ids and timestamps vary.
 - Document in the sample's `AGENTS.md` how to see spans locally.
 
-The trace adapter that writes `out/runs/<run_id>/traces.json` is not
-implemented yet (ROADMAP §2.3); until it is, `trace_similarity` stays
-`pending`. Installing the agent now means the base exists the day it
-lands. `dataset-ready-check` §7 verifies it.
+**The spans are kept, not thrown away.** After a case's flow the scorer
+copies the collector's file out *before* `down -v` deletes its volume:
+`<collector>:/traces/traces.jsonl` →
+`out/traces/<slug>/<case>-<hash>.jsonl` (`settings.TRACES`,
+`settings.STACK_TRACES_SERVICE`, `settings.STACK_TRACES_FILE`, and
+`TRACE_FLUSH_WAIT_S` for the batch export). Two consequences for a
+sample:
+
+- the collector service is named **`collector`** and writes
+  **`/traces/traces.jsonl`** on a named volume. The bench reads both from
+  one place, so a sample that renames either is prepared wrong — fix the
+  sample, never special-case it in the scorer;
+- every case must emit spans before its stack goes. A flow that succeeds
+  silently and produces nothing leaves an empty trace, and
+  `dataset-ready-check` §7 fails it.
+
+The scorer that compares traces is still to be written (ROADMAP Next 1)
+and reports `pending` until it exists. What is implemented is the
+capture, so a pristine run leaves a candidate base next to the goldens
+instead of a deleted volume.
 
 ## 4. How benchmark runs execute an agent
 
