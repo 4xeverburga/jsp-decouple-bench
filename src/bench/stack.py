@@ -17,6 +17,7 @@ import sys
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 from threading import Timer
 
 import settings
@@ -125,6 +126,20 @@ class Stack:
             env=self._env,
             capture_output=True,
         )
+
+    def copy_out(self, service: str, source: str, target: Path) -> bool:
+        """Take a file out of a running service; False if it is not there.
+
+        Best effort on purpose: a case is graded on its behaviour, so a
+        missing file must not turn a measurement into an error.
+        """
+        result = subprocess.run(
+            self._argv("cp", f"{service}:{source}", str(target)),
+            env=self._env,
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
 
     async def exec(
         self, service: str, argv: list[str], stdin: str

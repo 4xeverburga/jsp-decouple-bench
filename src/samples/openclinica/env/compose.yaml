@@ -1,0 +1,127 @@
+# OpenClinica — the scoring stack.
+#
+# One host port is configurable, so the app can run on any free port without
+# editing this file:
+#   APP_HTTP_PORT                host port for the app   (default 8092)
+#   OPENCLINICA_PUBLIC_URL       URL the host reaches it (defaults to it)
+#
+# The database publishes nothing: it is reached from inside `data` only, and
+# the seed is created by the app's own Liquibase run at boot.
+#
+# Credentials come from this folder's .env (synthetic and deterministic).
+#
+# Networks:
+#   api    front <-> back
+#   data   back <-> db
+# `front` is on both today: the app is still server-rendered and reads the
+# database directly.
+#
+# Traces: the app runs under the OpenTelemetry Java agent (CATALINA_OPTS) and
+# exports to `collector`, which writes them to the `traces` volume. Nothing
+# waits on the collector's health, so a dead one cannot change what the app
+# does.
+name: openclinica
+
+networks:
+  api: {}
+  data: {}
+
+services:
+  collector:
+    image: otel/opentelemetry-collector-contrib:0.140.0
+    networks:
+      - api
+    # the named volume is root-owned; the image's default user is not
+    user: "0"
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otel/config.yaml:ro
+      - traces:/traces
+
+  db:
+    image: postgres:9.6
+    networks:
+      - data
+    environment:
+      # 9.6 on purpose: the app's 2011 driver (postgresql 9.1) cannot do
+      # SCRAM, which is what every server from 10 on defaults to.
+      POSTGRES_USER: ${OPENCLINICA_DB_USER:?set .env (cp from .env.example)}
+      POSTGRES_PASSWORD: ${OPENCLINICA_DB_PASSWORD:?set .env (cp from .env.example)}
+      POSTGRES_DB: ${OPENCLINICA_DB_NAME:?set .env (cp from .env.example)}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  front:
+    x-default: true
+    build:
+      context: ${BENCH_CHECKOUT:?set BENCH_CHECKOUT to the tree to score}
+      dockerfile: ${BENCH_SAMPLE_ENV:?set by the bench}/Containerfile
+    networks:
+      - api
+      - data
+    depends_on:
+      db:
+        condition: service_healthy
+      collector:
+        condition: service_started
+    ports:
+      - "${APP_HTTP_PORT:-8092}:8080"
+    volumes:
+      - ./entrypoint.sh:/workspace/entrypoint.sh:ro
+    environment:
+      # fail fast instead of booting with empty credentials
+      OPENCLINICA_PUBLIC_URL: ${OPENCLINICA_PUBLIC_URL:-http://localhost:${APP_HTTP_PORT:-8092}}
+      OPENCLINICA_DB_HOST: db
+      OPENCLINICA_DB_NAME: ${OPENCLINICA_DB_NAME:?set .env (cp from .env.example)}
+      OPENCLINICA_DB_USER: ${OPENCLINICA_DB_USER:?set .env (cp from .env.example)}
+      OPENCLINICA_DB_PASSWORD: ${OPENCLINICA_DB_PASSWORD:?set .env (cp from .env.example)}
+      # Tomcat's own JVM is the one that hosts the app.
+      CATALINA_OPTS: -javaagent:/opt/otel/javaagent.jar
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:?set .env (cp from .env.example)}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:?set .env (cp from .env.example)}
+      OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:?set .env (cp from .env.example)}
+      OTEL_METRICS_EXPORTER: ${OTEL_METRICS_EXPORTER:?set .env (cp from .env.example)}
+      OTEL_LOGS_EXPORTER: ${OTEL_LOGS_EXPORTER:?set .env (cp from .env.example)}
+      OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:?set .env (cp from .env.example)}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?set .env (cp from .env.example)}
+    healthcheck:
+      # Any answer from the app's own context means Tomcat deployed it, which
+      # only happens after Liquibase finished; a 404 (context not up yet) is
+      # an error to curl -f, so the boot is waited out here.
+      test:
+        ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8080/OpenClinica/"]
+      interval: 5s
+      timeout: 10s
+      retries: 120
+      start_period: 300s
+
+  # One-shot: rotates the seeded `root` account to the .env credential and
+  # clears the 2006 password timestamp. Exits 0; the stack's readiness check
+  # treats a successful exit as done.
+  bootstrap:
+    image: postgres:9.6
+    networks:
+      - data
+    depends_on:
+      front:
+        condition: service_healthy
+    volumes:
+      - ./bootstrap.sh:/bootstrap.sh:ro
+    entrypoint: ["bash", "/bootstrap.sh"]
+    environment:
+      OPENCLINICA_DB_HOST: db
+      OPENCLINICA_DB_NAME: ${OPENCLINICA_DB_NAME:?set .env (cp from .env.example)}
+      OPENCLINICA_DB_USER: ${OPENCLINICA_DB_USER:?set .env (cp from .env.example)}
+      OPENCLINICA_DB_PASSWORD: ${OPENCLINICA_DB_PASSWORD:?set .env (cp from .env.example)}
+      OPENCLINICA_ADMIN_USER: ${OPENCLINICA_ADMIN_USER:?set .env (cp from .env.example)}
+      OPENCLINICA_ADMIN_PASSWORD: ${OPENCLINICA_ADMIN_PASSWORD:?set .env (cp from .env.example)}
+
+volumes:
+  db-data:
+  traces:

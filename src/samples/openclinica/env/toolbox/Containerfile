@@ -1,7 +1,8 @@
-# Agent toolbox: the JDK 8, Maven and Tomcat 9 the OpenClinica WAR runs on.
+# Agent toolbox: the JDK 8, Maven, Tomcat 9 and psql the OpenClinica WAR
+# runs on.
 #
 # No container runtime in here: the database is a sidecar. inspect_swe copies
-# the opencode binary in at run time, so the agent is not installed here.
+# the agent CLI binary in at run time, so the agent is not installed here.
 FROM maven:3.8.6-openjdk-8
 
 ARG TOMCAT_VERSION=9.0.98
@@ -10,5 +11,28 @@ RUN wget -qO- https://archive.apache.org/dist/tomcat/tomcat-9/v${TOMCAT_VERSION}
     && ln -s /opt/apache-tomcat-${TOMCAT_VERSION} /opt/tomcat
 ENV CATALINA_HOME=/opt/tomcat
 ENV JAVA_HOME=/usr/local/openjdk-8
+
+# The agent's shell is given a PATH of /usr/local/bin:/usr/bin:/bin, which this
+# ENV does not reach — the base image leaves the JDK tools out of it, so they
+# answer "command not found" otherwise. (`mvn` resolves either way, and the WAR
+# will not build without `java`/`javac`/`jar`.)
+RUN for tool in java javac jar jarsigner javadoc javap jcmd jdb jps \
+      jrunscript jstack keytool; do \
+      ln -sf "/usr/local/openjdk-8/bin/$tool" "/usr/local/bin/$tool"; \
+    done
+
+# A postgres client. The app's database is a sidecar on this network, and
+# reading its schema is part of understanding what a flow persists.
+#
+# Two traps, both fixed here: the image ships stale package lists (so it asks
+# for versions that are gone), and bullseye-security indexes versions the
+# mirror no longer carries (404). The client comes from the main repo, which
+# still has it, and it is only ever a client.
+RUN rm -rf /var/lib/apt/lists/* \
+ && sed -i '/debian-security/d' /etc/apt/sources.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client \
+ && rm -rf /var/lib/apt/lists/*
+RUN ln -sf /usr/bin/psql /usr/local/bin/psql
 
 WORKDIR /workspace

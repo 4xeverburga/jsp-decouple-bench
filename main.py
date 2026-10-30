@@ -44,11 +44,7 @@ from src.bench.seeds import task_type  # noqa: E402
 def _scorers(chosen: dict) -> list:
     options = chosen["bindings"]["db"]["options"]
     builders = {
-        "functional_parity": lambda: parity(
-            chosen["source"],
-            options["service"],
-            options["database"],
-        ),
+        "functional_parity": lambda: parity(chosen["source"], options),
     }
     return [builders[name]() for name in chosen["scorers"]]
 

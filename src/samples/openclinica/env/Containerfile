@@ -1,0 +1,83 @@
+# OpenClinica image — JDK 8 + Maven + Tomcat 9, DB = PostgreSQL 9.6 (the
+# compose `db` service). Build context is the sample tree; this file lives in
+# the bench, not in the tree the agent gets.
+#
+# The WAR is built here with PLACEHOLDER database settings. Everything
+# environment-specific — host, database, user, password, the URL the host
+# actually reaches — is written at run time by entrypoint.sh from compose's
+# environment, which comes from this folder's `.env`. Credentials must not be
+# baked into an image that may be rebuilt for another run.
+FROM maven:3.8.6-openjdk-8
+
+ARG TOMCAT_VERSION=9.0.98
+RUN wget -qO- https://archive.apache.org/dist/tomcat/tomcat-9/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz \
+      | tar -xz -C /opt \
+    && ln -s /opt/apache-tomcat-${TOMCAT_VERSION} /opt/tomcat \
+    && rm -rf /opt/tomcat/webapps/*
+ENV CATALINA_HOME=/opt/tomcat
+ENV JAVA_HOME=/usr/local/openjdk-8
+
+# The agent's shell is given PATH=/usr/local/bin:/usr/bin:/bin, which this
+# image's ENV does not reach: symlink the JDK tools it leaves out (the same
+# reason the solve toolbox does it), plus a postgres client so the schema can
+# be read from inside the service.
+RUN for tool in java javac jar jarsigner javadoc javap jcmd jdb jps \
+      jrunscript jstack keytool; do \
+      ln -sf "/usr/local/openjdk-8/bin/$tool" "/usr/local/bin/$tool"; \
+    done
+
+# Debian bullseye traps (same as the mamute image): stale package lists ask
+# for versions that are gone, and the security index advertises packages the
+# mirror no longer carries.
+RUN rm -rf /var/lib/apt/lists/* \
+ && sed -i '/debian-security/d' /etc/apt/sources.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client \
+ && rm -rf /var/lib/apt/lists/*
+RUN ln -sf /usr/bin/psql /usr/local/bin/psql
+
+WORKDIR /workspace
+
+# Dependency-cache layer: the poms alone, so a source edit does not re-pay
+# the download. Best effort — a reactor with unbuilt sibling modules cannot
+# resolve everything yet, and the build below finishes the job.
+COPY pom.xml ./
+COPY core/pom.xml core/
+COPY web/pom.xml web/
+COPY ws/pom.xml ws/
+RUN mvn -B -q -DskipTests dependency:go-offline || true
+
+COPY . .
+
+# Build the WAR. The `-D` values are what the (commented-out) root pom filters
+# expect: they resolve every `${...}` placeholder in datainfo.properties, and
+# `catalina.home` is what log.dir is built from. They are placeholders —
+# entrypoint.sh rewrites the exploded copy before Tomcat starts.
+RUN mvn -B -q -DskipTests \
+      -DdbType=postgres \
+      -DdbUser=clinica \
+      -DdbPass=clinica \
+      -Ddb=openclinica \
+      -DdbPort=5432 \
+      -DdbHost=db \
+      -DWEBAPP=OpenClinica \
+      -DWEBAPP.lower=openclinica \
+      -Dcatalina.home=/opt/tomcat \
+      package \
+ && mkdir -p /opt/openclinica \
+ && cp web/target/*.war /opt/openclinica/OpenClinica.war
+
+# OpenTelemetry Java agent, pinned and checked. Last on purpose: a layer above
+# the Maven ones would invalidate their (slow) cache. Only the jar lives here;
+# it is attached at run time (CATALINA_OPTS in compose.yaml), never to the
+# build.
+ARG OTEL_AGENT_VERSION=2.33.1
+ARG OTEL_AGENT_SHA256=e43a270df53c6f423e0ab157be9c27ccc01d5dc3232e162fe54777573db2f149
+RUN mkdir -p /opt/otel \
+ && wget -qO /opt/otel/javaagent.jar \
+      https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${OTEL_AGENT_VERSION}/opentelemetry-javaagent.jar \
+ && echo "${OTEL_AGENT_SHA256}  /opt/otel/javaagent.jar" | sha256sum -c -
+
+# entrypoint.sh is bind-mounted read-only at run time by compose.yaml — it is
+# bench infra and must not be baked into (or drift inside) the image.
+ENTRYPOINT ["bash", "./entrypoint.sh"]

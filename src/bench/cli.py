@@ -28,6 +28,7 @@ from dotenv import dotenv_values
 
 import settings
 
+from . import capture as freezing
 from . import solves
 from .compose import sample_env
 from .seeds import manifest as load_manifest
@@ -162,6 +163,41 @@ def score(manifest_id: int, run: str, logs: str) -> None:
     )
 
 
+def capture(manifest_id: int, cases: list[str]) -> None:
+    """Freeze a manifest's goldens from its pinned tree.
+
+    `BENCH_CHECKOUT` names the sample's repository here, as it does for
+    `task`: the pin is cut from it and only then becomes the tree the
+    stack builds. `BENCH_BASE_URL` is the address the stack will publish,
+    exactly as it is for scoring, because the golden is normalized against
+    it.
+    """
+    chosen = load_manifest(manifest_id)
+    slug = chosen["source"]
+    wanted = cases or list(chosen["scope"]["cases"])
+    unknown = sorted(set(wanted) - set(chosen["scope"]["cases"]))
+    if unknown:
+        raise SystemExit(f"manifest {manifest_id} has no case(s): {unknown}")
+    commit = pin(slug)
+    tree = solves.materialise(
+        f"capture-{uuid.uuid4().hex[:8]}",
+        Path(settings.checkout()),
+        commit,
+    )
+    # From here the stack must build the pinned tree, not the worktree the
+    # pin came from — same env the scorer is given.
+    os.environ["BENCH_CHECKOUT"] = str(tree)
+    credentials = dotenv_values(sample_env(slug) / ".env")
+    for key, value in credentials.items():
+        if value is not None:
+            os.environ[key] = value
+    freezing.run(slug, wanted, commit, chosen["bindings"]["db"]["options"])
+
+
+def _capture_verb(args: argparse.Namespace) -> None:
+    capture(args.manifest, args.case)
+
+
 def _task(args: argparse.Namespace) -> None:
     run = args.run or uuid.uuid4().hex
     print(f"run: {run}", flush=True)
@@ -252,6 +288,18 @@ def _parser() -> argparse.ArgumentParser:
     graded.add_argument("--run", required=True)
     graded.add_argument(
         "--logs", default=str(settings.LOGS), help="Inspect log dir"
+    )
+
+    frozen = verbs.add_parser(
+        "capture", help="freeze a case's golden from the pinned tree"
+    )
+    frozen.set_defaults(handler=_capture_verb)
+    frozen.add_argument("--manifest", type=int, required=True)
+    frozen.add_argument(
+        "--case",
+        action="append",
+        default=[],
+        help="case id; repeatable, default is every case of the manifest",
     )
 
     listed = verbs.add_parser("manifests", help="list them and their cases")

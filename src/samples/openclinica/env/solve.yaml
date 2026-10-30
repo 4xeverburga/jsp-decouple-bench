@@ -1,4 +1,5 @@
-# The openclinica solve sandbox: the checkout, writable, and the PostgreSQL it uses.
+# The openclinica solve sandbox: the checkout, writable, and the PostgreSQL
+# its app uses.
 #
 # The agent runs inside this, so it never has the docker socket and never
 # sees the supervisor's home. The image is built from toolbox/Containerfile;
@@ -21,10 +22,12 @@ services:
     init: true
     command: tail -f /dev/null
     volumes:
-      - ${BENCH_CHECKOUT:?set BENCH_CHECKOUT to the tree to solve in}:${BENCH_CHECKOUT}
-    working_dir: ${BENCH_CHECKOUT}
+      - ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}:${SOLVE_ROOT:?set SOLVE_ROOT}
+    working_dir: ${SOLVE_ROOT:?set SOLVE_ROOT}
 
   db:
+    # 9.6 on purpose: the app's 2011 driver cannot do SCRAM, which every
+    # server from 10 on defaults to.
     image: postgres:9.6
     environment:
       POSTGRES_USER: clinica

@@ -14,6 +14,7 @@ reduces across samples, so a manifest passes only if every case does.
 """
 
 import asyncio
+from uuid import uuid4
 
 from inspect_ai.scorer import CORRECT, INCORRECT, Score, Target, scorer
 from inspect_ai.solver import TaskState
@@ -65,17 +66,47 @@ def _screenshot(staged: str | None, failed: bool) -> str | None:
     return None
 
 
-@scorer(metrics=[all_must_pass()])
-def parity(slug: str, db_service: str, database: str) -> scorer:
-    """Grade the case this sample names, artifacts and rows both."""
+async def _trace(stack, slug: str, case: str) -> str | None:
+    """Keep the case's spans: the volume dies with the stack.
 
-    async def score(state: TaskState, target: Target) -> Score:
+    Their only other copy is inside the collector's volume, which
+    `down -v` deletes whatever the verdict was. Wait out the export batch
+    first, then take the file. Best effort like the screenshot: a case
+    that failed on its behaviour must report that, not a second error.
+    """
+    target = settings.TRACES / slug / f"{case}-{uuid4().hex[:8]}.jsonl"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    await asyncio.sleep(settings.TRACE_FLUSH_WAIT_S)
+    copied = await asyncio.to_thread(
+        stack.copy_out,
+        settings.STACK_TRACES_SERVICE,
+        settings.STACK_TRACES_FILE,
+        target,
+    )
+    if not copied:
+        return None
+    return str(target.relative_to(settings.ROOT))
+
+
+@scorer(metrics=[all_must_pass()])
+def parity(slug: str, options: dict) -> scorer:
+    """Grade the case this sample names, artifacts and rows both.
+
+    `options` is the manifest's `bindings.db.options`: which service holds
+    the database, which database, whose user, and which SQL dialect. It is
+    passed through as data rather than as a live object so the run's log
+    records what was graded against.
+    """
+    target = db.Target.from_options(options)
+
+    async def score(state: TaskState, target_state: Target) -> Score:
         case = state.metadata["case"]
         tables = list(golden(slug, case)["db"]["tables"])
         async with running(slug) as stack:
-            before = await db.snapshot(stack, db_service, database, tables)
+            before = await db.snapshot(stack, target, tables)
             artifacts = await asyncio.to_thread(play, slug, case)
-            after = await db.snapshot(stack, db_service, database, tables)
+            after = await db.snapshot(stack, target, tables)
+            trace = await _trace(stack, slug, case)
 
         browser = artifacts["differing"]
         rows, detail = _db_differences(slug, case, before, after)
@@ -100,6 +131,7 @@ def parity(slug: str, db_service: str, database: str) -> scorer:
                 "db": rows,
                 "db_delta": detail,
                 "screenshot": shot,
+                "trace": trace,
             },
         )
 

@@ -13,6 +13,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "",
@@ -52,6 +53,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "",
@@ -88,6 +90,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "",
@@ -129,6 +132,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "",
@@ -166,6 +170,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "root",
@@ -202,6 +207,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "root",
@@ -240,6 +246,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "root",
@@ -279,6 +286,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "root",
@@ -315,6 +323,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "root",
@@ -351,6 +360,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "root",
@@ -389,6 +399,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "root",
@@ -428,6 +439,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "root",
@@ -464,10 +476,13 @@
         "adapter": "playwright@1"
       },
       "db": {
-        "adapter": "shell@1",
+        "adapter": "postgres@1",
         "options": {
-          "cmd": "podman exec -i openclinica-pg psql -U clinica -d openclinica -X -A -F$'\\t' -P footer=off -P null=NULL",
-          "list_tables_sql": "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename"
+          "dialect": "postgres",
+          "service": "db",
+          "database": "openclinica",
+          "user": "clinica",
+          "password": "clinica"
         }
       }
     },
@@ -501,6 +516,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "",
@@ -547,6 +563,7 @@
       "db": {
         "adapter": "mysql@1",
         "options": {
+          "dialect": "mysql",
           "service": "db",
           "user": "root",
           "password": "",

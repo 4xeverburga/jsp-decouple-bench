@@ -66,6 +66,7 @@ SEEDS = ROOT / "seeds"
 SAMPLES = ROOT / "src" / "samples"
 OUT = ROOT / "out"
 EVIDENCE = OUT / "evidence"
+TRACES = OUT / "traces"
 SOLVES = OUT / "solves"
 WORKSPACES = OUT / "workspaces"
 LOGS = OUT / "evals"
@@ -94,6 +95,16 @@ STACK_HEALTHY_TIMEOUT_S = _integer("STACK_HEALTHY_TIMEOUT_S")
 STACK_POLL_INTERVAL_S = _integer("STACK_POLL_INTERVAL_S")
 STACK_REPORT_INTERVAL_S = _integer("STACK_REPORT_INTERVAL_S")
 STACK_PROJECT_PREFIX = _text("STACK_PROJECT_PREFIX")
+
+# --- the spans a case produces, kept before its stack is removed. ---------
+# Every sample's stack names its collector `collector` and has it write
+# this file (`prepare-repo-for-dataset`); a sample that does otherwise is
+# prepared wrong, so neither is a per-run knob. The wait is the batch
+# exporter's flush: spans arrive a few seconds after the request that made
+# them, and `down -v` deletes the volume just after.
+STACK_TRACES_SERVICE = "collector"
+STACK_TRACES_FILE = "/traces/traces.jsonl"
+TRACE_FLUSH_WAIT_S = 8
 
 # --- the agent the solve phase runs. Three values that describe ONE
 # agent, so switching AGENT means taking its version and its wire model

@@ -29,6 +29,17 @@ def golden(slug: str, case: str) -> dict:
     return json.loads(golden_file.read_text())
 
 
+def contract(slug: str, case: str) -> dict:
+    """The case's hand-written half: what it drives, and which rows it owns.
+
+    `expect.json` is generated and owns the values; `case.json` is the
+    author's declaration of which tables and columns the behaviour touches.
+    Capturing reads it — replay needs only the frozen golden.
+    """
+    case_dir = settings.SAMPLES / slug / "cases" / case
+    return json.loads((case_dir / "case.json").read_text())
+
+
 def _screenshot(page, slug: str, case: str) -> str | None:
     """Stage the page a case ended on, under out/evidence.
 
@@ -48,17 +59,18 @@ def _screenshot(page, slug: str, case: str) -> str | None:
     return str(target.relative_to(settings.ROOT))
 
 
-def play(slug: str, case: str) -> dict:
-    """Run the case's flow against the running stack; report the artifacts.
+def drive(slug: str, case: str) -> tuple[dict, str | None]:
+    """Run one case's flow against the running stack; report what happened.
 
-    A difference is not left as a list of keys: the page it happened on is
-    written to out/evidence, because "the count differs" is not evidence.
+    The page it ended on is staged beside the artifacts, always: whether
+    the case passes is not known here, and the classic failure is DB-only
+    (the DOM shows the right count, no row was written), so a picture only
+    of the failures `drive` can already see would miss the important ones.
     """
     from playwright.sync_api import sync_playwright
 
     case_dir = settings.SAMPLES / slug / "cases" / case
     flow = load(case_dir / "flow.py", f"flow_{case.replace('-', '_')}")
-    expect = golden(slug, case)["artifacts"]
     base_url = settings.base_url()
 
     with sync_playwright() as playwright:
@@ -74,14 +86,6 @@ def play(slug: str, case: str) -> dict:
         page = context.new_page()
         try:
             actual = normalize(flow.run(page, base_url), base_url)
-            differing = [
-                key for key in expect if actual.get(key) != expect[key]
-            ]
-            # Always take the shot: whether the case passes is not known
-            # here. The rows are compared after the page is gone, so a
-            # failure can be DB-only with the page looking right — and that
-            # is precisely the failure worth a picture. The scorer keeps
-            # the file only if something differs.
             shot = _screenshot(page, slug, case)
         except Exception:
             _screenshot(page, slug, case)
@@ -89,4 +93,16 @@ def play(slug: str, case: str) -> dict:
         finally:
             browser.close()
 
+    return actual, shot
+
+
+def play(slug: str, case: str) -> dict:
+    """Run the case's flow and compare it with its frozen golden.
+
+    A difference is not left as a list of keys: the page it happened on is
+    written to out/evidence, because "the count differs" is not evidence.
+    """
+    actual, shot = drive(slug, case)
+    expect = golden(slug, case)["artifacts"]
+    differing = [key for key in expect if actual.get(key) != expect[key]]
     return {"differing": differing, "screenshot": shot}
