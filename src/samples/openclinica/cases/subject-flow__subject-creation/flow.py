@@ -9,15 +9,20 @@ normalized DOM snapshots of the form (before) and the list page (after)
 for parity replay.
 
 Dates are filled explicitly (the form prefills enrollmentDate with
-*today*, which would break determinism otherwise). The app intermittently
-stalls on keep-alive reuse (documented quirk); _goto retries once on
-timeout. The orchestrator resets the DB between test dirs
-(environments/openclinica/scripts/reset-pristine.sh), so consecutive runs
-are identical.
+*today*, which would break determinism otherwise).
+
+The app stalls on keep-alive reuse: a page's images can stay "pending"
+forever on a reused connection, so the browser's `load` event never fires.
+Every navigation therefore waits for `domcontentloaded` (the markup and its
+scripts are in place; the two login-page images are cosmetic), and `_goto`
+retries once in case the main document itself is the stalled one. Each case
+gets its own fresh stack, so consecutive runs are identical.
 """
 
 import os
 import re
+
+from settings import CASE_TIMEOUT_MS
 
 SUBJECT_LABEL = "SUBJ-BENCH-001"
 PERSON_ID = "PERSON-BENCH-001"
@@ -34,12 +39,12 @@ def _normalize(html):
     return html.strip()
 
 
-def _goto(page, url, timeout=60000):
-    """goto with one retry — the app stalls on keep-alive reuse."""
+def _goto(page, url):
+    """goto with one retry, never waiting for the stalled subresources."""
     try:
-        page.goto(url, timeout=timeout)
+        page.goto(url, wait_until="domcontentloaded", timeout=CASE_TIMEOUT_MS)
     except Exception:
-        page.goto(url, timeout=timeout)
+        page.goto(url, wait_until="domcontentloaded", timeout=CASE_TIMEOUT_MS)
     page.wait_for_load_state("domcontentloaded")
 
 
@@ -47,7 +52,9 @@ def _login(page, base_url):
     _goto(page, base_url + "/")
     page.fill("#username", os.environ["OPENCLINICA_ADMIN_USER"])
     page.fill("#j_password", os.environ["OPENCLINICA_ADMIN_PASSWORD"])
-    with page.expect_navigation(wait_until="domcontentloaded", timeout=60000):
+    with page.expect_navigation(
+        wait_until="domcontentloaded", timeout=CASE_TIMEOUT_MS
+    ):
         page.click("input.loginbutton")
     page.wait_for_load_state("domcontentloaded")
 
@@ -64,7 +71,9 @@ def run(page, base_url):
     page.fill("input[name=enrollmentDate]", ENROLLMENT_DATE)
     page.select_option("select[name=gender]", GENDER)
     page.fill("input[name=dob]", DATE_OF_BIRTH)
-    with page.expect_navigation(wait_until="domcontentloaded", timeout=60000):
+    with page.expect_navigation(
+        wait_until="domcontentloaded", timeout=CASE_TIMEOUT_MS
+    ):
         page.click("input[name=submitDone]")
     page.wait_for_load_state("domcontentloaded")
 

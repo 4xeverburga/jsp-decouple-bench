@@ -21,9 +21,12 @@ What is done, what is next, and what is parked. Decisions of record live in
    run here: `opencode` 1.19.5, answered by
    `opencode-go/deepseek-v4.1-flash`.** Nothing else is proven — not
    another OpenCode model, not another agent.
-3. **Stacks for the other samples.** `online-study-system` and `openclinica`
-   have cases but no scoring stack, so neither can be scored yet. Each needs
-   `compose.yaml`, `Containerfile`, `.env` and the OpenTelemetry agent.
+3. **A scoring stack for `online-study-system`.** It has cases but no
+   `src/samples/online-study-system/env/`, so it cannot be scored yet: it
+   needs `compose.yaml`, `Containerfile`, `.env`/`.env.example`, an
+   `entrypoint.sh`, a one-shot bootstrap and the OpenTelemetry agent.
+   `src/samples/mamute/env/` and `src/samples/openclinica/env/` are the two
+   reference shapes.
 4. **Prove the other agents.** `src/bench/agents.py` registers `opencode`,
    `codex`, `claude` and `gemini`, and `--agent` selects one, but only
    `opencode` has run. Each of the others needs: a version whose own
@@ -63,6 +66,13 @@ What is done, what is next, and what is parked. Decisions of record live in
 ## Done
 
 - Inspect-based bench; `main.py` is the whole command line.
+- Golden capture is a command again: `main.py capture` cuts the pin, runs
+  one stack per case, and writes `expect.json`.
+- `functional_parity` reads any SQL dialect the manifest names (`mysql`,
+  `postgres`), from inside the case's `db` service.
+- Two samples with a scoring stack: `mamute` (Jetty + MySQL) and
+  `openclinica` (Tomcat 9 + PostgreSQL 9.6), both under the OTel agent.
+- `.agents/skills/` describe `main.py` and the current sample layout.
 - Samples under `src/samples/<slug>/{cases,env}`.
 - Work orders with no docker, compose or container vocabulary.
 - Scoring driven from the host: one compose project per case.

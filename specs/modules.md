@@ -71,24 +71,40 @@ layout.
 | file | role |
 |---|---|
 | `parity.py` | the scorer: browser artifacts and database rows, compared |
-| `cases.py` | play a case's flow, read its golden, stage a screenshot |
-| `delta.py` | before/after table deltas — copied verbatim, because the goldens were produced by it |
-| `db.py` | table snapshots through the case's stack (`compose exec`) |
+| `cases.py` | play a case's flow (`drive`), read its golden, compare (`play`), read its hand-written contract |
+| `delta.py` | before/after table deltas — the algorithm the goldens froze, so capture and replay agree |
+| `db.py` | table snapshots through the case's stack (`compose exec`), in the manifest's dialect |
 | `tabular.py` | the TSV parser every SQL client shares |
 | `artifacts.py` | the normalizer: base URL, clocks, inline styles |
+
+`db.Target` is built from `bindings.db.options` — `dialect` (`mysql` or
+`postgres`), `service`, `database`, `user`, `password`. Both clients are
+driven into the same unaligned TSV shape, so only the argv and the
+identifier quoting differ.
+
+## `src/bench/capture.py`
+
+The only writer of a golden. For each case: one stack from the pin,
+snapshot the tables `case.json` declares, play the flow once, snapshot
+again, and write `expect.json` (`sample`, `case`, `sample_commit`,
+`captured_at`, the `db` delta, the `artifacts`). It is host-side for the
+same reason scoring is, and it never compares against the golden it
+replaces.
 
 ## `src/samples/<slug>/cases/<case>/`
 
 ```
-case.json      # e2e contract + db contract (hand-written)
-expect.json    # frozen golden (captured, never hand-written)
+case.json      # hand-written contract: e2e notes + the db table specs
+               # (capture reads the table specs; replay reads only the golden)
+expect.json    # frozen golden (captured by `main.py capture`, never hand-written)
 flow.py        # Playwright flow: `run(page, base_url) -> artifacts`
-images/        # screenshots from the golden capture (review only)
+images/        # optional step shots kept from an investigation
 ```
 
 `case.json` names the routes, the artifacts compared and, per table, the
 `key_columns` and `ignore_columns` of the delta. Credentials are read from
-the environment, never written in a case or a flow.
+the environment, never written in a case or a flow; `cli.capture` and
+`cli.score` inject the sample's `env/.env` into the process.
 
 ## `src/samples/<slug>/env/`
 

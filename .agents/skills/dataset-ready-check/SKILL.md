@@ -2,214 +2,172 @@
 name: dataset-ready-check
 description: >
   Validate that a sample is ready for release in this benchmark: it boots
-  from a fresh clone at its pinned commit, the no-op self-check reproduces
-  the goldens while isolation still fails, the gates are sensitive to real
-  breakage, results are deterministic, the agent cannot see the answer key,
-  at least one controller is fully covered, and the OpenTelemetry agent
-  produces a usable trace base for `trace_similarity`. Use when asked to
-  "check if this sample is dataset ready", "validate the sample", or "is
-  this sample ready to publish".
+  from a fresh clone at its pinned commit, an untouched tree reproduces the
+  goldens, the cases are sensitive to real breakage, results are
+  deterministic, the agent cannot see the answer key, at least one controller
+  is fully covered, and the OpenTelemetry agent produces a usable trace base
+  for `trace_similarity`. Use when asked to "check if this sample is dataset
+  ready", "validate the sample", or "is this sample ready to publish".
 ---
 
 # Dataset-ready check for a sample
 
-> **Partly stale.** The commands below (`make db-init`, `make task`,
-> `make gate`, `bench.db`, `SAMPLE_SANDBOX`, `HARNESS_CMD`) are retired —
-> `main.py` is the command line and `specs/` is the source of truth. The
-> `network_isolation` checks describe a gate that no longer exists.
-
-Run this against ONE sample (slug from `bench.db`). Every check must pass;
-a sample that fails any check is not publishable, because every agent
-score produced on it would be meaningless. Write the result to
+Run this against ONE sample (`slug` from `seeds/sources.json`). Every check
+must pass; a sample that fails any check is not publishable, because every
+agent score produced on it would be meaningless. Write the result to
 `out/ready/<sample>.md` (`out/` is gitignored).
 
 **Prerequisites:** `prepare-repo-for-dataset` is done (history protected,
-runnable, OTel agent installed) and the cases were authored with
-`test-slice`.
+runnable, no origin pointer, OTel agent installed in the bench's
+`Containerfile`), the sample has a stack in `src/samples/<slug>/env/`, and
+the cases were authored with `test-slice`.
+
+**What the commands are now.** The bench is `main.py` (verbs `task`,
+`score`, `capture`, `manifests`) driven with `uv run`, and `specs/` is the
+source of truth. There is no Makefile, no `bench.db`, no
+`network_isolation` gate and no `topology` scorer — `functional_parity` is
+the only gate, `trace_similarity` is not built yet (`ROADMAP.md`).
 
 ## Commands under test
 
 ```bash
-make db-init
-make task MANIFEST_ID=<n> SAMPLE_SANDBOX=<abs empty folder> \
-          HARNESS=command HARNESS_CMD=true            # -> run_id
-make gate GATE_ID=functional_parity  RUN_ID=<run_id>
-make gate GATE_ID=network_isolation  RUN_ID=<run_id>
-make gate GATE_ID=trace_similarity   RUN_ID=<run_id>
+cd jsp-decouple-bench
+
+# 1. the stack builds and the app boots from the pin, then a golden is frozen
+BENCH_CHECKOUT=$PWD/../<sample> BENCH_BASE_URL=http://localhost:<port> \
+  APP_HTTP_PORT=<port> uv run python main.py capture --manifest <n>
+
+# 2. an untouched tree replays green (see §3 for the tree + run id)
+BENCH_CHECKOUT=$PWD/out/solves/<run>/tree BENCH_BASE_URL=http://localhost:<port> \
+  APP_HTTP_PORT=<port> uv run python main.py score --manifest <n> --run <run>
+
+# 3. a real agent, end to end (optional here; mandatory before quoting a score)
+uv run python main.py task --manifest <n> --agent opencode
 ```
 
-`SAMPLE_SANDBOX` is an absolute folder that exists for that one run and
-holds nothing yet. The bench clones the pin into it from the local mirror
-`out/cache/<slug>.git` and refuses a folder with anything in it, so no
-sibling tree exists for an agent to read — the checks cannot disturb a
-working copy and nothing can be learned by looking around the sandbox.
+Scoring drives the stack from the host (`src/bench/stack.py`): one compose
+project per case, started and removed by the scorer, `[stack]` progress on
+stderr. A first build of a sample is minutes long.
 
-## Checks (in order — stop at the first hard failure)
+## 1. It boots from the pin, on the bench's stack
 
-### 1. The pinned commit boots from scratch
-- `SAMPLE.commit_sha` contains `SAMPLE.entrypoint` (`compose.yaml`), its
-  `Dockerfile` and `.env`. The runner refuses otherwise.
-- The sample's `.env` is tracked and holds only synthetic credentials;
-  `.env.example` documents every variable. No real secrets anywhere
-  (grep for tokens/keys).
-- `docker compose down -v` then a `functional_parity` gate run (it
-  starts the stack itself): healthchecks go green with no network beyond
-  the first image pull. Record the cold-start time; > 15 min is a
-  usability problem.
-- `grep -rE '/home/|/usr/lib/jvm' compose.yaml Dockerfile .env* scripts/`
-  is empty. Only docker + make are needed on the host.
-- The scoring stack is the bench's (`src/samples/<slug>/env/`) and the
-  pin carries no compose file — `solves.materialise` refuses one. The old
-  shape check (`front`/`db`, networks `api`/`data`) died with
-  `network_isolation`.
+- `src/samples/<slug>/env/` holds `compose.yaml`, `Containerfile`,
+  `entrypoint.sh`, `.env`, `.env.example`, `otel-collector.yaml`,
+  `solve.yaml` and `toolbox/`. Nothing of it is in the sample tree.
+- The pin carries **no stack file**: `main.py capture` and the solve phase
+  both cut the tree with `solves.materialise`, which raises and lists the
+  offending paths if one is there.
+- `capture` finished: the app answered, the seeded account logged in, the
+  flow ran (a failed flow raises; there is no "captured anyway").
+- `docker compose ps` after the run shows nothing left over, and no
+  `bench-*` project or network survives (`down -v --remove-orphans`).
 
-### 2. No-op self-check (the most important check)
-The two gates must **disagree** on an untouched tree, and that
-disagreement is the whole point: parity proves the golden is
-reproducible, isolation proves the task is still undone.
-- A `HARNESS=command HARNESS_CMD=true` run must have `diff_empty: true`
-  in `out/runs/<run_id>/harness.json`.
-- `functional_parity` must be `pass`, `value 1.0`, for **every** manifest
-  of the sample.
-- `network_isolation` must **fail**, on the `front:isolated_from_db`
-  sub-check: the pinned `front` still shares `data` with `db`. A `pass`
-  here means the sample ships pre-decoupled and grades nothing — re-pin
-  to the monolithic shape (see `prepare-repo-for-dataset`).
-- If parity fails on an untouched tree, **the sample, the environment or
-  the golden is wrong, not an agent**. Fix the cause (pinning, seed,
-  flow) — never loosen a comparison or an `ignore_columns` list to pass.
+## 2. The golden is generated, and only here
 
-### 3. Sensitivity — the gate must be able to fail
-A gate that cannot fail proves nothing.
-- Run a task with a harness command that breaks a covered controller
-  in the fresh clone (e.g. `HARNESS_CMD="sed -i 's/…/…/' <Controller>.java"`).
-  `functional_parity` must report `fail` for the cases that exercise it.
-- Flip one byte of a case's `expect.json`: that case must fail. Restore
-  with `git checkout -- <file>` and confirm `git diff --exit-code` is
-  clean.
-- **Isolation must be sensitive in both directions**, but only one of
-  them is cheap to confirm.
-  - *Fails when it should*: in the fresh clone, add a `ports:` entry to
-    `db` and re-run — isolation must fail. Then give `front`
-    `network_mode: host` and confirm it fails again. Restore with
-    `git checkout -- compose.yaml`.
-  - *Passes when it should*: remove `data` from `front.networks` in the
-    clone and re-run — isolation must go `pass` at once, because it reads
-    declarations and nothing has to boot. Parity is a separate
-    measurement: an app that no longer reaches the database fails
-    `functional_parity`, not isolation. Restore with
-    `git checkout -- compose.yaml`.
-  - A `pass` on the pristine pin is not sensitivity: it means the sample
-    ships pre-decoupled (check 2). Re-pin instead.
+- `expect.json` is git-clean after a capture, or its only change is a
+  deliberate re-capture committed in the same change as the case.
+- `case.json` declares every table the delta shows; a table that changes
+  outside the spec means the contract is incomplete.
 
-### 4. Determinism
-- Repeat check 2 **twice** on fresh stacks: every case result identical
-  (`diff` the `cases/*.json` of both runs).
-- Repeat `make case-capture` for one case per slice:
-  `git diff --exit-code src/gates/functional_parity/cases/<sample>/` is
-  clean. Fix flakiness by pinning (seed, clock, locale), never by
-  loosening.
-- `en-US`, `UTC`, `1280x800` come from `config.py`; nothing in a flow
-  depends on host time or locale.
+## 3. An untouched tree reproduces the goldens
 
-### 5. The agent cannot see the answer key
-- The sample checkout contains none of: `expect.json`, `case.json`,
-  `bench.db`, `seeds/`, case names, and no benchmark vocabulary
-  (`benchmark`, `golden`, `parity`, `baseline`, `evaluation`, `BENCH_`
-  outside `compose.yaml` port variables):
-  `git grep -iE 'golden|parity|baseline|benchmark|expect\.json'` is empty
-  on the pinned commit.
-- **The checkout does not point at its own origin.** Provenance lives in
-  `SAMPLE.project_id`, in `seeds/sources.json` and in the remote history,
-  never in the tree: `UPSTREAM.md` is absent, and
-  `git grep -InE 'github\.com/<owner>|upstream|@<upstream-domain>'` is
-  empty apart from `LICENSE`, code namespaces (`br.com.<owner>.*`) and
-  rendered product branding that the goldens already freeze. A sample
-  that names its upstream hands the agent the original project to read.
-- Every manifest `prompt` reads as a ticket: no routes, case names,
-  expected DB deltas, or the words above. (`AGENTS.md` rules 2–3.)
-- Credentials are read from `.env`, never hardcoded in a flow or prompt.
+The scored artifact is a kept tree, so the no-op check needs one. Cut the
+pin, keep it as a run, keep its diff empty:
 
-### 6. Registry, cases and coverage
-- `make db-init && make samples && make manifests` list the sample with
-  its pin and one manifest per slice; every `scope.cases` entry has
-  `case.json`, `flow.py`, `expect.json` and `images/` on disk.
-- Case names follow `<slice>__<behavior>`; each case has a db contract
-  with explicit `ignore_columns` and `notes`.
-- **Controller coverage:** every slice meets the `test-slice` rule —
-  at least one controller fully covered — and the manifest's
-  `scope.covers` entry matches the JaCoCo evidence (see `test-slice`
-  §Coverage). Re-measure rather than trusting the recorded claim for the
-  slice you are reviewing.
+```bash
+PORT=8090
+uv run python - <<'PY'
+import json, shutil
+from pathlib import Path
+from src.bench import solves
+from src.bench.seeds import pin
 
-### 7. OpenTelemetry traces (for `trace_similarity`)
+slug, run = "mamute", "noop-mamute"
+tree = solves.materialise(run, Path("../mamute").resolve(), pin(slug))
+target = solves.location(run)
+shutil.copytree(tree, target / "tree")
+(target / "diff.patch").write_bytes(b"")
+(target / "record.json").write_text(json.dumps({
+    "agent": "none", "agent_model": "none", "agent_version": "none",
+    "model": "noop", "run_id": run, "diff_bytes": 0,
+}, indent=2) + "\n")
+PY
 
-`trace_similarity` compares a finished run's spans with a base taken from
-the pristine app, so every case must leave a usable trace behind. The
-scorer now keeps them: after the flow it copies the collector's file to
-`out/traces/<slug>/<case>-<hash>.jsonl` before `down -v` deletes the
-volume (`settings.TRACES`, `STACK_TRACES_SERVICE`, `STACK_TRACES_FILE`,
-`TRACE_FLUSH_WAIT_S`).
-
-- The app container starts with the OTel Java agent attached — the JVM
-  flag the launcher honours (`MAVEN_OPTS` when the app runs in Maven's
-  JVM, `JAVA_TOOL_OPTIONS` otherwise). Jar version pinned, checksum
-  verified at image build, nothing downloaded at boot.
-- Config comes only from `OTEL_*` in the sample's `.env`
-  (`OTEL_SERVICE_NAME=<slug>`, sampler `always_on`, metrics and logs
-  exporters `none`).
-- The collector is a service of the sample's own `compose.yaml`, named
-  `collector`, publishing no port, writing `/traces/traces.jsonl` on a
-  named volume. Renaming either is a sample defect, not a scorer case.
-- The app boots and passes its healthcheck with the collector stopped:
-  the agent fails open.
-- Attaching the agent changes nothing observable: check 2 is green
-  **with the agent on**, same results as without it.
-- **Every case of every manifest leaves a non-empty
-  `out/traces/<slug>/<case>-*.jsonl`.** A missing file fails this check:
-  the stack was removed before the spans flushed, or the collector never
-  wrote. Check the file, not the log line.
-- Replaying one case twice gives the same span **tree shape** (names,
-  parentage, `http.method`/route); only ids and timestamps differ. Diff
-  two runs' `out/traces` files to prove it.
-- The scorer itself is still `pending` (ROADMAP Next 1). What this check
-  proves today is that the base is *capturable*: a pristine no-op run
-  produces one trace per case. When the scorer lands, that run becomes
-  the frozen base and the gate must move off `pending`.
-
-### 8. Docs
-- The sample's `AGENTS.md` runbook is copy-paste correct: build → boot →
-  healthcheck on the pinned commit.
-- `README.md` sample table lists it (stack, DB, entrypoint).
-
-## Report format
-
-```markdown
-# Dataset-ready: <sample>
-
-**Verdict:** READY | NOT-READY (<passed>/8)
-
-| Check | Result | Notes |
-|---|---|---|
-| 1. Boots from scratch | pass/fail | cold start: X min |
-| 2. No-op self-check | pass/fail | parity N/N pass, isolation fails as required |
-| 3. Sensitivity | pass/fail | broken controller → parity fail; `front` off `data` → isolation pass |
-| 4. Determinism | pass/fail | 2 runs, recapture clean |
-| 5. Answer key hidden | pass/fail | |
-| 6. Registry, cases, coverage | pass/fail | <controller>: methods N/N |
-| 7. OTel traces | pass/fail | a trace per case, tree stable |
-| 8. Docs | pass/fail | |
+BENCH_CHECKOUT=$PWD/out/solves/noop-mamute/tree \
+BENCH_BASE_URL=http://localhost:$PORT APP_HTTP_PORT=$PORT \
+  uv run python main.py score --manifest <n> --run noop-mamute
 ```
 
-## Anti-goals
+Every case must come back `correct`. If it is red, the pin or the stack is
+wrong — no score taken on this sample means anything, and a real agent's
+result would be indistinguishable from the bench's own breakage.
 
-- Do NOT loosen a comparison, an `ignore_columns` list or a threshold to
-  make check 2 or 4 pass — fix the root cause.
-- Do NOT accept "works on my machine" — check 1 uses a fresh clone.
-- Do NOT publish a sample whose no-op self-check is red or whose gates
-  cannot fail (check 3).
-- Do NOT make a no-op run pass `network_isolation`. A sample whose pin
-  already keeps `front` off `data` has no task left in it; re-pin to the
-  monolithic shape instead of accepting the vacuous pass.
-- Do NOT treat `trace_similarity: pending` as a pass or a fail: it is
-  neither; check 7 verifies the evidence the gate will need.
+## 4. It is deterministic
+
+Run the capture a second time and compare. `captured_at` is provenance and
+the only field allowed to move:
+
+```bash
+git diff -U0 -- src/samples/<slug>/cases/<case>/expect.json \
+  | grep '^[+-]' | grep -v captured_at     # must print nothing
+```
+
+Then run §3 twice: same verdicts, same differing tables. Ids are stable
+because every fresh boot replays the same seed; a case that depends on
+another case's rows will show up here.
+
+## 5. The cases are sensitive to real breakage
+
+Break the behaviour on a scratch copy — comment out the `save(...)` a
+graded flow exercises — score it, and require `INCORRECT` with the
+expected tables named and a screenshot under `out/evidence/<slug>/`.
+Restore the copy afterwards (never the pin).
+
+A case that stays green when the write is gone is asserting on the wrong
+artifact, and the agent would pass it by accident.
+
+## 6. The agent cannot see the answer key
+
+Checked against the **tree**, not against intentions:
+
+- `git grep -InE 'BENCH_|golden|expect\.json|the bench|graded|harness'`
+  is empty apart from the app's own code.
+- No origin pointer: `UPSTREAM.md` absent, no project URL in `README` /
+  `AGENTS.md`, no "mirror of" sentence.
+- The pin is one commit in the run's checkout (`git rev-list --count HEAD`
+  is `1` once materialised) and has no refs or remotes.
+- The prompt (the manifest `prompt` + the task type's `base_prompt`) names
+  no route, no case, no golden, and no `docker`/`compose`/`container`/
+  `sandbox` word — the toolchain is "already installed here".
+- After a real run, `audit-agent-trace` finds no read outside the
+  checkout before any score is quoted.
+
+## 7. At least one controller is fully covered
+
+`scope.covers.handlers` in `seeds/manifests.json` maps every handler of one
+controller to the case that drives it, and `not_driven` explains the rest.
+Read the controller and spot-check two entries: the routing must be the
+app's, not the manifest author's belief.
+
+## 8. The trace base exists (for the scorer that is not built yet)
+
+- The scoring stack runs the app under the pinned OpenTelemetry Java agent
+  and ships to its own `collector` service; the agent is attached only at
+  run time (`CATALINA_OPTS` / `MAVEN_OPTS`), configured only through
+  `OTEL_*` in the sample's `env/.env`.
+- With the stack up, `docker compose cp collector:/traces/traces.jsonl
+  <dest>` yields spans for a graded flow (HTTP server, JDBC, and the
+  container's own client hops). Spans flush a few seconds after the
+  request.
+- The app boots and passes its healthcheck with the collector dead, and
+  the cases stay green with the agent attached (`functional_parity` must
+  not depend on tracing).
+- `trace_similarity` is pending: this check proves the base can be taken,
+  not that it is compared yet.
+
+## 9. Verdict
+
+Write `out/ready/<sample>.md`: each check, the command that proved it, and
+`pass` / `fail` with the evidence path. A sample is ready only when every
+check passes; a `trace`-dependent scorer stays `pending` on all samples
+until it exists, and a `pending` is never averaged into a pass.

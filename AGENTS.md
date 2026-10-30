@@ -85,9 +85,15 @@ assigned to the manifest grades the tree it left. `out/solves/<run id>/` keeps t
 the diff and a record of what ran. `python main.py score --manifest N --run ID`
 grades a kept tree again without paying for the agent.
 
+`python main.py capture --manifest N [--case ID]` freezes a case's golden
+from the pinned tree: one stack per case, the flow played once, the rows
+snapshotted before and after, written to `expect.json` beside the
+`flow.py` that drove it. It reads `BENCH_CHECKOUT` (the sample's
+repository, as `task` does) and `BENCH_BASE_URL`, like scoring.
+
 There is no Makefile and nothing is built: `main.py` is the whole command
-line (`task`, `score`, `manifests`) and also the file Inspect loads
-(`inspect eval main.py@<task type>`). Scoring prints its progress as
+line (`task`, `score`, `capture`, `manifests`) and also the file Inspect
+loads (`inspect eval main.py@<task type>`). Scoring prints its progress as
 `[stack]` lines; a first build of a sample is minutes long.
 
 ## Traces

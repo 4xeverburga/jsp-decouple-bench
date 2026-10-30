@@ -53,7 +53,12 @@ COPY . .
 # expect: they resolve every `${...}` placeholder in datainfo.properties, and
 # `catalina.home` is what log.dir is built from. They are placeholders —
 # entrypoint.sh rewrites the exploded copy before Tomcat starts.
+#
+# The context carries no `.git` (see the sample's `.dockerignore`), so the
+# buildnumber plugin is told a missing SCM is acceptable; otherwise it fails
+# the build. Its stamp is provenance and is normalized out of the goldens.
 RUN mvn -B -q -DskipTests \
+      -Dmaven.buildNumber.allowNullScm=true \
       -DdbType=postgres \
       -DdbUser=clinica \
       -DdbPass=clinica \

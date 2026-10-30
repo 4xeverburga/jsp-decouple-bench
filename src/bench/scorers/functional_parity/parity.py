@@ -24,7 +24,7 @@ import settings
 from ...stack import running
 from ..metrics import all_must_pass
 from . import db
-from .cases import golden, play
+from .cases import FlowAssertionError, golden, play
 from .delta import canonical, delta_table, summary
 
 
@@ -102,20 +102,47 @@ def parity(slug: str, options: dict) -> scorer:
     async def score(state: TaskState, target_state: Target) -> Score:
         case = state.metadata["case"]
         tables = list(golden(slug, case)["db"]["tables"])
+        failure = None
+        artifacts = None
         async with running(slug) as stack:
             before = await db.snapshot(stack, target, tables)
-            artifacts = await asyncio.to_thread(play, slug, case)
+            try:
+                artifacts = await asyncio.to_thread(play, slug, case)
+            except FlowAssertionError as error:
+                failure = error
             after = await db.snapshot(stack, target, tables)
             trace = await _trace(stack, slug, case)
 
-        browser = artifacts["differing"]
+        # The rows are compared either way: when the flow itself failed, the
+        # delta is often the better evidence (the page looked right, nothing
+        # was written).
         rows, detail = _db_differences(slug, case, before, after)
-        differing = browser + rows
-        shot = _screenshot(artifacts["screenshot"], bool(differing))
         expected = {
             table: golden(slug, case)["db"]["tables"][table]
             for table in detail
         }
+        if failure is not None:
+            shot = _screenshot(failure.screenshot, True)
+            return Score(
+                value=INCORRECT,
+                answer=case,
+                explanation=(
+                    f"{case}=failed:{failure.reason} "
+                    f"[{summary({'tables': detail}, {'tables': expected})}]"
+                ),
+                metadata={
+                    "case": case,
+                    "artifacts": [],
+                    "db": rows,
+                    "db_delta": detail,
+                    "screenshot": shot,
+                    "trace": trace,
+                },
+            )
+
+        browser = artifacts["differing"]
+        differing = browser + rows
+        shot = _screenshot(artifacts["screenshot"], bool(differing))
         return Score(
             value=INCORRECT if differing else CORRECT,
             answer=case,

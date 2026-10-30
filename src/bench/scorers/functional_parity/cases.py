@@ -59,6 +59,23 @@ def _screenshot(page, slug: str, case: str) -> str | None:
     return str(target.relative_to(settings.ROOT))
 
 
+class FlowAssertionError(Exception):
+    """The app did the wrong thing — a failed case, not a broken bench.
+
+    A flow asserts what the user should have seen. When that assertion
+    fails, or the page never reaches the signal it waits for, the verdict is
+    `INCORRECT`: the submission behaved differently. Only an exception that
+    is *not* one of these (no stack, no credentials, a corrupt golden) is
+    infrastructure, and only that may leave a case unmeasured.
+    """
+
+    def __init__(self, case: str, screenshot: str | None, reason: str) -> None:
+        self.case = case
+        self.screenshot = screenshot
+        self.reason = reason
+        super().__init__(f"{case}: {reason}")
+
+
 def drive(slug: str, case: str) -> tuple[dict, str | None]:
     """Run one case's flow against the running stack; report what happened.
 
@@ -67,6 +84,7 @@ def drive(slug: str, case: str) -> tuple[dict, str | None]:
     (the DOM shows the right count, no row was written), so a picture only
     of the failures `drive` can already see would miss the important ones.
     """
+    from playwright.sync_api import TimeoutError as PlaywrightTimeout
     from playwright.sync_api import sync_playwright
 
     case_dir = settings.SAMPLES / slug / "cases" / case
@@ -87,8 +105,12 @@ def drive(slug: str, case: str) -> tuple[dict, str | None]:
         try:
             actual = normalize(flow.run(page, base_url), base_url)
             shot = _screenshot(page, slug, case)
-        except Exception:
-            _screenshot(page, slug, case)
+        except Exception as error:
+            shot = _screenshot(page, slug, case)
+            if isinstance(error, (AssertionError, PlaywrightTimeout)):
+                raise FlowAssertionError(
+                    case, shot, f"{type(error).__name__}: {error}"[:600]
+                ) from error
             raise
         finally:
             browser.close()

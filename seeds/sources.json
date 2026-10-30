@@ -49,11 +49,11 @@
     "project_id": "OpenClinica/OpenClinica",
     "source": "https://github.com/4xeverburga/openclinica.git",
     "branch": "main",
-    "commit_sha": "53469e85fd57a6506ddf4eeb9f04fe8829a66703",
+    "commit_sha": "f634c82e5a4a72096ea64354eb1ac59705aac977",
     "license": "https://www.openclinica.com/gnu-lgpl-open-source-license",
     "description": "Clinical data management. Spring MVC 3.2, 807 JSPs (bounded flow only).",
     "entrypoint": null,
-    "target_url": "http://localhost:8089/OpenClinica",
+    "target_url": "http://localhost:8092/OpenClinica",
     "solve": {
       "toolchain": "JDK 8, Maven and Tomcat 9 toolchain",
       "database": "a PostgreSQL service named db, reachable on port 5432 as clinica with password clinica, database openclinica. Use that host, not localhost."

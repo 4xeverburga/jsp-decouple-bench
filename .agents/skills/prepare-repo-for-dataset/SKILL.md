@@ -15,15 +15,14 @@ description: >
 
 # Prepare a repo for the dataset
 
-> **Partly stale.** The Makefile-era commands still quoted below (`make
-> db-init`, `make task`, `HARNESS_CMD`, `bench.db`) are retired: `main.py`
-> is the command line now, and `specs/` is the source of truth. The
-> invariants in §1–§3 still hold as written.
-
 Run this **before any authoring work** on a candidate repo (before
 `authoring-bench-tests`, before baselines, before environments). It
 establishes the two invariants every later phase depends on: traceable
 history and a runnable project.
+
+The bench's command line is `main.py` (`task`, `score`, `capture`,
+`manifests`), run through `uv run`; `specs/` is the source of truth for the
+architecture. The invariants below are what this skill owns.
 
 ## 1. Protect the history (provenance)
 
@@ -65,8 +64,8 @@ the pristine upstream state. A rewritten history destroys that.
   ```
   This tag preserves the original upstream provenance; it is not a harness
   or a runtime selector. Benchmark runs and captures use the sample's pinned
-  `commit_sha`, which is seed data in `seeds/sources.json` and reaches
-  `bench.db` only through `make db-init`. If the repo is a
+  `commit_sha`, which is seed data in `seeds/sources.json` and is read from
+  there by every command (`seeds.pin`). If the repo is a
   HEAD-only upstream mirror, this single commit IS the provenance anchor —
   treat it as immutable.
 - **Work on feature branches, merge with merge commits** into `main`
@@ -194,8 +193,25 @@ agent eval depend on the environment behaving identically.
 Nothing about how the app runs is committed here. The scoring stack, the
 Containerfile, the `.env` and the OpenTelemetry collector live in the bench
 under `src/samples/<slug>/env/`, and `solves.materialise` refuses a pin
-that carries one (§1). `src/samples/mamute/env/` is the reference shape
-until a second sample has one.
+that carries one (§1). `src/samples/mamute/env/` is the reference shape;
+`src/samples/openclinica/env/` is the second one (a Tomcat WAR behind
+PostgreSQL), and between them they are the inventory a new sample needs:
+
+| file | what it is for |
+|---|---|
+| `compose.yaml` | `front` (built from the tree under test), `db` (sidecar, healthchecked), `collector`, and any one-shot `bootstrap` |
+| `Containerfile` | builds the app from the pin; placeholders only, never a credential; OTel jar last |
+| `entrypoint.sh` | writes the run-time config (database, public URL) before the app starts |
+| `bootstrap.sh` | one-shot: rotates the seeded account to this sample's credential |
+| `.env` | the sample's synthetic credentials and `OTEL_*` — tracked, deterministic |
+| `.env.example` | the same keys with `CHANGE_ME` for a fresh setup |
+| `otel-collector.yaml` | file exporter into the `traces` volume |
+| `solve.yaml` | the agent's sandbox: checkout at `settings.SOLVE_ROOT`, database sidecar |
+| `toolbox/Containerfile` | the agent's toolchain, with tools symlinked into `/usr/local/bin` (the agent's shell is given `PATH=/usr/local/bin:/usr/bin:/bin`) |
+
+Published port: `${APP_HTTP_PORT:-<unused default>}` on the host, always to
+`8080` inside. A sample whose default collides with a locally running
+instance of the same app should pick a different one.
 
 - **One repository, one application.** The app is one project; the bench
   builds its one service from the tree under test, with the database as a
@@ -219,18 +235,20 @@ pin is created and before any golden or trace base is captured: the agent
 is part of the pinned environment, not an afterthought.
 
 - **Attach it from outside the app.** Add the agent in the sample's
-  `Dockerfile` / `compose.yaml` (JVM flag `-javaagent:` through the
-  variable the app's launcher honours — e.g. `JAVA_TOOL_OPTIONS`, or
-  `MAVEN_OPTS` when the app runs via `mvn exec:java`, since that is the
-  JVM that hosts it). Do not touch `pom.xml`, app source or app
-  dependencies: this is instrumentation, not a dependency upgrade.
+  bench-owned `src/samples/<slug>/env/`: the `Containerfile` downloads and
+  verifies the jar, and `compose.yaml` passes the JVM flag (through the
+  variable the app's launcher honours — `JAVA_TOOL_OPTIONS`, `MAVEN_OPTS`
+  when the app runs via `mvn exec:java`, `CATALINA_OPTS` for Tomcat). Do not
+  touch `pom.xml`, app source or app dependencies: this is instrumentation,
+  not a dependency upgrade.
 - **Pin and vendor it.** Exact agent version and `sha256` verified at
   image build; no download at boot. A fresh clone must still reach a
   running app offline after the first image pull. The app's runtime must
   be supported by the agent (Java 8+); if not, record that in the
   assessment and stop — the sample cannot feed `trace_similarity`.
-- **Configure only through `OTEL_*` variables** in the sample's `.env`
-  (tracked, synthetic) and document them in `.env.example`:
+- **Configure only through `OTEL_*` variables** in the sample's
+  `src/samples/<slug>/env/.env` (tracked, synthetic) and document them in
+  that folder's `.env.example`:
   `OTEL_SERVICE_NAME=<sample slug>`, `OTEL_TRACES_SAMPLER=always_on`,
   `OTEL_METRICS_EXPORTER=none`, `OTEL_LOGS_EXPORTER=none`, and the traces
   exporter/endpoint. For the spans the oracle needs beyond HTTP, JDBC and
@@ -238,8 +256,7 @@ is part of the pinned environment, not an afterthought.
   `OTEL_INSTRUMENTATION_METHODS_INCLUDE`.
 - **Declare every moving part in `compose.yaml`.** A collector or sidecar
   is a service of the sample's own stack, attached to `api` or `data` and
-  publishing no port, so `network_isolation` keeps passing. It never joins
-  `host` and never adds a network.
+  publishing no port. It never joins `host` and never adds a network.
 - **Fail open and change nothing observable.** The app must boot and
   pass its healthcheck with the collector down, and the no-op
   `functional_parity` run must stay green with the agent attached.
@@ -268,52 +285,56 @@ and reports `pending` until it exists. What is implemented is the
 capture, so a pristine run leaves a candidate base next to the goldens
 instead of a deleted volume.
 
-## 4. How benchmark runs execute an agent
+## 4. How a task runs, once the sample is wired in
 
-The agent adapter is selected per run by the command the run is given
-(`HARNESS_CMD`, prompt on stdin); `HARNESS` is only the label the run is
-recorded under. The runner clones **one commit deep** from the local mirror
-(`git clone --no-local --depth 1 --branch <branch>`) into the sandbox the
-run owns, then detaches, scrubs refs/reflog and refuses to start if the
-result is not shallow or still reaches a parent commit. It does not stash
-or discard changes.
+The pin and the manifests are the wiring; nothing is registered anywhere
+else. `main.py` is the only command line:
 
-After the sample is wired into the registry and its cases are ready, pin the
-commit to evaluate and launch a task:
+- `task --manifest N` — cut the pin, let one CLI agent work in its own
+  sandbox, then score the tree it left;
+- `score --manifest N --run ID` — grade a kept tree again without paying
+  for the agent;
+- `capture --manifest N [--case X]` — freeze goldens from the pin;
+- `manifests` — list the work order.
+
+After the sample's cases are ready, set `commit_sha` in
+`seeds/sources.json` and run:
 
 ```bash
-# 1. set sample.commit_sha in seeds/sources.json, then:
-make db-init
-# 2. run from a folder that exists only for this run (absolute, empty)
-make task MANIFEST_ID=<n> SAMPLE_SANDBOX=<abs empty folder> \
-  HARNESS=claude-code
-make gate GATE_ID=functional_parity RUN_ID=<run_id>
+export BENCH_CHECKOUT=$PWD/../<sample>    # the repo the pin is cut from
+export BENCH_BASE_URL=http://localhost:<port> APP_HTTP_PORT=<port>
+uv run python main.py task --manifest <n> --agent opencode
 ```
 
-`make task` prints the `run_id`; a run itself has no pass/fail verdict.
-Evaluate gates separately, as independent measurements. For the no-op
-self-check, use `HARNESS=command HARNESS_CMD=true`; run this only after the
-sample's benchmark cases and environment have been authored. A `command`
-harness that launches a real agent requires its command via `HARNESS_CMD`.
+`task` prints the run id and keeps `out/solves/<run>/` (`record.json`,
+`diff.patch`, `tree/`). The solve phase runs one agent inside the sample's
+`env/solve.yaml` sandbox: the checkout at `settings.SOLVE_ROOT`, the
+database as a sidecar, and **no runtime socket** — so the agent cannot
+reach the host through the daemon, and its `$HOME` is the sandbox's own.
+`solves.materialise` archives the pin into `out/workspaces/<run>/` and
+refuses a tree that carries a stack file; the agent's session directory is
+kept as `out/solves/<run>/agent/session.tar`.
 
-### Scoping the tree is not isolation
+Scoring is a separate measurement with no sandbox: the scorer starts the
+sample's own stack on the host, plays each case, and removes it.
 
-The agent runs as the supervisor's user, so everything that user can read is
-in reach: `$HOME` (this repository, `bench.db`, the cases), `/tmp` (whatever
-the last command left there), shell history, and the agent's own store from
-earlier runs. Two runs were scored this way — one walked the sample's own
-git ancestry, the next found a replay harness in the supervisor's `/tmp`
-scratch and copied it.
+### What is still in reach
 
-Sandbox it at the layer that provisions the stack, not with a wrapper around
-the agent. In the ported bench (`inspect_port/`) Inspect boots the compose
-project and the agent runs inside that sandbox, which also removes the
-docker socket from the agent's reach: the daemon is on the evaluator's side,
-so `docker run -v /:/host` is not available to it.
+A container is not a boundary for everything: the agent shares the host's
+network, so any service the supervisor publishes is reachable, and the
+daemon's images are visible through whatever the sandbox mounts. Two runs
+were scored this way in the old harness — one walked the sample's git
+ancestry, the next read a replay harness from the supervisor's `/tmp`
+scratch. Audit the trace (`audit-agent-trace`) before quoting a score; the
+prompt and the tree are the two channels we control.
 
-The old approach — a bwrap mount namespace around `HARNESS_CMD` — was
-deleted with the port rather than kept in parallel. What still needs
-auditing is the network: a sandbox hides files, not reachable services.
+### Refusing a broken setup early
+
+`settings.py` reads `.env` and raises on a missing key, by name — there are
+no defaults, so a half-configured checkout fails on the first command
+instead of producing a quietly different run. `BENCH_CHECKOUT` and
+`BENCH_BASE_URL` are the only values from the process environment: they
+change per invocation and the driver sets them.
 `audit-agent-trace` looks for that.
 
 ## Checklist (all must be true before authoring starts)

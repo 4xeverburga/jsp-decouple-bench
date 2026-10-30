@@ -493,8 +493,7 @@
       "routes": [
         "/",
         "/j_spring_security_check",
-        "/AddNewSubject",
-        "/ListStudySubjects"
+        "/AddNewSubject"
       ]
     },
     "scorers": ["functional_parity"],
