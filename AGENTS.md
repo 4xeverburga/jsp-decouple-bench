@@ -50,8 +50,8 @@ modules and the lifecycle.
    just code.
 5. **Determinism.** `en-US`, `UTC`, `1280x800`, a fresh database per sample.
    No time-, locale- or host-dependent behaviour anywhere.
-6. **Credentials come from the source's `.env`**, never from a prompt, a case
-   or a flow.
+6. **Credentials come from the sample's `env/.env`**, never from a prompt, a
+   case or a flow.
 7. **The bench owns the stack.** Compose, Containerfile, `.env` and the
    OpenTelemetry setup live in `src/samples/<sample>/env/`, never in the tree
    the agent gets. A pin carries none of them: preparing the sample is what
@@ -70,7 +70,7 @@ modules and the lifecycle.
     Only the per-run inputs (`BENCH_CHECKOUT`, `BENCH_BASE_URL`,
     `BENCH_SAMPLE_ENV`) come from the process environment, and the driver
     derives each of them per invocation: the address a stack publishes is
-    the source's `target_url`, never something the caller remembered.
+    the sample's `target_url`, never something the caller remembered.
 
 ## Running one
 
@@ -96,7 +96,7 @@ grades a kept tree again without paying for the agent.
 from the pinned tree: one stack per case, the flow played once, the rows
 snapshotted before and after, written to `expect.json` beside the
 `flow.py` that drove it. It reads `BENCH_CHECKOUT` (the sample's
-repository, as `task` does) and publishes on the source's `target_url`,
+repository, as `task` does) and publishes on the sample's `target_url`,
 like scoring.
 
 There is no Makefile and nothing is built: `main.py` is the whole command

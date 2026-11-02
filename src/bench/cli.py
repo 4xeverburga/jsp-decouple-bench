@@ -59,7 +59,7 @@ def _published(slug: str) -> dict[str, str]:
     url = sample(slug)["target_url"]
     port = urlsplit(url).port
     if port is None:
-        raise SystemExit(f"source {slug} target_url has no port: {url}")
+        raise SystemExit(f"sample {slug} target_url has no port: {url}")
     return {"BENCH_BASE_URL": url, "APP_HTTP_PORT": str(port)}
 
 
@@ -219,7 +219,7 @@ def capture(manifest_id: int, cases: list[str]) -> None:
     `BENCH_CHECKOUT` names the sample's repository here, as it does for
     `task`: the pin is cut from it and only then becomes the tree the
     stack builds. The address the stack publishes — `BENCH_BASE_URL`, and
-    the `APP_HTTP_PORT` that serves it — comes from the source's
+    the `APP_HTTP_PORT` that serves it — comes from the sample's
     `target_url`, exactly as it does for scoring, because the golden is
     normalized against it.
     """

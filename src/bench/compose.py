@@ -25,9 +25,9 @@ def scoring_compose(slug: str) -> Path:
 
 
 def solve_compose(slug: str) -> Path:
-    """The workspace a source is solved in: its own folder, never shared."""
+    """The workspace a sample is solved in: its own folder, never shared."""
     if not sample_record(slug).get("solve"):
-        raise ValueError(f"source {slug!r} has no solve configuration")
+        raise ValueError(f"sample {slug!r} has no solve configuration")
     compose = sample_env(slug) / "solve.yaml"
     if not compose.is_file():
         raise FileNotFoundError(f"no solve workspace for {slug!r}: {compose}")
