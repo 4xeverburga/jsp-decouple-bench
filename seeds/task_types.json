@@ -12,6 +12,9 @@
   {
     "name": "dummy_file",
     "description": "Smoke test: write one file and stop. Proves an agent acts on the checkout at all, without any app work.",
-    "base_prompt": "This checkout is the working tree for one small job, described below.\n\nCreate the file it names at the root of the checkout, with exactly the\ncontent it gives. Change no existing file, add nothing else, and do not\nbuild, install or run anything. When the file is there, stop.\n"
-  }
+    "base_prompt": "This checkout is the working tree for one small job, described below.\n\nCreate the file it names at the root of the checkout, with exactly the\ncontent it gives. Change no existing file, add nothing else, and do not\nbuild, install or run anything. When the file is there, stop.\n"  },
+  {
+    "name": "agent_probe",
+    "description": "Probe: read the files it names, derive the values they hold, write one\nfile, stop. Tests whether an agent converts research into an edit instead\nof reading indefinitely.",
+    "base_prompt": "This checkout is the working tree for one small job, described below.\n\nThe job has two phases and they happen in that order: read the files it\nnames, then write the single file it asks for. Nothing else in the\nrepository is relevant, and reading the files it names is the whole of\nthe research.\n\nDo not build, install, run or start anything. Do not change any\nexisting file. When the file it asks for exists with exactly the\ncontent it specifies, the job is done: stop there and change nothing\nelse.\n"  }
 ]

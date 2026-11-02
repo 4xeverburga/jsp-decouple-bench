@@ -79,6 +79,9 @@ async def capture_solution(state: TaskState) -> None:
             # The CLI's name is only the wire format; this is what answered.
             "model": state.metadata["model_target"],
             "manifest_id": state.metadata["manifest_id"],
+            # A manifest's prompt is versioned, so a tree from one version
+            # cannot be compared with another: say which one produced it.
+            "manifest_version": state.metadata["manifest_version"],
         },
     )
     await _keep_agent(run, agent)
@@ -264,6 +267,36 @@ def dummy_file(
         agent_model,
         agent_version,
         "dummy_file",
+        model_target,
+    )
+
+
+@task
+def agent_probe(
+    manifest_id: int,
+    phase: str,
+    run: str,
+    agent: str,
+    agent_model: str,
+    agent_version: str,
+    model_target: str,
+) -> Task:
+    """Probe only: read a few files, write one, stop. No app work.
+
+    `dummy_file` proves an agent acts at all; it cannot prove an agent ever
+    stops researching, because it has no read phase. Here the read phase
+    comes first, so the run's `diff.patch` says whether the agent turned
+    reading into an edit. Parity is green by construction, as with
+    `dummy_file`, and says nothing about the agent.
+    """
+    return _manifest_task(
+        manifest_id,
+        phase,
+        run,
+        agent,
+        agent_model,
+        agent_version,
+        "agent_probe",
         model_target,
     )
 

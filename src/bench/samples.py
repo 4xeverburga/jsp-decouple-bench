@@ -35,6 +35,10 @@ def _metadata(chosen: dict, commit: str) -> dict:
         "commit": commit,
         "manifest": chosen["name"],
         "task_type": chosen["task_type"],
+        # The work order is base prompt plus this manifest's ask, and the
+        # ask is versioned: a solve's cleanup only ever sees sample
+        # metadata, so the version has to travel here to be recorded.
+        "manifest_version": chosen["version"],
     }
 
 

@@ -1,8 +1,8 @@
 [
   {
     "task_type": "decouple_slice",
-    "version": 1,
-    "prompt": "Users need to post an answer to a question. The answer form posts to a server-rendered page today; make it post to a JSON endpoint and update the page from the response. Everything users can do now must still work.",
+    "version": 2,
+    "prompt": "Users need to post an answer to a question. The answer form posts to a server-rendered page today; make it post to a JSON endpoint and update the page from the response. Everything users can do now must still work.\n\nThe boundary is the request, not the screen. The question page still renders on the server when it loads; what must stop is the submit rendering a view. The response carries JSON and the browser builds the markup for what that response carries.\n\nA client-side script that reproduces today's markup is expected, and is not a new component. The ban on new components means no new visual elements, no CSS changes and no copy changes.\n\nDone means: the form submits to a JSON endpoint, the page updates from that response without a full reload, and the DOM a browser sees after submitting is the same as before. When that holds, stop.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -613,5 +613,38 @@
     "name": "dummy-file-openclinica",
     "id": 16,
     "source": "openclinica"
+  },
+  {
+    "task_type": "agent_probe",
+    "version": 1,
+    "prompt": "Read pom.xml, system.properties and LICENSE at the root of the checkout. Then create the file AGENT_PROBE.md at the root of the checkout, holding exactly these three lines:\n\nPROBE_POM: the value inside the first <artifactId> element in pom.xml\nPROBE_JAVA: the value of java.runtime.version in system.properties\nPROBE_LICENSE: the first line of LICENSE\n\nNothing else in the file. Create no other file and change no existing one.",
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "dialect": "mysql",
+          "service": "db",
+          "user": "root",
+          "password": "",
+          "database": "mamute_development"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "answer-flow__answer-appears"
+      ],
+      "routes": []
+    },
+    "scorers": ["functional_parity"],
+    "name": "agent-probe",
+    "id": 17,
+    "source": "mamute"
   }
 ]
