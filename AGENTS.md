@@ -20,12 +20,15 @@ this file is not for you.
 | the verdicts | `src/bench/scorers/` |
 | direction, and what is parked | `ROADMAP.md` |
 
-A manifest carries its own budget: `time_limit_minutes`, required like every
-other field and seeded at 60. It is the only place a time limit lives — not
-the sample's `env/.env`, because one sample is graded by tasks of very
-different length, and not `.env`, because a run either fits the manifest it
-was asked for or is not a measurement. `main.py` hands it to both phases as
-Inspect's `time_limit`; exceeding it ends the sample, it does not fail it.
+A manifest carries two budgets: `solve_time_limit_minutes` and
+`score_time_limit_minutes`, required like every other field and seeded at 60.
+They are separate because they bound different things — a solve is the
+agent's own working time, a score is stack builds and case replays. They are
+the only place a time limit lives: not the sample's `env/.env`, because one
+sample is graded by tasks of very different length, and not `.env`, because a
+run either fits the manifest it was asked for or is not a measurement.
+`main.py` hands each to its own phase as Inspect's `time_limit`; exceeding it
+ends the sample, it does not fail it.
 
 Inspect owns the agent's sandbox, the run lifecycle and the logs. Scoring has
 no sandbox: the scorer starts each case's stack itself, from the host. The

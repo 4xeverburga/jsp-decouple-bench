@@ -211,7 +211,8 @@ there is no database to sync:
   "sample": "mamute",
   "name": "vote-flow",
   "task_type": "decouple_slice",
-  "time_limit_minutes": 60,
+  "solve_time_limit_minutes": 60,
+  "score_time_limit_minutes": 60,
   "scope": {
     "cases": ["vote-flow__upvote-increments-count",
               "vote-flow__downvote-increments-count"],

@@ -157,10 +157,11 @@ def _manifest_task(
         "sample": chosen["sample"],
         "version": chosen["version"],
     }
-    # A manifest's budget, not the sample's and not `.env`'s: the same sample
-    # is graded by tasks of very different length, and an unbounded solve can
-    # run for an hour before anyone notices.
-    time_limit = chosen["time_limit_minutes"] * 60
+    # Two budgets, because they bound different things. A solve is the
+    # agent's own working time; a score is stack builds and case replays,
+    # which has nothing to do with how long an agent may think. Both come
+    # from the manifest — the only place a run's length is decided — and
+    # neither has a default here (AGENTS.md rule 10).
 
     if phase == "solve":
         if run is None:
@@ -184,7 +185,7 @@ def _manifest_task(
             cleanup=capture_solution,
             description=kind["description"],
             metadata=metadata,
-            time_limit=time_limit,
+            time_limit=chosen["solve_time_limit_minutes"] * 60,
             sandbox=("docker", str(solve_compose(chosen["sample"]))),
         )
 
@@ -195,7 +196,7 @@ def _manifest_task(
             scorer=_scorers(chosen),
             description=kind["description"],
             metadata=metadata,
-            time_limit=time_limit,
+            time_limit=chosen["score_time_limit_minutes"] * 60,
         )
 
     raise ValueError(f"unknown task phase: {phase}")
