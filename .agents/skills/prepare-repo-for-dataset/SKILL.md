@@ -141,23 +141,26 @@ the pristine upstream state. A rewritten history destroys that.
   to ride in on, and whatever you do add reads like a normal
   application's. Re-pin after scrubbing; a scrub that is not in the pinned
   commit changes nothing for the agent.
-- **The pin must be the tip of its branch, and its history must be
-  unreachable.** Provisioning clones **one commit deep** (`--depth 1
-  --branch <branch>`) into the run's sandbox, so the checkout has no
-  remote, no refs, no reflog **and no parent objects**. A detached HEAD
-  is not enough on its own: every commit object names its parent, and a
-  full clone keeps the ancestors on disk, so `git log` still walks the
-  whole history — including the commit that says it is an eval sample.
-  Consequence for authoring: put the pin at a branch tip (push a branch
-  that points at it), because a shallow clone cuts at a ref.
+- **The pin's history must be unreachable.** The run's checkout is not a
+  clone: `solves.materialise` cuts the pin with `git archive <pin>`,
+  unpacks it, then `git init` + one `baseline` commit. What the agent gets
+  is a **fresh repository** — no remote, no refs, no reflog and no parent
+  objects at all — so `git log` cannot walk back to the commits that say
+  this is an eval sample. That is deliberately stronger than a shallow
+  clone (`--depth 1` still records the parent link, dangling), so do not
+  "restore" a clone here. Consequence for authoring: the pin only has to
+  exist in the repository `BENCH_CHECKOUT` names, at any commit — it does
+  not have to be the tip of a branch.
   ```bash
-  # in the run's checkout: 1 commit, shallow, and the parent is gone
-  git rev-list --count HEAD                 # 1
-  git rev-parse --is-shallow-repository     # true
-  git cat-file -e <parent-of-HEAD>          # fails: bad object
+  # run on any tree under out/workspaces/ or out/solves/*/tree
+  git rev-list --count HEAD     # 1
+  git remote -v                 # empty
+  git rev-parse HEAD^           # fails: unknown revision
   ```
-  `provision()` refuses a clone that is not shallow, so a mistake here
-  fails loudly instead of scoring a tainted run.
+  `is-shallow-repository` is **false** on these trees and must be: the
+  repository is new, not shallow. There is no `provision()` in `src/` —
+  the function that guarantees this is `solves.materialise`, and a pin
+  carrying a stack file is refused there (§"The stack is the bench's").
 
 ## 2. Leave the project runnable
 
@@ -178,6 +181,21 @@ agent eval depend on the environment behaving identically.
 - **Verify the app still runs after every change session**: build green,
   app boots, the healthcheck/home URL answers. "It compiled" is not
   "it runs".
+- **The toolbox must answer under a login shell too.** The agent's
+  commands do not always arrive through the `ENV PATH` the Containerfile
+  sets: `bash -lc` rebuilds `PATH` from `/etc/profile` and drops it.
+  Symlink the legacy JDK's tools into `/usr/local/bin` — **`java` and
+  `javac` included**, not just `jar`/`javap` — otherwise a login shell
+  finds `mvn`, `jar`, `javap` and `node` all working while `java` says
+  "command not found", which reads as "the JDK is not installed" and
+  sends an agent hunting for one. `openclinica`'s `toolbox/Containerfile`
+  is the reference shape; `mamute` shipped without `java`/`javac` and
+  produced exactly that confusion.
+  ```bash
+  docker run --rm <toolbox image> bash -lc \
+    'for t in java javac mvn node mysql; do
+       printf "%-6s %s\n" "$t" "$(command -v $t || echo MISSING)"; done'
+  ```
 - **Machine-specific stuff stays out of tracked files**: local paths,
   ports, credentials go in `AGENTS.md` (documented, machine-specific
   sections are fine there) or gitignored files — never hardcoded into

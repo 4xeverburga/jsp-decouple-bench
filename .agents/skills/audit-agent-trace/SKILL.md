@@ -94,9 +94,21 @@ empty.
 
 ### 2. Every path outside the checkout
 
-`SOLVE_ROOT` is `/workspace` (`settings.py`); the sandbox mounts nothing
-else of the bench. So every absolute path in a tool call should be under
-it, or a container path:
+`SOLVE_ROOT` is `/workspace` (`settings.py`) and the sandbox should mount
+nothing else of the bench. **That is a claim to verify, not a fact to lean
+on** — it has been wrong: a solve that mounted the checkout at its host
+path left `PWD` at
+`.../jsp-decouple-bench/out/workspaces/<run>` with `/workspace` empty, and
+the agent went looking for the repository that path named. Confirm it
+from the transcript before you filter anything out:
+
+```bash
+grep -n 'jsp-decouple-bench\|out/workspaces' "$STATE/transcript.txt" | head
+```
+
+A hit is a finding (a supervisor path, and the `jsp-decouple-bench` leak
+signature in §3), never noise to discard. Everything else in a tool call
+should be under `/workspace`, or a container path:
 
 ```bash
 grep -oE '(/[A-Za-z0-9._+-]+){2,}' "$STATE/transcript.txt" \

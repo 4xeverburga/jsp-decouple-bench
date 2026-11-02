@@ -9,9 +9,16 @@ FROM maven:3.8.6-openjdk-8
 # PATH of /usr/local/bin:/usr/bin:/bin, which this ENV does not reach —
 # symlinks for the JDK tools the base image leaves out of /usr/local/bin:
 # javap and friends answer "command not found" otherwise.
+#
+# `java` and `javac` are the ones that bite. A login shell (`bash -lc`)
+# rebuilds PATH from /etc/profile, dropping the openjdk bin dir this ENV
+# prepends, so a tool reached that way sees `mvn`, `jar`, `javap` and
+# `node` all working while `java` reports "command not found" — which
+# reads as "the JDK is not installed" and sends an agent hunting for one.
+# Symlinked like the rest, they answer under either shell.
 ENV JAVA_HOME=/usr/local/openjdk-8
 ENV PATH=/usr/local/openjdk-8/bin:${PATH}
-RUN for tool in jar jarsigner javap jcmd jdb jps jrunscript jstack; do \
+RUN for tool in java javac keytool jar jarsigner javap jcmd jdb jps jrunscript jstack; do \
       ln -sf "/usr/local/openjdk-8/bin/$tool" "/usr/local/bin/$tool"; \
     done
 

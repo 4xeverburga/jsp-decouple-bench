@@ -107,7 +107,7 @@ golden.
 - [ ] `locale`, `timezone_id`, `viewport` present in `case.json`.
 - [ ] Every declared table is one the flow actually touches; and no table
       the flow touches is missing from `db.tables`.
-- [ ] Contributes to the slice's controller coverage (`add-bench-case`).
+- [ ] Contributes to the slice's controller coverage (`add-bench-case` §7).
 
 ## Anti-patterns
 

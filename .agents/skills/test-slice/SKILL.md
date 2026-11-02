@@ -100,7 +100,7 @@ Rules (all hard-won — violating any of these cost a debug cycle):
   deterministic fixed credentials; act with the seeded actor, whose
   credentials come from `os.environ` only (`capture` and `score` inject
   the sample's `env/.env`). Why a literal must never appear is
-  `authoring-bench-tests` §"Self-containment".
+  `bench-case-principles` §"Self-containment".
 - **Wait for submit navigations explicitly**:
   `with page.expect_navigation(wait_until="load"): page.click(...)` —
   `click` + `wait_for_load_state` races the redirect.
@@ -132,7 +132,7 @@ capture correct it empirically: it snapshots exactly the tables you
 declared, and a table you forgot simply does not appear in the delta.
 Key columns come from `DESCRIBE <table>` (`\d` in psql) — join tables in
 mamute use `tags_id`/`watchers_id`, not `Tag_id`/`Watcher_id`. What counts
-as volatile, and what to exclude on purpose, is `authoring-bench-tests`
+as volatile, and what to exclude on purpose, is `bench-case-principles`
 §"The delta pattern".
 
 The client runs **inside the `db` service** of the case's stack, and the
@@ -165,7 +165,7 @@ is dropped: a capture is a run that passed by definition.
 **Never hand-edit `expect.json`.** If a case fails on an untouched tree,
 the environment or a normalizer rule is wrong — re-capture from the
 pristine pin, and understand *why* it differed first
-(`authoring-bench-tests` §"The golden is generated").
+(`bench-case-principles` §"The golden is generated").
 
 ### 6. Determinism gate (mandatory)
 

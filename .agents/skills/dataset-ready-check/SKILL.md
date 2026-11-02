@@ -58,6 +58,15 @@ stderr. A first build of a sample is minutes long.
   offending paths if one is there.
 - `capture` finished: the app answered, the seeded account logged in, the
   flow ran (a failed flow raises; there is no "captured anyway").
+- The solve toolbox answers the toolchain under a **login** shell as well
+  as a plain one, because the agent's commands may arrive either way
+  (`prepare-repo-for-dataset` §2). `java` missing here while `mvn` works
+  is the failure this catches:
+  ```bash
+  docker run --rm bench-solve-<slug>:local bash -lc \
+    'for t in java javac mvn node; do
+       printf "%-6s %s\n" "$t" "$(command -v $t || echo MISSING)"; done'
+  ```
 - `docker compose ps` after the run shows nothing left over, and no
   `bench-*` project or network survives (`down -v --remove-orphans`).
 
@@ -75,25 +84,26 @@ pin, keep it as a run, keep its diff empty:
 
 ```bash
 uv run python - <<'PY'
-import json, shutil
 from pathlib import Path
 from src.bench import solves
 from src.bench.seeds import pin
 
 slug, run = "mamute", "noop-mamute"
-tree = solves.materialise(run, Path("../mamute").resolve(), pin(slug))
-target = solves.location(run)
-shutil.copytree(tree, target / "tree")
-(target / "diff.patch").write_bytes(b"")
-(target / "record.json").write_text(json.dumps({
+workspace = solves.materialise(run, Path("../mamute").resolve(), pin(slug))
+solves.capture(run, workspace, {
     "agent": "none", "agent_model": "none", "agent_version": "none",
-    "model": "noop", "run_id": run, "diff_bytes": 0,
-}, indent=2) + "\n")
+    "model": "noop", "note": "no-op self-check at the pinned tree",
+})
+print(solves.location(run) / "tree")
 PY
 
 BENCH_CHECKOUT=$PWD/out/solves/noop-mamute/tree \
   uv run python main.py score --manifest <n> --run noop-mamute
 ```
+`materialise` cuts the tree; `capture` writes `tree/`, `diff.patch` and
+`record.json` together — do not hand-roll the copy. `score` reads all
+three (the record is what labels the score), and a hand-built tree with a
+missing `record.json` fails on `solves.read` rather than scoring.
 
 Every case must come back `correct`. If it is red, the pin or the stack is
 wrong — no score taken on this sample means anything, and a real agent's
@@ -136,15 +146,49 @@ Checked against the **tree**, not against intentions:
 - The prompt (the manifest `prompt` + the task type's `base_prompt`) names
   no route, no case, no golden, and no `docker`/`compose`/`container`/
   `sandbox` word — the toolchain is "already installed here".
+- **The solve sandbox itself.** A pristine tree and a clean prompt still
+  leak if the *mount* is wrong, so check it from inside a running sandbox
+  before spending a run:
+  ```bash
+  docker exec <workspace container> /bin/sh -c \
+    'pwd; ls /workspace | head -3; ls /home 2>&1; env | grep BENCH_'
+  ```
+  `pwd` must be `/workspace`, `/workspace` must hold the tree, the
+  supervisor's home must not exist there, and no `BENCH_*` variable may be
+  visible. A run whose `pwd` is
+  `.../jsp-decouple-bench/out/workspaces/<run>` has mounted the checkout at
+  its host path, which names this repository to the agent — that happened,
+  and the tree and the prompt were both clean while it did.
 - After a real run, `audit-agent-trace` finds no read outside the
   checkout before any score is quoted.
 
 ## 7. At least one controller is fully covered
 
-`scope.covers.handlers` in `seeds/manifests.json` maps every handler of one
-controller to the case that drives it, and `not_driven` explains the rest.
-Read the controller and spot-check two entries: the routing must be the
-app's, not the manifest author's belief.
+The intended record is `scope.covers` on the manifest entry — `controller`,
+`handlers` (handler → case) and `not_driven` (handler → why it cannot be
+reached) — written by `add-bench-case` §8. **No manifest populates it yet**:
+every `scope` in `seeds/manifests.json` is `{cases, routes}` only.
+
+```bash
+grep -n 'covers' seeds/manifests.json    # empty = nothing recorded yet
+```
+
+While that is true, the check is an argument you make by reading the code,
+not a field you open:
+
+1. Open the target controller and list its handlers and the route each one
+   registers (its annotations and `routes.properties`).
+2. Walk the slice's `flow.py` and point at the step that reaches each
+   handler.
+3. A handler with no step is either `not_driven` — write down why it cannot
+   be reached here — or a gap in the slice.
+
+The routing must be the app's, not the manifest author's belief:
+spot-check two handlers against `routes.properties` and the annotations.
+Record the handler map in `out/ready/<slug>.md`; populating
+`scope.covers` for the existing manifests is outstanding work
+(`ROADMAP.md`), and this section tightens to "read the field" once it is
+there.
 
 ## 8. The trace base exists (for the scorer that is not built yet)
 
