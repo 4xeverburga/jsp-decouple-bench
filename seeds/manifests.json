@@ -2,6 +2,7 @@
   {
     "task_type": "decouple_slice",
     "version": 2,
+    "time_limit_minutes": 60,
     "prompt": "Users need to post an answer to a question. The answer form posts to a server-rendered page today; make it post to a JSON endpoint and update the page from the response. Everything users can do now must still work.\n\nThe boundary is the request, not the screen. The question page still renders on the server when it loads; what must stop is the submit rendering a view. The response carries JSON and the browser builds the markup for what that response carries.\n\nA client-side script that reproduces today's markup is expected, and is not a new component. The ban on new components means no new visual elements, no CSS changes and no copy changes.\n\nDone means: the form submits to a JSON endpoint, the page updates from that response without a full reload, and the DOM a browser sees after submitting is the same as before. When that holds, stop.",
     "bindings": {
       "stack": {
@@ -37,11 +38,12 @@
     "scorers": ["functional_parity"],
     "name": "answer-flow",
     "id": 1,
-    "source": "mamute"
+    "sample": "mamute"
   },
   {
     "task_type": "decouple_slice",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Users need to ask a new question. The form posts to a server-rendered page today; make it post to a JSON endpoint and update the page from the response. Everything users can do now must still work.",
     "bindings": {
       "stack": {
@@ -74,11 +76,12 @@
     "scorers": ["functional_parity"],
     "name": "ask-flow",
     "id": 2,
-    "source": "mamute"
+    "sample": "mamute"
   },
   {
     "task_type": "decouple_slice",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Users need to upvote and downvote questions. The vote controls hit server-rendered endpoints today; make them use JSON endpoints and update the count in place. Everything users can do now must still work.",
     "bindings": {
       "stack": {
@@ -116,11 +119,12 @@
     "scorers": ["functional_parity"],
     "name": "vote-flow",
     "id": 3,
-    "source": "mamute"
+    "sample": "mamute"
   },
   {
     "task_type": "decouple_slice",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Users need to watch and unwatch a question. The action hits a server-rendered endpoint today; make it use a JSON endpoint and update the page from the response. Everything users can do now must still work.",
     "bindings": {
       "stack": {
@@ -154,11 +158,12 @@
     "scorers": ["functional_parity"],
     "name": "watch-flow",
     "id": 4,
-    "source": "mamute"
+    "sample": "mamute"
   },
   {
     "task_type": "decouple_slice",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Administrators need to add a course. The form posts to a server-rendered page today; make it post to a JSON endpoint and refresh the course list from the response. Everything admins can do now must still work.",
     "bindings": {
       "stack": {
@@ -191,11 +196,12 @@
     "scorers": ["functional_parity"],
     "name": "admin-course-flow",
     "id": 5,
-    "source": "online-study-system"
+    "sample": "online-study-system"
   },
   {
     "task_type": "decouple_slice",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Administrators need to add and remove students. Those actions post to server-rendered pages today; make them use JSON endpoints and update the student list in place. Everything admins can do now must still work.",
     "bindings": {
       "stack": {
@@ -230,11 +236,12 @@
     "scorers": ["functional_parity"],
     "name": "admin-student-flow",
     "id": 6,
-    "source": "online-study-system"
+    "sample": "online-study-system"
   },
   {
     "task_type": "decouple_slice",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Students need to take an exam and save their answers. Saving posts to a server-rendered page today; make it use a JSON endpoint and update the page from the response. Everything students can do now must still work.",
     "bindings": {
       "stack": {
@@ -270,11 +277,12 @@
     "scorers": ["functional_parity"],
     "name": "exam-flow",
     "id": 7,
-    "source": "online-study-system"
+    "sample": "online-study-system"
   },
   {
     "task_type": "decouple_slice",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Students need to drop a course. The action posts to a server-rendered page today; make it use a JSON endpoint and refresh the enrolled courses. Everything students can do now must still work.",
     "bindings": {
       "stack": {
@@ -307,11 +315,12 @@
     "scorers": ["functional_parity"],
     "name": "out-course-flow",
     "id": 8,
-    "source": "online-study-system"
+    "sample": "online-study-system"
   },
   {
     "task_type": "decouple_slice",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Students need to top up their balance. The form posts to a server-rendered page today; make it use a JSON endpoint and show the updated balance from the response. Everything students can do now must still work.",
     "bindings": {
       "stack": {
@@ -344,11 +353,12 @@
     "scorers": ["functional_parity"],
     "name": "recharge-flow",
     "id": 9,
-    "source": "online-study-system"
+    "sample": "online-study-system"
   },
   {
     "task_type": "decouple_slice",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Students need to select a course, and the system must refuse the selection when their balance is too low. Both outcomes are rendered server-side today; make them JSON endpoints and update the page from the response. Everything students can do now must still work.",
     "bindings": {
       "stack": {
@@ -383,11 +393,12 @@
     "scorers": ["functional_parity"],
     "name": "select-course-flow",
     "id": 10,
-    "source": "online-study-system"
+    "sample": "online-study-system"
   },
   {
     "task_type": "decouple_slice",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Students need to move between study periods while a course is in progress. Those actions post to server-rendered pages today; make them use JSON endpoints and update the progress on the page. Everything students can do now must still work.",
     "bindings": {
       "stack": {
@@ -423,11 +434,12 @@
     "scorers": ["functional_parity"],
     "name": "study-flow",
     "id": 11,
-    "source": "online-study-system"
+    "sample": "online-study-system"
   },
   {
     "task_type": "decouple_slice",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Teachers need to grade a student's course. The form posts to a server-rendered page today; make it use a JSON endpoint and refresh the marks from the response. Everything teachers can do now must still work.",
     "bindings": {
       "stack": {
@@ -462,11 +474,12 @@
     "scorers": ["functional_parity"],
     "name": "teacher-mark-flow",
     "id": 12,
-    "source": "online-study-system"
+    "sample": "online-study-system"
   },
   {
     "task_type": "decouple_slice",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Study staff need to add a subject to a study and see it in the subject list. The form posts to a server-rendered page today; make it post to a JSON endpoint and refresh the list from the response. Everything staff can do now must still work.",
     "bindings": {
       "stack": {
@@ -499,11 +512,12 @@
     "scorers": ["functional_parity"],
     "name": "subject-flow",
     "id": 13,
-    "source": "openclinica"
+    "sample": "openclinica"
   },
   {
     "task_type": "oneshot_decoupling",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Take the whole app in one go. Every screen that the server renders today should get its data as JSON and be rendered in the browser, and the presentation side should stop owning the database. Afterwards, everything users can do today must still work.",
     "bindings": {
       "stack": {
@@ -546,11 +560,12 @@
     "scorers": ["functional_parity"],
     "name": "whole-app",
     "id": 14,
-    "source": "mamute"
+    "sample": "mamute"
   },
   {
     "task_type": "dummy_file",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Create the file AGENT_OK.md at the root of the checkout. It holds one line and nothing else: written by the agent",
     "bindings": {
       "stack": {
@@ -579,11 +594,12 @@
     "scorers": ["functional_parity"],
     "name": "dummy-file",
     "id": 15,
-    "source": "mamute"
+    "sample": "mamute"
   },
   {
     "task_type": "dummy_file",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Create the file AGENT_OK.md at the root of the checkout. It holds one line and nothing else: written by the agent",
     "bindings": {
       "stack": {
@@ -612,11 +628,12 @@
     "scorers": ["functional_parity"],
     "name": "dummy-file-openclinica",
     "id": 16,
-    "source": "openclinica"
+    "sample": "openclinica"
   },
   {
     "task_type": "agent_probe",
     "version": 1,
+    "time_limit_minutes": 60,
     "prompt": "Read pom.xml, system.properties and LICENSE at the root of the checkout. Then create the file AGENT_PROBE.md at the root of the checkout, holding exactly these three lines:\n\nPROBE_POM: the value inside the first <artifactId> element in pom.xml\nPROBE_JAVA: the value of java.runtime.version in system.properties\nPROBE_LICENSE: the first line of LICENSE\n\nNothing else in the file. Create no other file and change no existing one.",
     "bindings": {
       "stack": {
@@ -645,6 +662,6 @@
     "scorers": ["functional_parity"],
     "name": "agent-probe",
     "id": 17,
-    "source": "mamute"
+    "sample": "mamute"
   }
 ]

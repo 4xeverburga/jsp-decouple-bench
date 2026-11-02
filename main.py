@@ -44,7 +44,7 @@ from src.bench.seeds import task_type  # noqa: E402
 def _scorers(chosen: dict) -> list:
     options = chosen["bindings"]["db"]["options"]
     builders = {
-        "functional_parity": lambda: parity(chosen["source"], options),
+        "functional_parity": lambda: parity(chosen["sample"], options),
     }
     return [builders[name]() for name in chosen["scorers"]]
 
@@ -154,9 +154,13 @@ def _manifest_task(
     metadata = {
         "manifest": chosen["name"],
         "task_type": chosen["task_type"],
-        "sample": chosen["source"],
+        "sample": chosen["sample"],
         "version": chosen["version"],
     }
+    # A manifest's budget, not the sample's and not `.env`'s: the same sample
+    # is graded by tasks of very different length, and an unbounded solve can
+    # run for an hour before anyone notices.
+    time_limit = chosen["time_limit_minutes"] * 60
 
     if phase == "solve":
         if run is None:
@@ -180,7 +184,8 @@ def _manifest_task(
             cleanup=capture_solution,
             description=kind["description"],
             metadata=metadata,
-            sandbox=("docker", str(solve_compose(chosen["source"]))),
+            time_limit=time_limit,
+            sandbox=("docker", str(solve_compose(chosen["sample"]))),
         )
 
     if phase == "score":
@@ -190,6 +195,7 @@ def _manifest_task(
             scorer=_scorers(chosen),
             description=kind["description"],
             metadata=metadata,
+            time_limit=time_limit,
         )
 
     raise ValueError(f"unknown task phase: {phase}")

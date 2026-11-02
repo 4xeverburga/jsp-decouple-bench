@@ -16,8 +16,14 @@ services:
   workspace:
     x-default: true
     build:
-      context: ./toolbox
-      dockerfile: Containerfile
+      # The tree is the context, exactly as it is for the scoring image: the
+      # toolbox warms `~/.m2` from the pin's own poms, so the agent's first
+      # `mvn` is seconds instead of the cold download a multi-module reactor
+      # costs. The mount below shadows whatever was copied in, so the copy in
+      # the image is never what the agent reads. Built once per pin;
+      # `docker compose up` reuses the image and does not rebuild it.
+      context: ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}
+      dockerfile: ${BENCH_SAMPLE_ENV:?set by the bench}/toolbox/Containerfile
     image: bench-solve-openclinica:local
     init: true
     command: tail -f /dev/null

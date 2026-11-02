@@ -36,3 +36,42 @@ RUN rm -rf /var/lib/apt/lists/* \
 RUN ln -sf /usr/bin/psql /usr/local/bin/psql
 
 WORKDIR /workspace
+
+# Dependency-cache and compile state, from the pin's own poms: the build
+# context is the sample tree (see solve.yaml), the same one the scoring image
+# builds from. Without this layer every solve paid the whole reactor's cold
+# download before the agent could compile anything.
+#
+# Nothing copied here is what the agent reads: at run time the checkout is
+# bind-mounted over /workspace, so only `~/.m2` survives into the solve.
+#
+# Not `dependency:go-offline`: it asks every repository the poms declare for
+# every artifact of every plugin — far more work than the build it warms (it
+# had not finished after thirteen minutes on the mamute sample). The
+# `package` below is the build the agent has to run anyway, so it resolves
+# exactly that set. The pass before the sources are copied only warms the
+# plugins, and on this reactor it stops at the JAXB plugin, which needs
+# `ws/src/main/webapp/WEB-INF/schemas` — hence `|| true`: the `package` below
+# is the one that has to succeed.
+#
+# Last on purpose: every layer above this one would invalidate it, and a
+# re-download is minutes of silence (`-q`).
+COPY pom.xml ./
+COPY core/pom.xml core/
+COPY web/pom.xml web/
+COPY ws/pom.xml ws/
+RUN mvn -B -q -DskipTests compile || true
+
+COPY . .
+RUN mvn -B -q -DskipTests \
+      -Dmaven.buildNumber.allowNullScm=true \
+      -DdbType=postgres \
+      -DdbUser=clinica \
+      -DdbPass=clinica \
+      -Ddb=openclinica \
+      -DdbPort=5432 \
+      -DdbHost=db \
+      -DWEBAPP=OpenClinica \
+      -DWEBAPP.lower=openclinica \
+      -Dcatalina.home=/opt/tomcat \
+      clean package

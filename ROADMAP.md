@@ -42,8 +42,6 @@ What is done, what is next, and what is parked. Decisions of record live in
   tree can be re-graded without paying for the agent again.
 - **App as native processes** (no Docker for scoring). Only worth it if the
   bench itself must run inside a container; costs the pinned toolchain.
-- **Maven cache mount** (`--mount=type=cache`): a `pom.xml` change re-pays a
-  long, silent download.
 - **Re-prove gate sensitivity** on the host-driven scorer with the
   `broken-vote` tree.
 - **A browser in the agent's toolbox — deliberately absent.** The solve
@@ -65,6 +63,10 @@ What is done, what is next, and what is parked. Decisions of record live in
 
 ## Done
 
+- Solve toolboxes carry the sample's Maven cache (`~/.m2`), built from the
+  tree the agent gets but never reading it: the checkout is bind-mounted over
+  `/workspace`, so a solve starts with a warm cache instead of paying the
+  cold download in the agent's own time.
 - Inspect-based bench; `main.py` is the whole command line.
 - Golden capture is a command again: `main.py capture` cuts the pin, runs
   one stack per case, and writes `expect.json`.

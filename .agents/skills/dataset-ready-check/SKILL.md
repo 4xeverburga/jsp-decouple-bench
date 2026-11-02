@@ -12,7 +12,7 @@ description: >
 
 # Dataset-ready check for a sample
 
-Run this against ONE sample (`slug` from `seeds/sources.json`). Every check
+Run this against ONE sample (`slug` from `seeds/samples.json`). Every check
 must pass; a sample that fails any check is not publishable, because every
 agent score produced on it would be meaningless. Write the result to
 `out/ready/<sample>.md` (`out/` is gitignored).

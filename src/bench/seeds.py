@@ -32,16 +32,16 @@ def manifests() -> list[dict]:
     return _seed("manifests.json")
 
 
-def source(slug: str) -> dict:
-    """The registry row for a code source: provenance and the pin."""
-    for row in _seed("sources.json"):
+def sample(slug: str) -> dict:
+    """The registry row for a sample: provenance and the pin."""
+    for row in _seed("samples.json"):
         if row["slug"] == slug:
             return row
     raise KeyError(slug)
 
 
 def pin(slug: str) -> str:
-    for row in _seed("sources.json"):
+    for row in _seed("samples.json"):
         if row["slug"] == slug:
             return row["commit_sha"]
     raise KeyError(slug)
@@ -50,11 +50,11 @@ def pin(slug: str) -> str:
 def work_order(chosen: dict) -> str:
     """The two data fields the agent reads — no routes, no case names."""
     kind = task_type(chosen["task_type"])
-    solve = source(chosen["source"]).get("solve", {})
+    solve = sample(chosen["sample"]).get("solve", {})
     try:
         base = kind["base_prompt"].format(**solve)
     except KeyError as missing:
         raise ValueError(
-            f"source {chosen['source']!r} has no solve {missing.args[0]!r}"
+            f"sample {chosen['sample']!r} has no solve {missing.args[0]!r}"
         ) from None
     return f"{base.rstrip()}\n\n{chosen['prompt'].rstrip()}\n"

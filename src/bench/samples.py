@@ -18,7 +18,7 @@ of the same commit distinct.
 from inspect_ai.dataset import Sample
 
 from .seeds import manifest as load_manifest
-from .seeds import pin, source, work_order
+from .seeds import pin, sample, work_order
 
 
 def code_id(slug: str, commit: str) -> str:
@@ -27,7 +27,7 @@ def code_id(slug: str, commit: str) -> str:
 
 
 def _metadata(chosen: dict, commit: str) -> dict:
-    record = source(chosen["source"])
+    record = sample(chosen["sample"])
     return {
         "project_id": record["project_id"],
         "branch": record["branch"],
@@ -45,8 +45,8 @@ def _metadata(chosen: dict, commit: str) -> dict:
 def for_scoring(manifest_id: int) -> list[Sample]:
     """One sample per case, each against the pinned commit."""
     chosen = load_manifest(manifest_id)
-    commit = pin(chosen["source"])
-    code = code_id(chosen["source"], commit)
+    commit = pin(chosen["sample"])
+    code = code_id(chosen["sample"], commit)
     base = _metadata(chosen, commit)
     return [
         Sample(
@@ -75,10 +75,10 @@ def for_solving(
     wire name is only the format of the request.
     """
     chosen = load_manifest(manifest_id)
-    commit = pin(chosen["source"])
+    commit = pin(chosen["sample"])
     return [
         Sample(
-            id=f"{code_id(chosen['source'], commit)}:{chosen['name']}",
+            id=f"{code_id(chosen['sample'], commit)}:{chosen['name']}",
             input=work_order(chosen),
             target="decoupled",
             metadata=dict(

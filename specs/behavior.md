@@ -20,8 +20,8 @@ Run inputs come from the process environment, because they change per
 invocation: `BENCH_CHECKOUT` (the tree under test) and `BENCH_SAMPLE_ENV`
 (the sample's `env/`). The address a stack publishes is not one of them
 any more: `BENCH_BASE_URL` and the `APP_HTTP_PORT` that serves it are
-derived by the driver from the source's `target_url` in
-`seeds/sources.json` — one field, so the URL a case is played against
+derived by the driver from the sample's `target_url` in
+`seeds/samples.json` — one field, so the URL a case is played against
 cannot drift from the port compose binds — and the sample's own
 public-URL variable (`MAMUTE_PUBLIC_URL`) defaults to it. Credentials come
 from the sample's `env/.env`, which `score` exports.

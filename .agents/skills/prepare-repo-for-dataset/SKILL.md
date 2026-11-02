@@ -64,7 +64,7 @@ the pristine upstream state. A rewritten history destroys that.
   ```
   This tag preserves the original upstream provenance; it is not a harness
   or a runtime selector. Benchmark runs and captures use the sample's pinned
-  `commit_sha`, which is seed data in `seeds/sources.json` and is read from
+  `commit_sha`, which is seed data in `seeds/samples.json` and is read from
   there by every command (`seeds.pin`). If the repo is a
   HEAD-only upstream mirror, this single commit IS the provenance anchor —
   treat it as immutable.
@@ -76,7 +76,7 @@ the pristine upstream state. A rewritten history destroys that.
   Local-only commits are invisible to anyone auditing the sample later.
 - **Do not point at the origin from inside the tree.** The history is the
   provenance: the `pristine` tag, the remote, and `SAMPLE.project_id` in
-  `seeds/sources.json`. The checkout an agent reads must say nothing about
+  `seeds/samples.json`. The checkout an agent reads must say nothing about
   where the code came from — no `UPSTREAM.md`, no upstream URL in README /
   AGENTS.md / `pom.xml` `<scm>`, no "mirror of" sentence, no release-war
   download, no update script that curls the project site. One link is
@@ -188,14 +188,29 @@ agent eval depend on the environment behaving identically.
   `javac` included**, not just `jar`/`javap` — otherwise a login shell
   finds `mvn`, `jar`, `javap` and `node` all working while `java` says
   "command not found", which reads as "the JDK is not installed" and
-  sends an agent hunting for one. `openclinica`'s `toolbox/Containerfile`
-  is the reference shape; `mamute` shipped without `java`/`javac` and
-  produced exactly that confusion.
+  sends an agent hunting for one. A toolbox that symlinks `jar`/`javap`
+  but not `java`/`javac` produces exactly that confusion; copy the symlink
+  loop from any sample under `src/samples/*/env/toolbox/`.
   ```bash
   docker run --rm <toolbox image> bash -lc \
     'for t in java javac mvn node mysql; do
        printf "%-6s %s\n" "$t" "$(command -v $t || echo MISSING)"; done'
   ```
+- **Warm the dependency cache in the toolbox**, or every solve pays the
+  cold download before the agent can compile anything (minutes, against
+  seconds with a warm `~/.m2`). Point the sandbox's `build.context` at the
+  tree (`${BENCH_CHECKOUT}`) and `dockerfile` at the bench's
+  `toolbox/Containerfile`, then `COPY` the pom(s) + any vendored repo and
+  run the build the agent will run (`mvn -B -q compile`, `package` for a
+  WAR) before copying the sources in, then again after — the second run
+  proves the cache complete. The bind mount shadows all of it at run time,
+  so only the build tool's cache (`~/.m2`, `~/.gradle`) survives. Do
+  **not** warm it with a resolution-only goal (`dependency:go-offline` and
+  its kin): it walks every repository the poms declare for every artifact
+  of every plugin, including plugins the build never runs, so it can cost
+  several times the build it is meant to warm. `main.py task` builds the
+  toolbox before the eval, because `docker compose up` never rebuilds an
+  image that exists; after editing a toolbox by hand, build it again.
 - **Machine-specific stuff stays out of tracked files**: local paths,
   ports, credentials go in `AGENTS.md` (documented, machine-specific
   sections are fine there) or gitignored files — never hardcoded into
@@ -211,9 +226,9 @@ agent eval depend on the environment behaving identically.
 Nothing about how the app runs is committed here. The scoring stack, the
 Containerfile, the `.env` and the OpenTelemetry collector live in the bench
 under `src/samples/<slug>/env/`, and `solves.materialise` refuses a pin
-that carries one (§1). `src/samples/mamute/env/` is the reference shape;
-`src/samples/openclinica/env/` is the second one (a Tomcat WAR behind
-PostgreSQL), and between them they are the inventory a new sample needs:
+that carries one (§1). The samples under `src/samples/*/env/` are the
+worked examples — one native process behind MySQL, one WAR behind
+PostgreSQL — and together they are the inventory a new sample needs:
 
 | file | what it is for |
 |---|---|
@@ -225,7 +240,7 @@ PostgreSQL), and between them they are the inventory a new sample needs:
 | `.env.example` | the same keys with `CHANGE_ME` for a fresh setup |
 | `otel-collector.yaml` | file exporter into the `traces` volume |
 | `solve.yaml` | the agent's sandbox: checkout at `settings.SOLVE_ROOT`, database sidecar |
-| `toolbox/Containerfile` | the agent's toolchain, with tools symlinked into `/usr/local/bin` (the agent's shell is given `PATH=/usr/local/bin:/usr/bin:/bin`) |
+| `toolbox/Containerfile` | the agent's toolchain, with tools symlinked into `/usr/local/bin` (the agent's shell is given `PATH=/usr/local/bin:/usr/bin:/bin`) and the build tool's cache warmed from the pin |
 
 Published port: `${APP_HTTP_PORT:-<unused default>}` on the host, always to
 `8080` inside. A sample whose default collides with a locally running
@@ -316,7 +331,7 @@ else. `main.py` is the only command line:
 - `manifests` — list the work order.
 
 After the sample's cases are ready, set `commit_sha` in
-`seeds/sources.json` and run:
+`seeds/samples.json` and run:
 
 ```bash
 export BENCH_CHECKOUT=$PWD/../<sample>    # the repo the pin is cut from

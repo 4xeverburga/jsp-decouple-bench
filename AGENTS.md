@@ -8,8 +8,8 @@ this file is not for you.
 
 | thing | where |
 |---|---|
-| the code under test, its pin and stack entrypoint | `seeds/sources.json` |
-| the graded cases and the work order | `seeds/manifests.json` |
+| the code under test, its pin and stack entrypoint | `seeds/samples.json` |
+| the graded cases, the work order and the run's budget | `seeds/manifests.json` |
 | every parameter: timeouts, viewport, locale, models, paths | `settings.py` |
 | the values of those parameters | `.env` (untracked, from `.env.example`) |
 | the CLI agents the solve can run, and what each needs | `src/bench/agents.py` |
@@ -19,6 +19,13 @@ this file is not for you.
 | starting and removing a case's stack | `src/bench/stack.py` |
 | the verdicts | `src/bench/scorers/` |
 | direction, and what is parked | `ROADMAP.md` |
+
+A manifest carries its own budget: `time_limit_minutes`, required like every
+other field and seeded at 60. It is the only place a time limit lives — not
+the sample's `env/.env`, because one sample is graded by tasks of very
+different length, and not `.env`, because a run either fits the manifest it
+was asked for or is not a measurement. `main.py` hands it to both phases as
+Inspect's `time_limit`; exceeding it ends the sample, it does not fail it.
 
 Inspect owns the agent's sandbox, the run lifecycle and the logs. Scoring has
 no sandbox: the scorer starts each case's stack itself, from the host. The

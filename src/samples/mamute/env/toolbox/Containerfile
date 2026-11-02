@@ -47,3 +47,33 @@ RUN for tool in node npm npx; do \
     done
 
 WORKDIR /workspace
+
+# Dependency-cache and compile state, from the pin's own pom: the build
+# context is the sample tree (see solve.yaml), the same one the scoring image
+# builds from. Without this layer every solve paid a cold Maven build — ~430 s
+# against a ~4 s recompile with a warm `~/.m2` — because the image could not
+# see a pom at all.
+#
+# Nothing copied here is what the agent reads: at run time the checkout is
+# bind-mounted over /workspace, so only `~/.m2` survives into the solve.
+#
+# Not `dependency:go-offline`: it asks every repository the pom declares —
+# the pin's snapshot and Restlet ones included — for every artifact of every
+# plugin, and had not finished after thirteen minutes here. The build below
+# resolves only what the build needs; the pass before the sources are copied
+# warms the plugins, and the one after is what fills the cache (the compiler
+# skips a project with no sources before it resolves a classpath). The `exec`
+# goal is the plugin the app is booted with (`entrypoint.sh`), warmed without
+# booting it.
+#
+# Last on purpose: every layer above this one would invalidate it, and a
+# re-download is minutes of silence (`-q`).
+COPY pom.xml ./
+COPY local-repo ./local-repo
+RUN mvn -B -q compile \
+ && mvn -B -q exec:exec -Dexec.executable=/bin/true || true
+
+COPY src ./src
+# `clean` too: it is the usual first word of the build an agent runs, and it
+# is a different plugin from the compiler's.
+RUN mvn -B -q clean compile

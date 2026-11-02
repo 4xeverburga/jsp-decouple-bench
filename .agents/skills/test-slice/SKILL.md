@@ -144,7 +144,7 @@ dialect is the manifest's (`bindings.db.options.dialect`, `mysql` or
 The stack is the bench's (`src/samples/<sample>/env/`), so the sample
 must have one before a case can be captured. `BENCH_CHECKOUT` names the
 sample's **repository** (the pin is cut from it); the address its stack
-publishes is the source's `target_url` in `seeds/sources.json`, which the
+publishes is the sample's `target_url` in `seeds/samples.json`, which the
 driver derives — never export a port or a URL by hand:
 
 ```bash
@@ -208,9 +208,10 @@ there is no database to sync:
 ```json
 {
   "id": 3,
-  "source": "mamute",
+  "sample": "mamute",
   "name": "vote-flow",
   "task_type": "decouple_slice",
+  "time_limit_minutes": 60,
   "scope": {
     "cases": ["vote-flow__upvote-increments-count",
               "vote-flow__downvote-increments-count"],

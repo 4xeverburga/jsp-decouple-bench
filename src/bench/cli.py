@@ -21,6 +21,7 @@ import argparse
 import os
 import shutil
 import subprocess
+import sys
 import uuid
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -31,10 +32,10 @@ import settings
 
 from . import capture as freezing
 from . import solves
-from .compose import sample_env
+from .compose import sample_env, solve_compose
 from .seeds import manifest as load_manifest
 from .seeds import manifests as all_manifests
-from .seeds import pin, source
+from .seeds import pin, sample
 
 TASKS = settings.ROOT / "main.py"
 EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
@@ -55,7 +56,7 @@ def _published(slug: str) -> dict[str, str]:
     two together is what stops the URL a case is played against from
     drifting away from the port compose binds.
     """
-    url = source(slug)["target_url"]
+    url = sample(slug)["target_url"]
     port = urlsplit(url).port
     if port is None:
         raise SystemExit(f"source {slug} target_url has no port: {url}")
@@ -95,6 +96,36 @@ def _spec(manifest_id: int) -> str:
     return f"{TASKS.name}@{chosen['task_type']}"
 
 
+def _build_toolbox(slug: str, workspace: Path) -> None:
+    """Build the solve image, which carries the sample's Maven cache.
+
+    `docker compose up` (what the sandbox runs) never rebuilds an image that
+    already exists, and the first build of a toolbox downloads that whole
+    cache: minutes, inside an eval whose sandbox startup has a timeout of its
+    own. Building it here streams the download where it can be watched, and
+    leaves the run with the image its `toolbox/Containerfile` describes.
+    """
+    subprocess.run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            str(solve_compose(slug)),
+            "build",
+            "workspace",
+        ],
+        env={
+            **os.environ,
+            "BENCH_CHECKOUT": str(workspace),
+            "BENCH_SAMPLE_ENV": str(sample_env(slug)),
+            "SOLVE_ROOT": settings.SOLVE_ROOT,
+        },
+        # stdout belongs to the driver (`run: <id>`); a build is chatter.
+        stdout=sys.stderr,
+        check=True,
+    )
+
+
 def solve(
     manifest_id: int,
     model: str,
@@ -107,8 +138,9 @@ def solve(
 ) -> None:
     """Let the agent work on a tree cut from the pin, in its own workspace."""
     chosen = load_manifest(manifest_id)
-    slug = chosen["source"]
+    slug = chosen["sample"]
     workspace = solves.materialise(run, Path(settings.checkout()), pin(slug))
+    _build_toolbox(slug, workspace)
     _eval(
         _spec(manifest_id),
         [
@@ -147,7 +179,7 @@ def score(manifest_id: int, run: str, logs: str) -> None:
     # What produced this tree, from the run's own record: a re-score of last
     # week's run must not be labelled with today's `.env`.
     record = solves.read(run)
-    slug = load_manifest(manifest_id)["source"]
+    slug = load_manifest(manifest_id)["sample"]
     env_dir = sample_env(slug)
     credentials = dotenv_values(env_dir / ".env")
     _eval(
@@ -192,7 +224,7 @@ def capture(manifest_id: int, cases: list[str]) -> None:
     normalized against it.
     """
     chosen = load_manifest(manifest_id)
-    slug = chosen["source"]
+    slug = chosen["sample"]
     wanted = cases or list(chosen["scope"]["cases"])
     unknown = sorted(set(wanted) - set(chosen["scope"]["cases"]))
     if unknown:

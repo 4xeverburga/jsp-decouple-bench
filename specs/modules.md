@@ -10,7 +10,7 @@ jsp-decouple-bench/
 ├── AGENTS.md                # the supervisor's contract
 ├── ROADMAP.md               # direction
 ├── specs/                   # modules.md, behavior.md
-├── seeds/                   # sources.json, task_types.json, manifests.json
+├── seeds/                   # samples.json, task_types.json, manifests.json
 ├── src/samples/<slug>/env/  # the stack: compose, Containerfile, .env, OTel
 ├── out/                     # gitignored; ALL output
 │   ├── solves/<run_id>/     # record.json, diff.patch, tree/
@@ -137,6 +137,29 @@ to honour, so that nothing has to be special-cased per sample:
   workspace starts neither a collector nor a javaagent.
 - **Keep the database a sidecar**, reachable by service name, and make sure
   the app can be pointed at it without editing tracked files.
+- **Warm `~/.m2` in the toolbox, from the pin.** A solve with an empty cache
+  pays the whole Maven download before the agent can compile anything
+  (minutes); with it, a full recompile is seconds. The build context is
+  therefore the sample tree — the same context the scoring image builds
+  from — so `toolbox/Containerfile` can `COPY` the pom(s) and run the build
+  the agent will run (`mvn -B -q compile`, or `package` for a WAR sample)
+  before the sources are copied in, then again after: the second run is what
+  proves the cache complete, and it must be the layer that can fail. Nothing
+  copied in is what the agent reads: the checkout is bind-mounted over
+  `SOLVE_ROOT` at run time.
+  ```yaml
+  build:
+    context: ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}
+    dockerfile: ${BENCH_SAMPLE_ENV:?set by the bench}/toolbox/Containerfile
+  ```
+  Not `dependency:go-offline`: it asks every repository the poms declare —
+  the pins carry snapshot and Restlet repositories — for every artifact of
+  every plugin, and on `mamute` it had not finished after thirteen minutes
+  where the build itself takes about eight. `main.py task` builds the
+  toolbox before the eval starts (`cli._build_toolbox`), because
+  `docker compose up` — what the sandbox runs — never rebuilds an image
+  that already exists and its startup is on a timer; the download belongs
+  before the clock, where it can be watched.
 
 
 ## `out/`
