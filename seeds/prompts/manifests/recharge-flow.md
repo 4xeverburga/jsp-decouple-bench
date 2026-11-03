@@ -1,0 +1,1 @@
+Students need to top up their balance. The form posts to a server-rendered page today; make it use a JSON endpoint and show the updated balance from the response. Everything students can do now must still work.

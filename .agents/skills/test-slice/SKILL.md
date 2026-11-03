@@ -204,6 +204,9 @@ and a JaCoCo run is extra confirmation, not a gate.
 
 Edit `seeds/manifests.json` directly — seeds are the source of truth
 there is no database to sync:
+the row carries no prompt; the ask goes in
+`seeds/prompts/manifests/<name>.md`, named after the row's `name`, and
+the loader refuses a manifest whose file is missing.
 
 ```json
 {

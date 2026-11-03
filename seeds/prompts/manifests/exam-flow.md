@@ -1,0 +1,1 @@
+Students need to take an exam and save their answers. Saving posts to a server-rendered page today; make it use a JSON endpoint and update the page from the response. Everything students can do now must still work.

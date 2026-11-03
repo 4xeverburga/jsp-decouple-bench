@@ -1,0 +1,1 @@
+Study staff need to add a subject to a study and see it in the subject list. The form posts to a server-rendered page today; make it post to a JSON endpoint and refresh the list from the response. Everything staff can do now must still work.

@@ -1,0 +1,1 @@
+Students need to select a course, and the system must refuse the selection when their balance is too low. Both outcomes are rendered server-side today; make them JSON endpoints and update the page from the response. Everything students can do now must still work.

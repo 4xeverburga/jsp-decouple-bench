@@ -9,7 +9,8 @@ this file is not for you.
 | thing | where |
 |---|---|
 | the code under test, its pin and stack entrypoint | `seeds/samples.json` |
-| the graded cases, the work order and the run's budget | `seeds/manifests.json` |
+| the graded cases and the run's budget | `seeds/manifests.json` |
+| the work order: task-type contracts and each manifest's ask | `seeds/prompts/{task_types,manifests}/<name>.md` |
 | every parameter: timeouts, viewport, locale, models, paths | `settings.py` |
 | the values of those parameters | `.env` (untracked, from `.env.example`) |
 | agents the solve can run | `src/agents/` |

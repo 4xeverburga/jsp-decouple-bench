@@ -1,10 +1,9 @@
 [
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Users need to post an answer to a question. Today the form posts to a server-rendered page and the browser navigates. Make the submit answer with JSON and let the page update itself from that response.\n\nWhat to add: a controller action that takes the answer the form already sends and replies with JSON — the answer's body and author, and the question's answer count — plus a client-side script on the question page that posts the form, appends the answer to the list and updates the count. Reproducing today's markup from that response is the job; a script that does it is not a new component.\n\nWhat must stay: the server's validation, permissions and persistence; the page's address; every other flow; and what a browser sees for an answer and for the count — the same elements, classes and text as today. No CSS, no copy changes, no new visual elements, no reordering.\n\nByte-identical HTML is neither required nor possible once the browser builds the new answer: the page still arrives rendered on first load, and only the submit changes. Equal elements, classes and text is the bar.\n\nDone means, in an ordinary browser: submitting the form leaves the address unchanged, the answer appears in the list and the count goes up without a full reload, and reloading the page shows the same state. When that holds, stop.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -43,10 +42,9 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Users need to ask a new question. The form posts to a server-rendered page today; make it post to a JSON endpoint and update the page from the response. Everything users can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -82,10 +80,9 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Users need to upvote and downvote questions. The vote controls hit server-rendered endpoints today; make them use JSON endpoints and update the count in place. Everything users can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -126,10 +123,9 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Users need to watch and unwatch a question. The action hits a server-rendered endpoint today; make it use a JSON endpoint and update the page from the response. Everything users can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -166,10 +162,9 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Administrators need to add a course. The form posts to a server-rendered page today; make it post to a JSON endpoint and refresh the course list from the response. Everything admins can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -205,10 +200,9 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Administrators need to add and remove students. Those actions post to server-rendered pages today; make them use JSON endpoints and update the student list in place. Everything admins can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -246,10 +240,9 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Students need to take an exam and save their answers. Saving posts to a server-rendered page today; make it use a JSON endpoint and update the page from the response. Everything students can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -288,10 +281,9 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Students need to drop a course. The action posts to a server-rendered page today; make it use a JSON endpoint and refresh the enrolled courses. Everything students can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -327,10 +319,9 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Students need to top up their balance. The form posts to a server-rendered page today; make it use a JSON endpoint and show the updated balance from the response. Everything students can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -366,10 +357,9 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Students need to select a course, and the system must refuse the selection when their balance is too low. Both outcomes are rendered server-side today; make them JSON endpoints and update the page from the response. Everything students can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -407,10 +397,9 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Students need to move between study periods while a course is in progress. Those actions post to server-rendered pages today; make them use JSON endpoints and update the progress on the page. Everything students can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -449,10 +438,9 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Teachers need to grade a student's course. The form posts to a server-rendered page today; make it use a JSON endpoint and refresh the marks from the response. Everything teachers can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -490,10 +478,9 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Study staff need to add a subject to a study and see it in the subject list. The form posts to a server-rendered page today; make it post to a JSON endpoint and refresh the list from the response. Everything staff can do now must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -529,10 +516,9 @@
   },
   {
     "task_type": "oneshot_decoupling",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Take the whole app in one go. Every screen that the server renders today should get its data as JSON and be rendered in the browser, and the presentation side should stop owning the database. Afterwards, everything users can do today must still work.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -581,7 +567,6 @@
     "version": 1,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Create the file AGENT_OK.md at the root of the checkout. It holds one line and nothing else: written by the agent",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -616,7 +601,6 @@
     "version": 1,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Create the file AGENT_OK.md at the root of the checkout. It holds one line and nothing else: written by the agent",
     "bindings": {
       "stack": {
         "adapter": "compose@1"
@@ -651,7 +635,6 @@
     "version": 1,
     "solve_time_limit_minutes": 60,
     "score_time_limit_minutes": 60,
-    "prompt": "Read pom.xml, system.properties and LICENSE at the root of the checkout. Then create the file AGENT_PROBE.md at the root of the checkout, holding exactly these three lines:\n\nPROBE_POM: the value inside the first <artifactId> element in pom.xml\nPROBE_JAVA: the value of java.runtime.version in system.properties\nPROBE_LICENSE: the first line of LICENSE\n\nNothing else in the file. Create no other file and change no existing one.",
     "bindings": {
       "stack": {
         "adapter": "compose@1"

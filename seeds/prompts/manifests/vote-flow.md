@@ -1,0 +1,1 @@
+Users need to upvote and downvote questions. The vote controls hit server-rendered endpoints today; make them use JSON endpoints and update the count in place. Everything users can do now must still work.

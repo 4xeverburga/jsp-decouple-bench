@@ -1,0 +1,1 @@
+Students need to move between study periods while a course is in progress. Those actions post to server-rendered pages today; make them use JSON endpoints and update the progress on the page. Everything students can do now must still work.

@@ -1,0 +1,1 @@
+Administrators need to add a course. The form posts to a server-rendered page today; make it post to a JSON endpoint and refresh the course list from the response. Everything admins can do now must still work.

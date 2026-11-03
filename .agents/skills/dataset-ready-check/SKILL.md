@@ -143,7 +143,7 @@ Checked against the **tree**, not against intentions:
   `AGENTS.md`, no "mirror of" sentence.
 - The pin is one commit in the run's checkout (`git rev-list --count HEAD`
   is `1` once materialised) and has no refs or remotes.
-- The prompt (the manifest `prompt` + the task type's `base_prompt`) names
+- The prompt (`seeds/prompts/manifests/<name>.md` + `seeds/prompts/task_types/<task_type>.md`) names
   no route, no case, no golden, and no `docker`/`compose`/`container`/
   `sandbox` word — the toolchain is "already installed here".
 - **The solve sandbox itself.** A pristine tree and a clean prompt still

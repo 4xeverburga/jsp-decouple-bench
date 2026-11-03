@@ -1,0 +1,1 @@
+Take the whole app in one go. Every screen that the server renders today should get its data as JSON and be rendered in the browser, and the presentation side should stop owning the database. Afterwards, everything users can do today must still work.

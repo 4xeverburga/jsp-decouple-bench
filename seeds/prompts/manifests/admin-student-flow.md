@@ -1,0 +1,1 @@
+Administrators need to add and remove students. Those actions post to server-rendered pages today; make them use JSON endpoints and update the student list in place. Everything admins can do now must still work.

@@ -182,7 +182,7 @@ Only `oneshot_decoupling` asks for the second edge: page-building code
 stops reading the database and reaches the app's own JSON endpoints over
 HTTP, at the address and port the browser uses. `decouple_slice` asks for
 the first edge only (JSON to the browser) and may keep its DAOs. Read the
-contract in `seeds/task_types.json` before judging a diff.
+contract in `seeds/prompts/task_types/` before judging a diff.
 
 ```bash
 grep -nE '^\+.*(@Inject|@Autowired|new ).*(DAO|Dao|Repository|Session)' \

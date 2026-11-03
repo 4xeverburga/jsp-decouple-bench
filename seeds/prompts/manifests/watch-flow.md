@@ -1,0 +1,1 @@
+Users need to watch and unwatch a question. The action hits a server-rendered endpoint today; make it use a JSON endpoint and update the page from the response. Everything users can do now must still work.

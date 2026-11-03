@@ -11,6 +11,7 @@ jsp-decouple-bench/
 ├── ROADMAP.md               # direction
 ├── specs/                   # modules.md, behavior.md
 ├── seeds/                   # samples.json, task_types.json, manifests.json
+│   └── prompts/             # task_types/<name>.md, manifests/<name>.md
 ├── out/                     # gitignored; ALL output
 │   ├── solves/<run_id>/     # record.json, diff.patch, tree/
 │   ├── workspaces/<run_id>/ # the tree an agent is given
