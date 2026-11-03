@@ -1,1 +1,1 @@
-Users need to watch and unwatch a question. The action hits a server-rendered endpoint today; make it use a JSON endpoint and update the page from the response. Everything users can do now must still work.
+Users need to watch and unwatch a question. Today the controller behind the action records it itself; move that work behind the backend and have that controller reach it over HTTP — the watch, the unwatch, and the reads its response is built from. The control keeps calling what it calls today and gets the same response. Everything users can do now must still work.

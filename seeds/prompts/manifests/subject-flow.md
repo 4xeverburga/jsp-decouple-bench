@@ -1,1 +1,1 @@
-Study staff need to add a subject to a study and see it in the subject list. The form posts to a server-rendered page today; make it post to a JSON endpoint and refresh the list from the response. Everything staff can do now must still work.
+Study staff need to add a subject to a study and see it in the subject list. Today the controllers behind the form and the list do that work themselves; move it behind the backend and have them reach it over HTTP — the add, and the reads the subject list is rendered from. Everything staff can do now must still work.

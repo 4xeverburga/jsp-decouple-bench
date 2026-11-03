@@ -1,1 +1,1 @@
-Administrators need to add a course. The form posts to a server-rendered page today; make it post to a JSON endpoint and refresh the course list from the response. Everything admins can do now must still work.
+Administrators need to add a course and see it in the course list. Today the controllers behind the form and the list do that work themselves; move it behind the backend and have them reach it over HTTP — the add, and the reads the course list is rendered from. Everything admins can do now must still work.

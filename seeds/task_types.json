@@ -1,11 +1,11 @@
 [
   {
     "name": "decouple_slice",
-    "description": "Decouple one feature boundary: the screen's data leaves the server as JSON and the browser builds the markup, so no server-rendered view remains for that flow; behaviour parity."
+    "description": "Decouple one feature boundary inside the app: its work moves behind JSON backend controllers, and the page-side controllers reach them over loopback HTTP and render the same JSP; behaviour parity."
   },
   {
     "name": "oneshot_decoupling",
-    "description": "Decouple the whole sample in one run (every case)."
+    "description": "Decouple the whole sample in one run (every case): every page-side controller reaches the backend over loopback HTTP and holds no service or data access; JSP stays."
   },
   {
     "name": "dummy_file",

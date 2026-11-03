@@ -1,1 +1,1 @@
-Students need to move between study periods while a course is in progress. Those actions post to server-rendered pages today; make them use JSON endpoints and update the progress on the page. Everything students can do now must still work.
+Students need to move between study periods while a course is in progress. Today the controllers behind those actions and the progress page do that work themselves; move it behind the backend and have them reach it over HTTP — each move, and the reads the progress is rendered from. Everything students can do now must still work.

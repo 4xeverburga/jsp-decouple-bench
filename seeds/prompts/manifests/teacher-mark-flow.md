@@ -1,1 +1,1 @@
-Teachers need to grade a student's course. The form posts to a server-rendered page today; make it use a JSON endpoint and refresh the marks from the response. Everything teachers can do now must still work.
+Teachers need to grade a student's course and see the marks. Today the controllers behind the form and the marks do that work themselves; move it behind the backend and have them reach it over HTTP — the grading, and the reads the marks are rendered from. Everything teachers can do now must still work.

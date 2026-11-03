@@ -1,1 +1,1 @@
-Students need to top up their balance. The form posts to a server-rendered page today; make it use a JSON endpoint and show the updated balance from the response. Everything students can do now must still work.
+Students need to top up their balance and see the new balance. Today the controllers behind the form and the balance do that work themselves; move it behind the backend and have them reach it over HTTP — the top-up, and the reads the balance is rendered from. Everything students can do now must still work.

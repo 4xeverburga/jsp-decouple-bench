@@ -1,1 +1,1 @@
-Administrators need to add and remove students. Those actions post to server-rendered pages today; make them use JSON endpoints and update the student list in place. Everything admins can do now must still work.
+Administrators need to add and remove students and see the student list change. Today the controllers behind those actions and the list do that work themselves; move it behind the backend and have them reach it over HTTP — the add, the remove, and the reads the student list is rendered from. Everything admins can do now must still work.

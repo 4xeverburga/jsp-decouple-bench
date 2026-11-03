@@ -1,1 +1,1 @@
-Students need to take an exam and save their answers. Saving posts to a server-rendered page today; make it use a JSON endpoint and update the page from the response. Everything students can do now must still work.
+Students need to take an exam and save their answers. Today the controllers behind the exam page and the save do that work themselves; move it behind the backend and have them reach it over HTTP — the save, and the reads the exam page is rendered from. Everything students can do now must still work.

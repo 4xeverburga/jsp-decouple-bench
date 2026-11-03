@@ -1,1 +1,1 @@
-Users need to ask a new question. The form posts to a server-rendered page today; make it post to a JSON endpoint and update the page from the response. Everything users can do now must still work.
+Users need to ask a new question. Today the controller behind the form saves the question itself, and the page it lands on reads it back the same way; move that work behind the backend and have both reach it over HTTP — the save, and the reads the resulting page is rendered from. Everything users can do now must still work.

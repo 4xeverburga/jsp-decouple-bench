@@ -1,1 +1,1 @@
-Students need to drop a course. The action posts to a server-rendered page today; make it use a JSON endpoint and refresh the enrolled courses. Everything students can do now must still work.
+Students need to drop a course and see their enrolled courses change. Today the controllers behind the action and the enrolled-course list do that work themselves; move it behind the backend and have them reach it over HTTP — the drop, and the reads the list is rendered from. Everything students can do now must still work.
