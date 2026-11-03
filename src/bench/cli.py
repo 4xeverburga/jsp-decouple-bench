@@ -150,14 +150,17 @@ def _build_toolbox(slug: str, workspace: Path) -> None:
     )
 
 
-def solve(manifest_id: int, profile: str, run: str, logs: str) -> None:
+def solve(
+    manifest_id: int, profile: str, score_profile: str, run: str, logs: str
+) -> None:
     """Let the profile's agent work on a tree cut from the pin.
 
-    The task resolves the profile itself, from `runs.yaml`; this process
-    resolves it too, because only it can hand the provider's credentials
-    to `inspect eval` and name the model that answers.
+    The task resolves the profile itself, from `tasks-config.yaml`; this
+    process resolves it too, because only it can hand the provider's
+    credentials to `inspect eval` and name the model that answers. The
+    score profile is only passed through: every task takes it.
     """
-    resolved = settings.profile(profile)
+    resolved = settings.solve_profile(profile)
     chosen = load_manifest(manifest_id)
     slug = chosen["sample"]
     workspace = solves.materialise(run, Path(settings.checkout()), pin(slug))
@@ -173,6 +176,8 @@ def solve(manifest_id: int, profile: str, run: str, logs: str) -> None:
             f"run={run}",
             "-T",
             f"profile={profile}",
+            "-T",
+            f"score_profile={score_profile}",
         ],
         logs,
         {
@@ -186,8 +191,13 @@ def solve(manifest_id: int, profile: str, run: str, logs: str) -> None:
     _require_success(logs, run, "solve")
 
 
-def score(manifest_id: int, run: str, logs: str) -> None:
-    """Grade the tree a solve kept; the scorer starts the stack itself."""
+def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
+    """Grade the tree a solve kept; the replay starts the stack itself.
+
+    The score profile names the judge `trace_similarity` asks; its
+    credentials come from `.env`, like a solve profile's.
+    """
+    judge = settings.score_profile(score_profile)
     tree = solves.tree(run)
     if not tree.is_dir():
         raise SystemExit(f"no tree for run {run}: {tree} is missing")
@@ -213,6 +223,8 @@ def score(manifest_id: int, run: str, logs: str) -> None:
             f"run={run}",
             "-T",
             f"profile={record['profile']}",
+            "-T",
+            f"score_profile={score_profile}",
             "--max-samples",
             "1",
         ],
@@ -220,6 +232,7 @@ def score(manifest_id: int, run: str, logs: str) -> None:
         {
             **{k: v for k, v in credentials.items() if v is not None},
             **_published(slug),
+            **settings.credentials(judge),
             "BENCH_CHECKOUT": str(tree),
         },
         settings.SCORE_MODEL,
@@ -268,13 +281,13 @@ def _capture_verb(args: argparse.Namespace) -> None:
 def _task(args: argparse.Namespace) -> None:
     run = args.run or uuid.uuid4().hex
     print(f"run: {run}", flush=True)
-    solve(args.manifest, args.profile, run, args.logs)
-    score(args.manifest, run, args.logs)
+    solve(args.manifest, args.profile, args.score_profile, run, args.logs)
+    score(args.manifest, run, args.score_profile, args.logs)
     print(f"tree: {solves.tree(run)}")
 
 
 def _score_verb(args: argparse.Namespace) -> None:
-    score(args.manifest, args.run, args.logs)
+    score(args.manifest, args.run, args.score_profile, args.logs)
 
 
 def _manifests(_args: argparse.Namespace) -> None:
@@ -301,7 +314,12 @@ def _parser() -> argparse.ArgumentParser:
     task.add_argument(
         "--profile",
         required=True,
-        help="who solves it: a profile in runs.yaml (agent, model, effort)",
+        help="who solves it: a solve_profiles entry of tasks-config.yaml",
+    )
+    task.add_argument(
+        "--score-profile",
+        required=True,
+        help="who judges it: a score_profiles entry of tasks-config.yaml",
     )
     task.add_argument("--run", help="reuse a run id instead of minting one")
     task.add_argument(
@@ -312,6 +330,11 @@ def _parser() -> argparse.ArgumentParser:
     graded.set_defaults(handler=_score_verb)
     graded.add_argument("--manifest", type=int, required=True)
     graded.add_argument("--run", required=True)
+    graded.add_argument(
+        "--score-profile",
+        required=True,
+        help="who judges it: a score_profiles entry of tasks-config.yaml",
+    )
     graded.add_argument(
         "--logs", default=str(settings.LOGS), help="Inspect log dir"
     )

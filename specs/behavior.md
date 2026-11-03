@@ -3,9 +3,12 @@
 Three verbs, all through `main.py`:
 
 ```bash
-uv run python main.py manifests                              # list them
-uv run python main.py task  --manifest <id> --profile <name> # solve, then score
-uv run python main.py score --manifest <id> --run <run_id>   # score a kept tree
+uv run python main.py manifests            # list them
+uv run python main.py task  --manifest <id> --profile <solve> \
+    --score-profile <judge>               # solve, then score
+uv run python main.py score --manifest <id> --run <run_id> \
+    --score-profile <judge>               # score a kept tree
+uv run python main.py capture --manifest <id> [--case <case>]  # freeze bases
 ```
 
 `main.py` is also the file Inspect loads (`inspect eval main.py@<task type>`),
@@ -43,9 +46,11 @@ set -a; . src/samples/mamute/env/.env; set +a   # the sample's credentials
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=score -T run=<run_id> \
   -T profile=opencode-v1-deepseek-flash-medium \
+  -T score_profile=judge-claude-opus-5.5-high \
   --model mockllm/model --max-samples 1
 ```
 
+Export the judge's credential too (`ANTHROPIC_API_KEY` for that profile).
 `profile` is a label in this phase (the driver takes it from the run's
 record); `--model` is the model Inspect demands, and `BENCH_SCORE_MODEL` is
 what the driver passes there. One sample at a time: the cases share the
@@ -69,6 +74,7 @@ set -a; . .env; set +a                          # the profile's keys
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=solve -T run=$RUN \
   -T profile=opencode-v1-deepseek-flash-medium \
+  -T score_profile=judge-claude-opus-5.5-high \
   --model openai-api/opencode-go/deepseek-v4.1-flash
 ```
 
@@ -106,7 +112,8 @@ home. A non-zero agent exit is recorded, not raised.
 
 ## 2. Score
 
-Scoring has **no Inspect sandbox**. For each case the scorer, on the host:
+Scoring has **no Inspect sandbox**. For each case the score phase's solver,
+`replay.replayed_case`, on the host:
 
 1. starts a fresh compose project from `env/compose.yaml`, built from
    `BENCH_CHECKOUT`, and waits until every service is healthy or a one-shot
@@ -114,10 +121,15 @@ Scoring has **no Inspect sandbox**. For each case the scorer, on the host:
 2. snapshots the case's tables, plays `flow.py` with Playwright, snapshots
    again;
 3. copies the collector's span file out to `out/traces/<slug>/`, waiting
-   out its export batch, because `down -v` deletes the volume — best
-   effort, so a missing trace never turns a verdict into an error;
-4. compares and scores;
-5. removes the project (`down -v`), even on failure.
+   out its export batch, because `down -v` deletes the volume;
+4. removes the project (`down -v`), even on failure;
+5. leaves the observation — the flow's failure or artifacts, the table
+   deltas, the trace path — in the sample's store (`state.store["replay"]`).
+
+Then every scorer the manifest names judges that one run: the flow is
+played once, so two gates never grade two different runs of the app. A
+missing trace leaves parity's verdict alone and makes `trace_similarity`
+an error.
 
 Samples run one at a time (`--max-samples 1`): they share the published port.
 `stack.py` streams `docker compose` output as `[stack]` lines, because a first
@@ -147,14 +159,29 @@ DB-only, with the page looking right, so the flow cannot know in advance.
 Sensitivity is part of the contract: removing the `votes.save(...)` call from
 the vote controller must fail both vote cases on the `Vote` family of tables.
 
-### `trace_similarity` — **not built**
+### `trace_similarity`
 
-Intent: compare the spans a case produces with a base captured from the
-pristine app, to tell whether calls inside the application are REST, FFI or
-plain function calls. The stack already emits the spans (see
-`src/samples/<slug>/env/otel-collector.yaml`); the scorer and the base are on
-`ROADMAP.md`. It must never fabricate a score: without a base it is
-`pending`, not a pass.
+Per case, on the spans the replay kept:
+
+1. condense them (`spans.condense`): the browser's requests in order, each
+   with what served it — `SQL <op> <table>`, the app's own `HTTP CLIENT`
+   calls and, nested under one, the `SERVER` span that answered it. Ids,
+   timestamps, hosts, numbers and slugs are erased; Hibernate wrappers and
+   the JDBC driver's connection chatter are dropped; static assets are not
+   requests; identical siblings fold into `xN`;
+2. **floor**: no `HTTP CLIENT` call answered by the app's own `SERVER` span
+   means no boundary — `INCORRECT`, with no model asked. A no-op tree ends
+   here;
+3. **judge**: the score profile's model reads the work order (the sample's
+   input), the case's `trace.json` (BEFORE) and the condensed tree (AFTER),
+   and answers four booleans in a fixed schema — `browser_contract_kept`,
+   `boundary_crossed`, `page_side_clean`, `writes_preserved` — plus the
+   requests it put in scope and an explanation. The verdict is their
+   conjunction, computed by the scorer.
+
+No spans, no `trace.json`, or no parseable verdict raises: the case was
+not measured. The judge's prompt is `scorers/trace_similarity/judge.md`; it
+is the bench's and never reaches the agent.
 
 `network_isolation` and `topology` are retired. The scoring stack is a single
 `front` service with no network contract to grade.

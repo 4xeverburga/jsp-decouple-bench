@@ -35,7 +35,7 @@
         "/answer/{question.id}"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": ["functional_parity", "trace_similarity"],
     "name": "answer-flow",
     "id": 1,
     "sample": "mamute"
@@ -73,7 +73,7 @@
         "/{question.id}-{sluggedTitle}"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": ["functional_parity", "trace_similarity"],
     "name": "ask-flow",
     "id": 2,
     "sample": "mamute"
@@ -116,7 +116,7 @@
         "/question/{question.id}/voto/positivo"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": ["functional_parity", "trace_similarity"],
     "name": "vote-flow",
     "id": 3,
     "sample": "mamute"
@@ -155,7 +155,7 @@
         "/question/watched/{question.id}"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": ["functional_parity", "trace_similarity"],
     "name": "watch-flow",
     "id": 4,
     "sample": "mamute"
@@ -557,7 +557,7 @@
         "/question/watched/{question.id}"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": ["functional_parity", "trace_similarity"],
     "name": "whole-app",
     "id": 14,
     "sample": "mamute"

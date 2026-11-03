@@ -7,10 +7,12 @@ Two kinds of value live here, and only one of them is a parameter:
   required: there are no defaults, so a missing key is a configuration
   error, not a silent fallback. The shell environment is not consulted for
   them; `.env` is the single source of truth. `.env` also holds the
-  credentials a run profile names, and nothing about the run itself.
-- **Run profiles**, from `runs.yaml` — who solves a manifest, with which
-  model and effort. Named, tracked, chosen per invocation with
-  `--profile`; see `profile`.
+  credentials a profile names, and nothing about the run itself.
+- **Profiles**, from `tasks-config.yaml` — who solves a manifest, with
+  which model and effort (`solve_profiles`, chosen with `--profile`), and
+  which model judges its spans (`score_profiles`, chosen with
+  `--score-profile`). Named, tracked, chosen per invocation; see
+  `solve_profile` and `score_profile`.
 - **Run inputs**, from the process environment — the checkout under test,
   the URL its stack publishes, the sample's own env folder. They change
   from run to run and are set by the driver (`src/bench/cli.py`), so they
@@ -96,12 +98,12 @@ STACK_TRACES_SERVICE = "collector"
 STACK_TRACES_FILE = "/traces/traces.jsonl"
 TRACE_FLUSH_WAIT_S = 8
 
-# --- who solves a run: a named profile in `runs.yaml`, never `.env`. -----
-# A profile is a choice, not a secret, so it is tracked; `.env` only holds
-# the credentials a profile's `model_env` names. `src/agents/` defines the
-# agents a profile can name.
-RUNS_FILE = ROOT / "runs.yaml"
-PROFILE_KEYS = (
+# --- who solves a run, and who judges it: named profiles in
+# `tasks-config.yaml`, never `.env`. A profile is a choice, not a secret, so
+# it is tracked; `.env` only holds the credentials its `model_env` names.
+# `src/agents/` defines the agents a solve profile can name.
+TASKS_CONFIG = ROOT / "tasks-config.yaml"
+SOLVE_PROFILE_KEYS = (
     "agent",
     "agent_model",
     "agent_version",
@@ -110,39 +112,69 @@ PROFILE_KEYS = (
     "reasoning_effort",
     "model_args",
 )
+SCORE_PROFILE_KEYS = (
+    "judge_model",
+    "model_env",
+    "reasoning_effort",
+    "model_args",
+    "max_tokens",
+    "max_retries",
+)
 EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
 
 
-def profile(name: str) -> dict:
-    """The run profile called ``name``, exactly as `runs.yaml` spells it.
+def _profile(section: str, keys: tuple[str, ...], name: str) -> dict:
+    """The profile ``name`` of ``section``, exactly as the file spells it.
 
     Every key is required and no other is allowed, so a typo is an error
-    and not a value that silently never applies. Credentials are not part
-    of it: `credentials` resolves `model_env` against `.env`.
+    and not a value that silently never applies.
     """
-    profiles = yaml.safe_load(RUNS_FILE.read_text())
+    config = yaml.safe_load(TASKS_CONFIG.read_text())
+    unknown_sections = sorted(
+        set(config) - {"solve_profiles", "score_profiles"}
+    )
+    if unknown_sections:
+        raise KeyError(f"{TASKS_CONFIG}: unknown {unknown_sections}")
+    profiles = config[section]
     if name not in profiles:
         raise KeyError(
-            f"no profile {name!r} in {RUNS_FILE}; it has: "
+            f"no {section} entry {name!r} in {TASKS_CONFIG}; it has: "
             f"{', '.join(sorted(profiles))}"
         )
     chosen = profiles[name]
-    missing = [key for key in PROFILE_KEYS if key not in chosen]
-    unknown = sorted(set(chosen) - set(PROFILE_KEYS))
+    missing = [key for key in keys if key not in chosen]
+    unknown = sorted(set(chosen) - set(keys))
     if missing or unknown:
         raise KeyError(
-            f"profile {name!r} in {RUNS_FILE}: missing {missing}, "
+            f"{section} {name!r} in {TASKS_CONFIG}: missing {missing}, "
             f"unknown {unknown}"
         )
     if chosen["reasoning_effort"] not in EFFORTS:
         raise ValueError(
-            f"profile {name!r}: reasoning_effort must be one of {EFFORTS}"
+            f"{section} {name!r}: reasoning_effort must be one of {EFFORTS}"
         )
-    return {key: chosen[key] for key in PROFILE_KEYS}
+    return {key: chosen[key] for key in keys}
+
+
+def solve_profile(name: str) -> dict:
+    """Who solves: the agent, its pin, the model that answers, its effort.
+
+    Credentials are not part of it: `credentials` resolves `model_env`
+    against `.env`.
+    """
+    return _profile("solve_profiles", SOLVE_PROFILE_KEYS, name)
+
+
+def score_profile(name: str) -> dict:
+    """Who judges: the model `trace_similarity` asks, and its budget."""
+    return _profile("score_profiles", SCORE_PROFILE_KEYS, name)
 
 
 def credentials(chosen: dict) -> dict[str, str]:
     """The values of the variables a profile's provider reads, from `.env`.
+
+    Either kind of profile: both name their provider's variables in
+    `model_env`.
 
     WHICH variables is the profile's business: a provider reads its
     credential under a name of its own — one `*_API_KEY` for Inspect's

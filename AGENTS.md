@@ -14,7 +14,8 @@ this file is not for you.
 | every parameter: timeouts, viewport, locale, models, paths | `settings.py` |
 | the values of those parameters | `.env` (untracked, from `.env.example`) |
 | agents the solve can run | `src/agents/` |
-| who solves a run: agent, its pin, the model that answers, its effort | a named profile in `runs.yaml` |
+| who solves a run: agent, its pin, the model that answers, its effort | a `solve_profiles` entry in `tasks-config.yaml` |
+| who judges the spans: the model `trace_similarity` asks, its effort | a `score_profiles` entry in `tasks-config.yaml` |
 | the credentials a profile names | `.env` |
 | the answer key: flows and goldens | `src/samples/<sample>/cases/` |
 | the stack, Containerfile, .env, OpenTelemetry collector | `src/samples/<sample>/env/` |
@@ -83,26 +84,34 @@ modules and the lifecycle.
 cp .env.example .env        # once per checkout; settings.py reads nothing else
 export BENCH_CHECKOUT=/abs/checkout
 
-uv run python main.py task --manifest 3 --profile opencode-v1-deepseek-flash-medium
+uv run python main.py task --manifest 3 \
+    --profile opencode-v1-deepseek-flash-medium \
+    --score-profile judge-claude-opus-5.5-high
 ```
 
-`--profile` is required and names a row of `runs.yaml`: the agent, its
+`--profile` is required and names a `solve_profiles` entry of
+`tasks-config.yaml`: the agent, its
 version, the wire model it asks for, the `answer_model` that answers, the
 variables that provider reads, the reasoning effort and the model args.
 Every key is required. A new run setup is a new profile, not an edit to an
 old one: the record keeps the profile's name and what it resolved to.
 `answer_model` is the only thing a score is attributed to: the agent's
-model name is just the format of its request.
+model name is just the format of its request. `--score-profile` is
+required too, on `task` and on `score`, and names a `score_profiles` entry:
+the model that judges the spans, the variables its provider reads, its
+effort, its args and its output budget. A trace verdict is attributed to
+that judge, so keep it fixed across the runs you compare.
 
 The solve runs one agent in its own workspace, then every scorer
 assigned to the manifest grades the tree it left. `out/solves/<run id>/` keeps the tree,
-the diff and a record of what ran. `python main.py score --manifest N --run ID`
-grades a kept tree again without paying for the agent.
+the diff and a record of what ran. `python main.py score --manifest N --run ID
+--score-profile NAME` grades a kept tree again without paying for the agent.
 
 `python main.py capture --manifest N [--case ID]` freezes a case's golden
 from the pinned tree: one stack per case, the flow played once, the rows
 snapshotted before and after, written to `expect.json` beside the
-`flow.py` that drove it. It reads `BENCH_CHECKOUT` (the sample's
+`flow.py` that drove it, and the spans of that same run, condensed, to
+`trace.json` — the base `trace_similarity` compares against. It reads `BENCH_CHECKOUT` (the sample's
 repository, as `task` does) and publishes on the sample's `target_url`,
 like scoring.
 
@@ -117,8 +126,15 @@ Every stack runs the app under the OpenTelemetry Java agent, configured only
 through `OTEL_*` in the sample's `.env`; a collector writes the spans to
 `/traces/traces.jsonl`. Read them while the stack is up, with
 `docker compose cp collector:/traces/traces.jsonl <dest>`; they flush a few
-seconds after a request. The `trace_similarity` scorer that compares them is
-not built yet (`ROADMAP.md`).
+seconds after a request. The score phase's solver (`src/bench/replay.py`)
+plays each case once and keeps its spans in `out/traces/<slug>/`; every
+scorer judges that one run. `trace_similarity` condenses them to a request
+tree (`scorers/trace_similarity/spans.py`), fails a tree with no loopback
+hop outright, and otherwise asks the score profile's judge whether the
+in-scope work now runs behind an HTTP call to the app itself, against the
+case's `trace.json`. A case without a `trace.json` is an error, not a pass:
+capture it first. Changing how spans are condensed means capturing every
+base again.
 
 In a Containerfile, add new layers **last**: one above the Maven layer
 invalidates its cache and costs a long, silent download.

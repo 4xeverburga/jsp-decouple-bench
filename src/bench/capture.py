@@ -11,8 +11,10 @@ the stack is a plain compose project and the browser is the host's.
 
 It cuts a tree from the pin, builds the sample's stack from it, runs each
 case's flow once, and writes `expect.json` beside the `flow.py` that drove
-it. The table specs come from the case's hand-written `case.json`; the
-values come from the run, so nothing here decides what "correct" means.
+it, and `trace.json` — the spans that served that same run, condensed — as
+the base `trace_similarity` compares against. The table specs come from the
+case's hand-written `case.json`; the values come from the run, so nothing
+here decides what "correct" means.
 
 One stack per case, because a golden assumes a pristine database: the case
 that ran first would otherwise be part of the second one's baseline.
@@ -26,9 +28,11 @@ from pathlib import Path
 
 import settings
 
+from .replay import keep_trace
 from .scorers.functional_parity import db
 from .scorers.functional_parity.cases import contract, drive
 from .scorers.functional_parity.delta import delta_table
+from .scorers.trace_similarity import base as trace_base
 from .stack import running
 
 
@@ -46,6 +50,12 @@ async def one(slug: str, case: str, commit: str, target: db.Target) -> Path:
         before = await db.snapshot(stack, target, names)
         artifacts, shot = await asyncio.to_thread(drive, slug, case)
         after = await db.snapshot(stack, target, names)
+        collected = await keep_trace(stack, slug, case)
+    if collected is None:
+        raise RuntimeError(
+            f"{case}: the stack's collector left no spans; a base cannot be "
+            f"frozen without them"
+        )
     # A capture is by definition a run that "passed": the page it ended on
     # is interesting only when something differs.
     if shot:
@@ -75,6 +85,8 @@ async def one(slug: str, case: str, commit: str, target: db.Target) -> Path:
     path = settings.SAMPLES / slug / "cases" / case / "expect.json"
     path.write_text(json.dumps(golden, indent=2) + "\n")
     _say(f"{case}: wrote {path.relative_to(settings.ROOT)}")
+    spans = trace_base.freeze(slug, case, commit, collected)
+    _say(f"{case}: wrote {spans.relative_to(settings.ROOT)}")
     return path
 
 

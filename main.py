@@ -15,10 +15,13 @@ cases they are graded on, so one sample per case serves either.
 
     inspect eval main.py@oneshot_decoupling \
         -T manifest_id=14 -T phase=score -T run=<id> \
-        -T profile=opencode-v1-deepseek-flash-medium --model mockllm/model
+        -T profile=opencode-v1-deepseek-flash-medium \
+        -T score_profile=judge-claude-opus-5.5-high --model mockllm/model
 
-`profile` names a row of `runs.yaml`: who solves, and the model that
-answers it. A score only carries it as a label.
+`profile` names a `solve_profiles` entry of `tasks-config.yaml`: who solves,
+and the model that answers it; a score only carries it as a label.
+`score_profile` names a `score_profiles` entry: the model that judges the
+spans; a solve does not read it.
 """
 
 import base64
@@ -29,7 +32,7 @@ from pathlib import Path
 
 from inspect_ai import Task, task
 from inspect_ai.model import GenerateConfig, Model, get_model
-from inspect_ai.solver import Generate, Solver, TaskState, solver
+from inspect_ai.solver import TaskState
 from inspect_ai.util import sandbox as host_sandbox
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -38,33 +41,22 @@ import settings  # noqa: E402
 from src import agents  # noqa: E402
 from src.bench import samples, solves  # noqa: E402
 from src.bench.compose import solve_compose  # noqa: E402
-from src.bench.scorers.functional_parity import parity  # noqa: E402
+from src.bench.replay import replayed_case  # noqa: E402
+from src.bench.scorers import parity, trace_similarity  # noqa: E402
 from src.bench.seeds import manifest as load_manifest  # noqa: E402
 from src.bench.seeds import task_type  # noqa: E402
 
 
-def _scorers(chosen: dict) -> list:
-    options = chosen["bindings"]["db"]["options"]
+def _scorers(chosen: dict, score_profile: str) -> list:
     builders = {
-        "functional_parity": lambda: parity(chosen["sample"], options),
+        "functional_parity": lambda: parity(chosen["sample"]),
+        "trace_similarity": lambda: trace_similarity(
+            chosen["sample"],
+            score_profile,
+            settings.score_profile(score_profile),
+        ),
     }
     return [builders[name]() for name in chosen["scorers"]]
-
-
-@solver
-def submitted_tree() -> Solver:
-    """The agent stage when there is no agent.
-
-    The scorer starts the stack itself (src/bench/stack.py), so there is
-    nothing to start here: this stands where the agent's run goes, and
-    grades the tree as it stands — which is exactly what the no-op
-    self-check wants.
-    """
-
-    async def solve(state: TaskState, generate: Generate) -> TaskState:
-        return state
-
-    return solve
 
 
 async def capture_solution(state: TaskState) -> None:
@@ -150,6 +142,7 @@ def _manifest_task(
     phase: str,
     run: str,
     profile: str,
+    score_profile: str,
     expected_type: str,
 ) -> Task:
     chosen = load_manifest(manifest_id)
@@ -172,7 +165,7 @@ def _manifest_task(
     # neither has a default here (AGENTS.md rule 10).
 
     if phase == "solve":
-        resolved = settings.profile(profile)
+        resolved = settings.solve_profile(profile)
         return Task(
             dataset=samples.for_solving(manifest_id, run, profile, resolved),
             solver=agents.solver_for(
@@ -192,8 +185,13 @@ def _manifest_task(
     if phase == "score":
         return Task(
             dataset=samples.for_scoring(manifest_id),
-            solver=[submitted_tree()],
-            scorer=_scorers(chosen),
+            # The case is played once, here; every scorer judges that run.
+            solver=[
+                replayed_case(
+                    chosen["sample"], chosen["bindings"]["db"]["options"]
+                )
+            ],
+            scorer=_scorers(chosen, score_profile),
             description=kind["description"],
             metadata=metadata,
             time_limit=chosen["score_time_limit_minutes"] * 60,
@@ -208,6 +206,7 @@ def decouple_slice(
     phase: str,
     run: str,
     profile: str,
+    score_profile: str,
 ) -> Task:
     """Run the solve or score phase for a decouple_slice manifest."""
     return _manifest_task(
@@ -215,6 +214,7 @@ def decouple_slice(
         phase,
         run,
         profile,
+        score_profile,
         "decouple_slice",
     )
 
@@ -225,6 +225,7 @@ def oneshot_decoupling(
     phase: str,
     run: str,
     profile: str,
+    score_profile: str,
 ) -> Task:
     """Run the solve or score phase for an oneshot_decoupling manifest."""
     return _manifest_task(
@@ -232,6 +233,7 @@ def oneshot_decoupling(
         phase,
         run,
         profile,
+        score_profile,
         "oneshot_decoupling",
     )
 
@@ -242,6 +244,7 @@ def dummy_file(
     phase: str,
     run: str,
     profile: str,
+    score_profile: str,
 ) -> Task:
     """Smoke test only: one new file, no app work.
 
@@ -256,6 +259,7 @@ def dummy_file(
         phase,
         run,
         profile,
+        score_profile,
         "dummy_file",
     )
 
@@ -266,6 +270,7 @@ def agent_probe(
     phase: str,
     run: str,
     profile: str,
+    score_profile: str,
 ) -> Task:
     """Probe only: read a few files, write one, stop. No app work.
 
@@ -280,6 +285,7 @@ def agent_probe(
         phase,
         run,
         profile,
+        score_profile,
         "agent_probe",
     )
 

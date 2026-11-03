@@ -25,8 +25,9 @@ the cases were authored with `add-bench-case`.
 **What the commands are now.** The bench is `main.py` (verbs `task`,
 `score`, `capture`, `manifests`) driven with `uv run`, and `specs/` is the
 source of truth. There is no Makefile, no `bench.db`, no
-`network_isolation` gate and no `topology` scorer — `functional_parity` is
-the only gate, `trace_similarity` is not built yet (`ROADMAP.md`).
+`network_isolation` gate and no `topology` scorer. The gates are
+`functional_parity` and `trace_similarity`; the second needs a `trace.json`
+per case, which `capture` writes beside `expect.json`.
 
 ## Commands under test
 
@@ -38,15 +39,18 @@ BENCH_CHECKOUT=$PWD/../<sample> uv run python main.py capture --manifest <n>
 
 # 2. an untouched tree replays green (see §3 for the tree + run id)
 BENCH_CHECKOUT=$PWD/out/solves/<run>/tree \
-  uv run python main.py score --manifest <n> --run <run>
+  uv run python main.py score --manifest <n> --run <run> \
+  --score-profile <judge>
 
 # 3. a real agent, end to end (optional here; mandatory before quoting a score)
-uv run python main.py task --manifest <n> --profile <name>
+uv run python main.py task --manifest <n> --profile <name> \
+  --score-profile <judge>
 ```
 
 Who solves — the agent, its version, the wire model it is asked for, the
-model that answers and the effort — is the profile `--profile` names in
-`runs.yaml`. None of it is passed as a flag, so a run cannot be described
+model that answers and the effort — is the `solve_profiles` entry
+`--profile` names in `tasks-config.yaml`; who judges the spans is the
+`score_profiles` entry `--score-profile` names. None of it is passed as a flag, so a run cannot be described
 by its command line alone: read `out/solves/<run>/record.json`.
 
 Scoring drives the stack from the host (`src/bench/stack.py`): one compose
@@ -106,7 +110,8 @@ print(solves.location(run) / "tree")
 PY
 
 BENCH_CHECKOUT=$PWD/out/solves/noop-mamute/tree \
-  uv run python main.py score --manifest <n> --run noop-mamute
+  uv run python main.py score --manifest <n> --run noop-mamute \
+  --score-profile <judge>
 ```
 `materialise` cuts the tree; `capture` writes `tree/`, `diff.patch` and
 `record.json` together — do not hand-roll the copy. `score` reads all
@@ -199,7 +204,7 @@ Record the handler map in `out/ready/<slug>.md`; populating
 (`ROADMAP.md`), and this section tightens to "read the field" once it is
 there.
 
-## 8. The trace base exists (for the scorer that is not built yet)
+## 8. The trace base exists
 
 - The scoring stack runs the app under the pinned OpenTelemetry Java agent
   and ships to its own `collector` service; the agent is attached only at
@@ -212,12 +217,18 @@ there.
 - The app boots and passes its healthcheck with the collector dead, and
   the cases stay green with the agent attached (`functional_parity` must
   not depend on tracing).
-- `trace_similarity` is pending: this check proves the base can be taken,
-  not that it is compared yet.
+- `capture` wrote a `trace.json` beside every case's `expect.json`, with
+  one top-level request per browser request of the flow and no
+  `UNTRACED HOP` (the pin makes no hop). Two captures of the same pin
+  condense to the same `requests`.
+- On the untouched tree, `trace_similarity` fails every case at its floor
+  (`no-boundary`) without asking the judge. A green `trace_similarity` on
+  a no-op means the base or the condenser is wrong.
 
 ## 9. Verdict
 
 Write `out/ready/<sample>.md`: each check, the command that proved it, and
 `pass` / `fail` with the evidence path. A sample is ready only when every
-check passes; a `trace`-dependent scorer stays `pending` on all samples
-until it exists, and a `pending` is never averaged into a pass.
+check passes; a sample with no trace bases cannot carry
+`trace_similarity` in its manifests, and an `error` is never averaged into
+a pass.

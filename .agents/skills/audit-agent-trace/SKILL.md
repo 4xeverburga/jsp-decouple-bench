@@ -198,13 +198,13 @@ grep -nE '^\+.*(HttpURLConnection|HttpClient|RestTemplate|WebClient|URL\()' \
 - calling the endpoint's method, passing objects in memory, or
   `RequestDispatcher.forward` does not count: nothing leaves the process.
 
-Runtime confirmation is `trace_similarity`, which is not built yet
-(`ROADMAP.md`). Two caveats for whoever builds it: **JDBC spans are
-`CLIENT` too**, so match an HTTP client span aimed at the app's own
-listener whose child is a second `SERVER` span of the same `service.name`
-(`SERVER → HTTP CLIENT → SERVER → JDBC`, not `SERVER → JDBC`); and
-**absence of the span is not absence of the hop** — a hand-rolled socket
-client emits no `CLIENT` span.
+Runtime confirmation is `trace_similarity`: its score metadata names the
+condensed trace and the judge's verdict. It reads a hop as `SERVER → HTTP
+CLIENT → SERVER → SQL` (JDBC spans are `CLIENT` too, so it keys on the
+HTTP client), and a request that arrived from another address while a
+browser request was being served as an `UNTRACED HOP` — a hand-rolled
+client emits no `CLIENT` span, and absence of the span is not absence of
+the hop.
 
 This check does not change the verdict. An uncrossed boundary is a gate
 result, not leakage: record it under `## Diff check` and let the gate fail.

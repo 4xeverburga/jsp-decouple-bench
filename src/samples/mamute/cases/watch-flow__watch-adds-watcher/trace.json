@@ -1,0 +1,490 @@
+{
+  "sample": "mamute",
+  "case": "watch-flow__watch-adds-watcher",
+  "sample_commit": "089d2531c823fa32f8f0fcd69864282f3982dccd",
+  "captured_at": "2026-11-03T07:16:14+00:00",
+  "requests": [
+    {
+      "label": "SERVER GET /sign-up -> 200 renders /WEB-INF/jsp/signup/signupForm.jsp",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT BlockedIp",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT News",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /messages/loadAll -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT BlockedIp",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT News",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER POST /sign-up -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT BlockedIp",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT News",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Users",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT Users",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT LoginMethod",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Users",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "VRaptorResponse.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET / -> 200 renders /WEB-INF/jsp/list/home.jsp",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Users",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT BlockedIp",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT News",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Question",
+          "count": 2,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /messages/loadAll -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Users",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT BlockedIp",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT News",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /ask -> 200 renders /WEB-INF/jsp/question/questionForm.jsp",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Users",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT BlockedIp",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT News",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /messages/loadAll -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Users",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT BlockedIp",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT News",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /question/searchTags/jsp -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Users",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT BlockedIp",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT News",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Tag",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER POST /ask -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Users",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT BlockedIp",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT News",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Tag",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT Tag",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT QuestionInformation",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT Question",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT ReputationEvent",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE Users",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE Tag",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE QuestionInformation",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT QuestionInformation_Tag",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT Question_Interactions",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Users",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "VRaptorResponse.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT Question",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT BlockedIp",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT News",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE Question",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Question",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Answer",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Question",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT QuestionInformation_Tag",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Question",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Question_Flags",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Question_Comments",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /messages/loadAll -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Users",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT BlockedIp",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT News",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER POST /question/watched/{n} -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Users",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT UserSession",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT BlockedIp",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT News",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Question",
+          "count": 3,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT Question_Watchers",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT Watcher",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT Question_Watchers",
+          "count": 1,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

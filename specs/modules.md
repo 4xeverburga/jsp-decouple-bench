@@ -37,7 +37,9 @@ jsp-decouple-bench/
 | `compose.py` | where a sample's scoring stack and solve workspace are |
 | `stack.py` | starts and removes a case's compose project from the host |
 | `solves.py` | a run id, its tree and its diff |
-| `scorers/` | one package per gate, plus `metrics.all_must_pass` |
+| `replay.py` | the score phase's solver: plays a case once, keeps what it saw |
+| `capture.py` | freezes a case's golden and trace base from the pin |
+| `scorers/` | one package per gate, `metrics.all_must_pass`, and `observation` — where the replay leaves what it saw |
 
 `settings.py` sits at the repository root, not in `src/bench`, because every
 module imports it and it must not depend on the package it configures. It
@@ -53,7 +55,9 @@ algorithm and the shape rules.
 ```
 main.py → cli → solves, stack, compose, seeds, settings
         → agents → inspect_ai / inspect_swe
-        → scorers → stack, settings   (a scorer never imports another scorer)
+        → replay → stack, scorers.functional_parity (db, cases, delta)
+        → scorers → settings   (a scorer never imports another scorer;
+                                both read the replay via scorers.observation)
 ```
 
 - `settings` and `seeds` are leaves. `settings` is importable from anywhere
@@ -88,12 +92,23 @@ layout.
 driven into the same unaligned TSV shape, so only the argv and the
 identifier quoting differ.
 
+## `src/bench/scorers/trace_similarity/`
+
+| file | role |
+|---|---|
+| `similarity.py` | the scorer: a deterministic floor, then the judge |
+| `spans.py` | the collector's OTLP file, condensed to a request tree, rendered as text |
+| `base.py` | the case's trace base, `trace.json`, frozen beside `expect.json` |
+| `judge.py` | the score profile's model, the verdict schema, the conjunction |
+| `judge.md` | the judge's prompt — the bench's, never the agent's |
+
 ## `src/bench/capture.py`
 
 The only writer of a golden. For each case: one stack from the pin,
 snapshot the tables `case.json` declares, play the flow once, snapshot
 again, and write `expect.json` (`sample`, `case`, `sample_commit`,
-`captured_at`, the `db` delta, the `artifacts`). It is host-side for the
+`captured_at`, the `db` delta, the `artifacts`), and from the same run's
+spans `trace.json` (`trace_similarity.base.freeze`). It is host-side for the
 same reason scoring is, and it never compares against the golden it
 replaces.
 
@@ -103,6 +118,7 @@ replaces.
 case.json      # hand-written contract: e2e notes + the db table specs
                # (capture reads the table specs; replay reads only the golden)
 expect.json    # frozen golden (captured by `main.py capture`, never hand-written)
+trace.json     # frozen trace base, condensed spans of that same capture
 flow.py        # Playwright flow: `run(page, base_url) -> artifacts`
 images/        # optional step shots kept from an investigation
 ```

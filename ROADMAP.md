@@ -5,17 +5,16 @@ What is done, what is next, and what is parked. Decisions of record live in
 
 ## Next
 
-1. **`trace_similarity` scorer.** The mamute stack already emits spans
-   (Jetty server, JDBC, Hibernate, `HttpURLConnection` client) to the
-   `traces` volume. Remaining:
-   - read `/traces/traces.jsonl` while the case's stack is still up;
-   - capture a per-case **trace base** from the pristine pin, frozen next to
-     `expect.json`;
-   - compare span-tree *shape* (names, parentage, `http.method`/route), not
-     ids or timestamps, and tell a REST hop (client + server span) from an
-     in-process call (no span) from an FFI/native hop;
+1. **`trace_similarity`, beyond mamute.** The scorer is built (a
+   deterministic floor, then a judge from a `score_profiles` entry) and the
+   mamute cases have their `trace.json`. Remaining:
+   - capture bases for `openclinica` and add the scorer to manifest 13;
+     its condensed tree has not been looked at yet;
+   - calibrate the judge: the same verdicts from two `score_profiles` on
+     the same trees, and a few doctored trees (a write left on the page
+     side, a hop that only reads) per sample before a verdict is quoted;
    - list controller and DAO methods in `OTEL_INSTRUMENTATION_METHODS_INCLUDE`
-     so plain function calls show up in the base.
+     if a case needs to see in-process calls, not just their SQL.
 2. **A full task end to end** on a real agent, then `audit-agent-trace`
    before any score is quoted. **Only one combination has ever finished a
    run here: `opencode` 1.19.5, answered by
@@ -59,6 +58,12 @@ What is done, what is next, and what is parked. Decisions of record live in
   `/workspace`, so a solve starts with a warm cache instead of paying the
   cold download in the agent's own time.
 - Inspect-based bench; `main.py` is the whole command line.
+- `trace_similarity`: the score phase replays each case once
+  (`src/bench/replay.py`) and both gates judge that run; spans are
+  condensed to a request tree, a tree with no hop fails outright, and a
+  judge from `tasks-config.yaml`'s `score_profiles` rules on the rest
+  against the case's `trace.json`. `runs.yaml` became `tasks-config.yaml`
+  (`solve_profiles`, `score_profiles`).
 - Golden capture is a command again: `main.py capture` cuts the pin, runs
   one stack per case, and writes `expect.json`.
 - `functional_parity` reads any SQL dialect the manifest names (`mysql`,
@@ -72,7 +77,7 @@ What is done, what is next, and what is parked. Decisions of record live in
 - OpenTelemetry in the mamute stack.
 - `network_isolation` retired: with one scoring service there is no network
   contract left to grade.
-- Solve is agent-agnostic: a `runs.yaml` profile (`--profile`) selects
+- Solve is agent-agnostic: a `tasks-config.yaml` solve profile (`--profile`) selects
   native ReAct or a registered CLI agent, and the model that answers it. Only `opencode`
   is verified end to end (see Next 2 and 4).
 - `templates/` deleted: the stack lives in `src/samples/<slug>/env/`, so

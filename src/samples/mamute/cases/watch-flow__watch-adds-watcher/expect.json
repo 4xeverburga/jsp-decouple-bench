@@ -1,8 +1,8 @@
 {
   "sample": "mamute",
   "case": "watch-flow__watch-adds-watcher",
-  "sample_commit": "6fbd05891e66c867591bec777b27ce034533d39c",
-  "captured_at": "2026-10-28T01:19:54Z",
+  "sample_commit": "089d2531c823fa32f8f0fcd69864282f3982dccd",
+  "captured_at": "2026-11-03T07:16:14+00:00",
   "db": {
     "tables": {
       "Users": {

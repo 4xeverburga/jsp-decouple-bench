@@ -313,21 +313,23 @@ sample:
   silently and produces nothing leaves an empty trace, and
   `dataset-ready-check` §7 fails it.
 
-The scorer that compares traces is still to be written (ROADMAP Next 1)
-and reports `pending` until it exists. What is implemented is the
-capture, so a pristine run leaves a candidate base next to the goldens
-instead of a deleted volume.
+`capture` freezes the spans of the pristine run as `trace.json`, the base
+`trace_similarity` compares against; a manifest names that scorer only once
+every case it grades has one. The app's healthcheck must be `curl`: the
+condenser tells the probe from the app's own work by its user agent.
 
 ## 4. How a task runs, once the sample is wired in
 
 The pin and the manifests are the wiring; nothing is registered anywhere
 else. `main.py` is the only command line:
 
-- `task --manifest N --profile NAME` — cut the pin, let that profile's
-  agent work in its own sandbox, then score the tree it left;
-- `score --manifest N --run ID` — grade a kept tree again without paying
-  for the agent;
-- `capture --manifest N [--case X]` — freeze goldens from the pin;
+- `task --manifest N --profile NAME --score-profile JUDGE` — cut the pin,
+  let that profile's agent work in its own sandbox, then score the tree it
+  left;
+- `score --manifest N --run ID --score-profile JUDGE` — grade a kept tree
+  again without paying for the agent;
+- `capture --manifest N [--case X]` — freeze goldens and trace bases from
+  the pin;
 - `manifests` — list the work order.
 
 After the sample's cases are ready, set `commit_sha` in
@@ -335,10 +337,12 @@ After the sample's cases are ready, set `commit_sha` in
 
 ```bash
 export BENCH_CHECKOUT=$PWD/../<sample>    # the repo the pin is cut from
-uv run python main.py task --manifest <n> --profile <name>
+uv run python main.py task --manifest <n> --profile <name> \
+    --score-profile <judge>
 ```
 
-`--profile` names a row of `runs.yaml`: the agent, the version installed
+`--profile` names a `solve_profiles` entry of `tasks-config.yaml`: the
+agent, the version installed
 for it, the wire model it is asked for, the model that answers, and the
 effort. No agent parameter is passed on the command line, so a new run
 setup is a new profile rather than a longer command.
