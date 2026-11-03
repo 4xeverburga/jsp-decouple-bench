@@ -27,6 +27,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from dotenv import dotenv_values
+from inspect_ai.log import list_eval_logs, read_eval_log
 
 import settings
 
@@ -89,6 +90,28 @@ def _eval(
     subprocess.run(
         argv, cwd=settings.ROOT, env={**os.environ, **env}, check=True
     )
+
+
+def _require_success(logs: str, run: str, phase: str) -> None:
+    """Stop unless this run's `phase` eval finished as a success.
+
+    `inspect eval` exits 0 when a task errors or is interrupted, and a
+    solve's cleanup still keeps the untouched tree. Scoring that tree would
+    grade an agent that never ran as one that changed nothing, so a phase
+    that did not succeed ends the run here, with Inspect's own reason.
+    """
+    for info in list_eval_logs(logs):
+        header = read_eval_log(info, header_only=True)
+        args = header.eval.task_args
+        if args.get("run") == run and args.get("phase") == phase:
+            if header.status == "success":
+                return
+            reason = header.error.message if header.error else header.status
+            raise SystemExit(
+                f"{phase} of run {run} did not succeed ({header.status}): "
+                f"{reason}; log: {info.name}"
+            )
+    raise SystemExit(f"no {phase} log for run {run} in {logs}")
 
 
 def _spec(manifest_id: int) -> str:
@@ -160,6 +183,7 @@ def solve(manifest_id: int, profile: str, run: str, logs: str) -> None:
         },
         resolved["answer_model"],
     )
+    _require_success(logs, run, "solve")
 
 
 def score(manifest_id: int, run: str, logs: str) -> None:
@@ -200,6 +224,7 @@ def score(manifest_id: int, run: str, logs: str) -> None:
         },
         settings.SCORE_MODEL,
     )
+    _require_success(logs, run, "score")
 
 
 def capture(manifest_id: int, cases: list[str]) -> None:

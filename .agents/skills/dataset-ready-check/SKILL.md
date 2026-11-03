@@ -41,8 +41,13 @@ BENCH_CHECKOUT=$PWD/out/solves/<run>/tree \
   uv run python main.py score --manifest <n> --run <run>
 
 # 3. a real agent, end to end (optional here; mandatory before quoting a score)
-uv run python main.py task --manifest <n> --agent opencode
+uv run python main.py task --manifest <n> --profile <name>
 ```
+
+Who solves — the agent, its version, the wire model it is asked for, the
+model that answers and the effort — is the profile `--profile` names in
+`runs.yaml`. None of it is passed as a flag, so a run cannot be described
+by its command line alone: read `out/solves/<run>/record.json`.
 
 Scoring drives the stack from the host (`src/bench/stack.py`): one compose
 project per case, started and removed by the scorer, `[stack]` progress on
@@ -91,8 +96,11 @@ from src.bench.seeds import pin
 slug, run = "mamute", "noop-mamute"
 workspace = solves.materialise(run, Path("../mamute").resolve(), pin(slug))
 solves.capture(run, workspace, {
+    # `score` refuses a record with no profile, because the profile is what
+    # labels the verdict; no agent produced this tree.
+    "profile": "none",
     "agent": "none", "agent_model": "none", "agent_version": "none",
-    "model": "noop", "note": "no-op self-check at the pinned tree",
+    "model": "none", "note": "no-op self-check at the pinned tree",
 })
 print(solves.location(run) / "tree")
 PY
@@ -102,8 +110,9 @@ BENCH_CHECKOUT=$PWD/out/solves/noop-mamute/tree \
 ```
 `materialise` cuts the tree; `capture` writes `tree/`, `diff.patch` and
 `record.json` together — do not hand-roll the copy. `score` reads all
-three (the record is what labels the score), and a hand-built tree with a
-missing `record.json` fails on `solves.read` rather than scoring.
+three (the record is what labels the score), requires a `profile` key in
+it, and a hand-built tree with a missing `record.json` fails on
+`solves.read` rather than scoring.
 
 Every case must come back `correct`. If it is red, the pin or the stack is
 wrong — no score taken on this sample means anything, and a real agent's

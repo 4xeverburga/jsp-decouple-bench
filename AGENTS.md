@@ -111,12 +111,6 @@ line (`task`, `score`, `capture`, `manifests`) and also the file Inspect
 loads (`inspect eval main.py@<task type>`). Scoring prints its progress as
 `[stack]` lines; a first build of a sample is minutes long.
 
-Every eval is written to `out/evals/` — `settings.LOGS`, the `--log-dir` the
-driver passes to each `inspect eval`. Read them in the viewer with
-`uv run inspect view --log-dir out/evals`. The flag is not optional:
-`inspect view` defaults to `./logs`, which exists here but stays empty, so
-without it the viewer opens on nothing.
-
 ## Traces
 
 Every stack runs the app under the OpenTelemetry Java agent, configured only

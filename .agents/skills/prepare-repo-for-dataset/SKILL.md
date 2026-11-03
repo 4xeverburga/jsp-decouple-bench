@@ -323,8 +323,8 @@ instead of a deleted volume.
 The pin and the manifests are the wiring; nothing is registered anywhere
 else. `main.py` is the only command line:
 
-- `task --manifest N` — cut the pin, let one CLI agent work in its own
-  sandbox, then score the tree it left;
+- `task --manifest N --profile NAME` — cut the pin, let that profile's
+  agent work in its own sandbox, then score the tree it left;
 - `score --manifest N --run ID` — grade a kept tree again without paying
   for the agent;
 - `capture --manifest N [--case X]` — freeze goldens from the pin;
@@ -335,8 +335,13 @@ After the sample's cases are ready, set `commit_sha` in
 
 ```bash
 export BENCH_CHECKOUT=$PWD/../<sample>    # the repo the pin is cut from
-uv run python main.py task --manifest <n> --agent opencode
+uv run python main.py task --manifest <n> --profile <name>
 ```
+
+`--profile` names a row of `runs.yaml`: the agent, the version installed
+for it, the wire model it is asked for, the model that answers, and the
+effort. No agent parameter is passed on the command line, so a new run
+setup is a new profile rather than a longer command.
 
 `task` prints the run id and keeps `out/solves/<run>/` (`record.json`,
 `diff.patch`, `tree/`). The solve phase runs one agent inside the sample's

@@ -29,23 +29,14 @@ What is done, what is next, and what is parked. Decisions of record live in
    reference shapes.
 4. **Prove the other CLI agents.** `src/agents/registry.py` registers `opencode`,
    `codex`, `claude` and `gemini`, and a profile's `agent` selects one, but only
-   `opencode` has run. Each of the others needs: a version whose own
-   catalogue knows the wire name (`agent_model`), its session directory
-   confirmed against `agents.state()`, and a first run read before any
-   score from it is quoted. What differs is the wire name, the bridge
-   prefix and where the CLI writes its record. The native `react` agent is
-   implemented in `src/agents/react.py`; its tool and provider compatibility
-   still needs a real slice run.
-
-## Parked
-
+   `opencode` has run. 
+   
+# Parked
 - **One phase instead of two.** Scoring no longer needs an Inspect sandbox, so
   solve and score could run in a single task. Kept apart for now because a kept
   tree can be re-graded without paying for the agent again.
 - **App as native processes** (no Docker for scoring). Only worth it if the
   bench itself must run inside a container; costs the pinned toolchain.
-- **Re-prove gate sensitivity** on the host-driven scorer with the
-  `broken-vote` tree.
 - **A browser in the agent's toolbox — deliberately absent.** The solve
   sandbox has no Playwright, no Chromium and none of the libraries one needs
   (`libnss3`, `libatk`, `libgbm` are all missing), and its Node 16 is below
@@ -60,8 +51,6 @@ What is done, what is next, and what is parked. Decisions of record live in
   wiring rather than on logic: a separate toolbox image, Node 20 beside the
   grunt-era 16, the EOL-bullseye apt traps, roughly +500 MB per solve
   build.
-- **`.agents/skills/` still describe the old Makefile CLI** and need the same
-  pass the specs just had.
 
 ## Done
 

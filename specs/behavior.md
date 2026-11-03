@@ -77,47 +77,6 @@ hook writes it, not the driver — so the score command above can follow it
 with nothing in between. Run side by side, this is also the only place a
 stale `BENCH_CHECKOUT` shows: the score phase trusts it.
 
-## Agents and answerers
-
-Two independent choices, joined by the bridge, and named together by one
-profile in `runs.yaml` (`--profile`):
-
-| | profile keys | what it decides |
-|---|---|---|
-| **agent** | `agent`, `agent_model`, `agent_version` | which implementation and tool set solves the work order |
-| **answerer** | `answer_model`, `model_env`, `reasoning_effort`, `model_args` | which model generates the tokens, and so what a score is attributed to |
-
-The task builds the answering `Model` itself, so it is not Inspect's active
-model and the eval's `--reasoning-effort` / `-M` would never reach it: the
-profile's effort and args are set on that model directly.
-
-The native `react` agent uses the answerer directly and has sandbox-backed
-shell and text-editor tools. Its `agent_model` and `agent_version` values
-are recorded labels; they do not select a second model or CLI version.
-The CLI agents use `agents.aliases()` to map the name a CLI sends onto the
-`Model` the eval built. Two constraints survive that:
-
-- the **wire model** must exist in the CLI's own catalogue. The CLI checks it
-  before sending anything, so a version that predates the slug refuses it and
-  no alias can rescue it (opencode 1.14.42 vs `deepseek-v4.1-flash`);
-- the **answerer's provider** must have its credentials named in the
-  profile's `model_env` and set in `.env`. The agent needs none of its own: its
-  CLI sandbox gets a dummy credential and the bridge answers. Native ReAct
-  uses the answerer's configured credentials directly.
-
-`model_env` is what keeps a new provider out of the code: it lists the
-variable names the provider reads — one `*_API_KEY` for an Inspect provider,
-`<SERVICE>_API_KEY` + `<SERVICE>_BASE_URL` for an OpenAI-compatible gateway,
-nothing for `mockllm` — and `settings.credentials` forwards exactly those. Each
-named variable is required; an empty list is a real answer, an absent one is
-an error.
-
-What is proven end to end: `opencode` 1.19.5 answered by
-`opencode-go/deepseek-v4.1-flash`. `codex`, `claude` and `gemini` are
-registered and selectable; the native `react` agent is implemented but
-still needs a real slice run before its provider/tool compatibility is
-considered proven.
-
 ## The unit of work
 
 A **manifest** (`seeds/manifests.json`) names one source, one task type, the
