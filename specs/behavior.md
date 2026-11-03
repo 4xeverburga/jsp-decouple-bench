@@ -42,7 +42,7 @@ export BENCH_BASE_URL=http://localhost:8090 APP_HTTP_PORT=8090   # the seed's ta
 set -a; . src/samples/mamute/env/.env; set +a   # the sample's credentials
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=score -T run=<run_id> \
-  -T profile=opencode-deepseek-flash \
+  -T profile=opencode-v1-deepseek-flash-medium \
   --model mockllm/model --max-samples 1
 ```
 
@@ -68,7 +68,7 @@ export BENCH_SAMPLE_ENV=$PWD/src/samples/mamute/env SOLVE_ROOT=/workspace
 set -a; . .env; set +a                          # the profile's keys
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=solve -T run=$RUN \
-  -T profile=opencode-deepseek-flash \
+  -T profile=opencode-v1-deepseek-flash-medium \
   --model openai-api/opencode-go/deepseek-v4.1-flash
 ```
 

@@ -23,7 +23,7 @@
 # profile's name and the values it resolved to, and a name that meant
 # something else last week makes old records lie.
 
-opencode-deepseek-flash:
+opencode-v1-deepseek-flash-medium:
   agent: opencode
   agent_model: opencode-go/deepseek-v4.1-flash
   agent_version: 1.19.5
@@ -51,6 +51,24 @@ claude-code-sonnet-5.5-medium-subscription:
   reasoning_effort: medium
   model_args: {}
 
+# The native agent on the same answerer and provider as
+# `opencode-v1-deepseek-flash-medium`, at `high` effort: the two profiles
+# differ in the agent and in the effort, so read a comparison between them
+# with that in mind. `agent_model` and `agent_version` stay `none` because
+# the native agent asks no bridge for a name and installs no CLI; they are
+# recorded labels, not selectors.
+react-deepseek-flash-high:
+  agent: react
+  agent_model: none
+  agent_version: none
+  answer_model: openai-api/opencode-go/deepseek-v4.1-flash
+  model_env: [OPENCODE_GO_API_KEY, OPENCODE_GO_BASE_URL]
+  reasoning_effort: high
+  model_args: {}
+
+# The zero-cost smoke profile: the whole pipeline with an answerer that never
+# reaches a provider. Kept beside the real one so neither name lies about
+# which one it is.
 react-mock:
   agent: react
   agent_model: none

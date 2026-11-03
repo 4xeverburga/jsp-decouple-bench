@@ -15,7 +15,7 @@ cases they are graded on, so one sample per case serves either.
 
     inspect eval main.py@oneshot_decoupling \
         -T manifest_id=14 -T phase=score -T run=<id> \
-        -T profile=opencode-deepseek-flash --model mockllm/model
+        -T profile=opencode-v1-deepseek-flash-medium --model mockllm/model
 
 `profile` names a row of `runs.yaml`: who solves, and the model that
 answers it. A score only carries it as a label.

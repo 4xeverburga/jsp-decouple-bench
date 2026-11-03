@@ -83,7 +83,7 @@ modules and the lifecycle.
 cp .env.example .env        # once per checkout; settings.py reads nothing else
 export BENCH_CHECKOUT=/abs/checkout
 
-uv run python main.py task --manifest 3 --profile opencode-deepseek-flash
+uv run python main.py task --manifest 3 --profile opencode-v1-deepseek-flash-medium
 ```
 
 `--profile` is required and names a row of `runs.yaml`: the agent, its
