@@ -15,9 +15,10 @@ cases they are graded on, so one sample per case serves either.
 
     inspect eval main.py@oneshot_decoupling \
         -T manifest_id=14 -T phase=score -T run=<id> \
-        -T agent=opencode -T agent_model=opencode-go/deepseek-v4.1-flash \
-        -T agent_version=1.19.5 -T model_target=mockllm/model \
-        --model mockllm/model
+        -T profile=opencode-deepseek-flash --model mockllm/model
+
+`profile` names a row of `runs.yaml`: who solves, and the model that
+answers it. A score only carries it as a label.
 """
 
 import base64
@@ -27,7 +28,7 @@ import uuid
 from pathlib import Path
 
 from inspect_ai import Task, task
-from inspect_ai.model import Model, get_model
+from inspect_ai.model import GenerateConfig, Model, get_model
 from inspect_ai.solver import Generate, Solver, TaskState, solver
 from inspect_ai.util import sandbox as host_sandbox
 
@@ -69,16 +70,18 @@ def submitted_tree() -> Solver:
 async def capture_solution(state: TaskState) -> None:
     """Keep the tree the agent left, so a score can be re-run without it."""
     run = state.metadata["run"]
-    agent = state.metadata["agent"]
+    resolved = state.metadata["resolved"]
+    agent = resolved["agent"]
     solves.capture(
         run,
         Path(settings.checkout()),
         {
-            "agent": agent,
-            "agent_model": state.metadata["agent_model"],
-            "agent_version": state.metadata["agent_version"],
+            # The name a run was asked for, and what it meant at the time:
+            # a profile can be edited after the run, its record cannot.
+            "profile": state.metadata["profile"],
+            **resolved,
             # The CLI's name is only the wire format; this is what answered.
-            "model": state.metadata["model_target"],
+            "model": resolved["answer_model"],
             "manifest_id": state.metadata["manifest_id"],
             # A manifest's prompt is versioned, so a tree from one version
             # cannot be compared with another: say which one produced it.
@@ -121,19 +124,24 @@ async def _keep_agent(run: str, agent: str) -> None:
 SESSION_HEADER = "x-opencode-session"
 
 
-def _answer_model(model_target: str) -> Model:
+def _answer_model(resolved: dict) -> Model:
     """The model that answers the agent's calls, whatever they were named.
 
     A Model instance, not a name: resolving a bare string builds a model
     without the args the eval was given, and a gateway that needs a routing
-    header rejects that one.
+    header rejects that one. Because it is built here it is not the eval's
+    active model, and Inspect merges the eval's `--reasoning-effort` and
+    `-M` only into that one — so the profile's effort and arguments are
+    set on this model directly, or they would never reach a request.
     """
     session = os.environ.get("OPENCODE_SESSION_ID")
     if session is None:
         session = uuid.uuid4().hex
     return get_model(
-        model_target,
+        resolved["answer_model"],
+        config=GenerateConfig(reasoning_effort=resolved["reasoning_effort"]),
         default_headers={SESSION_HEADER: session},
+        **resolved["model_args"],
     )
 
 
@@ -141,11 +149,8 @@ def _manifest_task(
     manifest_id: int,
     phase: str,
     run: str,
-    agent: str,
-    agent_model: str,
-    agent_version: str,
+    profile: str,
     expected_type: str,
-    model_target: str,
 ) -> Task:
     chosen = load_manifest(manifest_id)
     if chosen["task_type"] != expected_type:
@@ -167,22 +172,14 @@ def _manifest_task(
     # neither has a default here (AGENTS.md rule 10).
 
     if phase == "solve":
-        if run is None:
-            raise ValueError("solve phase requires run")
+        resolved = settings.profile(profile)
         return Task(
-            dataset=samples.for_solving(
-                manifest_id,
-                run,
-                agent,
-                agent_model,
-                agent_version,
-                model_target,
-            ),
+            dataset=samples.for_solving(manifest_id, run, profile, resolved),
             solver=agents.solver_for(
-                agent,
-                _answer_model(model_target),
-                agent_model,
-                agent_version,
+                resolved["agent"],
+                _answer_model(resolved),
+                resolved["agent_model"],
+                resolved["agent_version"],
                 settings.SOLVE_ROOT,
             ),
             cleanup=capture_solution,
@@ -210,21 +207,15 @@ def decouple_slice(
     manifest_id: int,
     phase: str,
     run: str,
-    agent: str,
-    agent_model: str,
-    agent_version: str,
-    model_target: str,
+    profile: str,
 ) -> Task:
     """Run the solve or score phase for a decouple_slice manifest."""
     return _manifest_task(
         manifest_id,
         phase,
         run,
-        agent,
-        agent_model,
-        agent_version,
+        profile,
         "decouple_slice",
-        model_target,
     )
 
 
@@ -233,21 +224,15 @@ def oneshot_decoupling(
     manifest_id: int,
     phase: str,
     run: str,
-    agent: str,
-    agent_model: str,
-    agent_version: str,
-    model_target: str,
+    profile: str,
 ) -> Task:
     """Run the solve or score phase for an oneshot_decoupling manifest."""
     return _manifest_task(
         manifest_id,
         phase,
         run,
-        agent,
-        agent_model,
-        agent_version,
+        profile,
         "oneshot_decoupling",
-        model_target,
     )
 
 
@@ -256,10 +241,7 @@ def dummy_file(
     manifest_id: int,
     phase: str,
     run: str,
-    agent: str,
-    agent_model: str,
-    agent_version: str,
-    model_target: str,
+    profile: str,
 ) -> Task:
     """Smoke test only: one new file, no app work.
 
@@ -273,11 +255,8 @@ def dummy_file(
         manifest_id,
         phase,
         run,
-        agent,
-        agent_model,
-        agent_version,
+        profile,
         "dummy_file",
-        model_target,
     )
 
 
@@ -286,10 +265,7 @@ def agent_probe(
     manifest_id: int,
     phase: str,
     run: str,
-    agent: str,
-    agent_model: str,
-    agent_version: str,
-    model_target: str,
+    profile: str,
 ) -> Task:
     """Probe only: read a few files, write one, stop. No app work.
 
@@ -303,11 +279,8 @@ def agent_probe(
         manifest_id,
         phase,
         run,
-        agent,
-        agent_model,
-        agent_version,
+        profile,
         "agent_probe",
-        model_target,
     )
 
 

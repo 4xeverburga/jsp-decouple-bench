@@ -11,7 +11,8 @@ will start, and the arguments only it takes. Every one of those five
 things is a way a CLI varies:
 
     param   the keyword that carries the wire model. ``opencode`` and
-            ``gemini`` name it after themselves; the rest call it ``model``
+            ``gemini`` name it after themselves, ``claude`` calls it
+            ``model_config``; the rest call it ``model``
     prefix  what the CLI puts in front of that name before it asks the
             bridge — ``codex`` serves it as ``inspect/<name>``
     state   where the CLI keeps its session record inside the sandbox
@@ -67,7 +68,10 @@ AGENTS = {
     ),
     "claude": Agent(
         solver=claude_code,
-        param="model",
+        # Not ``model``: that one is an Inspect model to serve (it must be
+        # ``provider/name``). ``model_config`` is the identity Claude Code
+        # presents and asks for, which the alias routes to the answerer.
+        param="model_config",
         prefix="",
         state="/root/.claude",
         env={},

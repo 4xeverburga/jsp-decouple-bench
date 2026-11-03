@@ -62,17 +62,15 @@ def for_scoring(manifest_id: int) -> list[Sample]:
 def for_solving(
     manifest_id: int,
     run: str,
-    agent: str,
-    agent_model: str,
-    agent_version: str,
-    model_target: str,
+    profile: str,
+    resolved: dict,
 ) -> list[Sample]:
     """One sample for the manifest: the agent works on the tree once.
 
-    The agent trio is recorded, not used: it names what ran, the version of
-    it, and the model name it asked the bridge for. `model_target` is what
-    actually answered, and it is what a score has to be attributed to — the
-    wire name is only the format of the request.
+    The profile is recorded, not used: its name, and the values it
+    resolved to — what ran, at which version, the wire name it asked the
+    bridge for, and the `answer_model` that actually answered, which is
+    what a score has to be attributed to.
     """
     chosen = load_manifest(manifest_id)
     commit = pin(chosen["sample"])
@@ -85,10 +83,8 @@ def for_solving(
                 _metadata(chosen, commit),
                 manifest_id=manifest_id,
                 run=run,
-                agent=agent,
-                agent_model=agent_model,
-                agent_version=agent_version,
-                model_target=model_target,
+                profile=profile,
+                resolved=resolved,
             ),
         )
     ]

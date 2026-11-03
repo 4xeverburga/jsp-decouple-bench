@@ -1,0 +1,61 @@
+# Named run profiles: who solves a manifest, and with what model.
+#
+#   uv run python main.py task --manifest 1 --profile <name>
+#
+# A profile is not a secret, so it is tracked. The credentials it needs are
+# not: `model_env` names variables, and their values are read from `.env`.
+# Every key is required in every profile (AGENTS.md rule 10); an empty list
+# or mapping is a real answer, an absent key is an error.
+#
+#   agent            a row of src/agents/registry.py
+#   agent_model      the wire name the CLI formats its requests for; a label
+#                    only for react, which has no bridge
+#   agent_version    the CLI version installed in the workspace; a label
+#                    only for react. A CLI must know `agent_model`.
+#   answer_model     the Inspect model that generates the tokens. A score is
+#                    attributed to this, not to `agent_model`.
+#   model_env        the variables `answer_model`'s provider reads, from .env
+#   reasoning_effort none | minimal | low | medium | high | xhigh | max, set
+#                    on the answering model itself
+#   model_args       provider arguments for `answer_model` (Inspect's -M)
+#
+# Rename a profile rather than change what it means: a run records the
+# profile's name and the values it resolved to, and a name that meant
+# something else last week makes old records lie.
+
+opencode-deepseek-flash:
+  agent: opencode
+  agent_model: opencode-go/deepseek-v4.1-flash
+  agent_version: 1.19.5
+  answer_model: openai-api/opencode-go/deepseek-v4.1-flash
+  model_env: [OPENCODE_GO_API_KEY, OPENCODE_GO_BASE_URL]
+  reasoning_effort: medium
+  model_args: {}
+
+claude-code-sonnet-5.5-medium:
+  agent: claude
+  agent_model: claude-sonnet-5-5
+  agent_version: 2.1.311
+  answer_model: anthropic/claude-sonnet-5-5
+  model_env: [ANTHROPIC_API_KEY]
+  reasoning_effort: medium
+  model_args: {}
+
+# Not reliable since it has the sub usage limits
+claude-code-sonnet-5.5-medium-subscription:
+  agent: claude
+  agent_model: claude-sonnet-5-5
+  agent_version: 2.1.311
+  answer_model: anthropic/claude-sonnet-5-5
+  model_env: [ANTHROPIC_AUTH_TOKEN]
+  reasoning_effort: medium
+  model_args: {}
+
+react-mock:
+  agent: react
+  agent_model: none
+  agent_version: none
+  answer_model: mockllm/model
+  model_env: []
+  reasoning_effort: none
+  model_args: {}

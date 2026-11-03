@@ -38,7 +38,6 @@ from .seeds import manifests as all_manifests
 from .seeds import pin, sample
 
 TASKS = settings.ROOT / "main.py"
-EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
 
 
 def _tool(name: str) -> list[str]:
@@ -69,9 +68,12 @@ def _eval(
     logs: str,
     env: dict[str, str],
     model: str,
-    extra: tuple[str, ...],
 ) -> None:
-    """One `inspect eval`; `model` answers the agent's bridged calls."""
+    """One `inspect eval`; `model` is the eval's model.
+
+    It is not what answers a solve's calls: the task builds that model
+    itself, from the profile, with the profile's effort and arguments.
+    """
     argv = [
         *_tool("inspect"),
         "eval",
@@ -79,7 +81,6 @@ def _eval(
         *args,
         "--model",
         model,
-        *extra,
         "--display",
         "plain",
         "--log-dir",
@@ -126,17 +127,14 @@ def _build_toolbox(slug: str, workspace: Path) -> None:
     )
 
 
-def solve(
-    manifest_id: int,
-    model: str,
-    agent: str,
-    agent_model: str,
-    agent_version: str,
-    run: str,
-    logs: str,
-    extra: tuple[str, ...],
-) -> None:
-    """Let the agent work on a tree cut from the pin, in its own workspace."""
+def solve(manifest_id: int, profile: str, run: str, logs: str) -> None:
+    """Let the profile's agent work on a tree cut from the pin.
+
+    The task resolves the profile itself, from `runs.yaml`; this process
+    resolves it too, because only it can hand the provider's credentials
+    to `inspect eval` and name the model that answers.
+    """
+    resolved = settings.profile(profile)
     chosen = load_manifest(manifest_id)
     slug = chosen["sample"]
     workspace = solves.materialise(run, Path(settings.checkout()), pin(slug))
@@ -151,23 +149,16 @@ def solve(
             "-T",
             f"run={run}",
             "-T",
-            f"agent={agent}",
-            "-T",
-            f"agent_model={agent_model}",
-            "-T",
-            f"agent_version={agent_version}",
-            "-T",
-            f"model_target={model}",
+            f"profile={profile}",
         ],
         logs,
         {
             "BENCH_CHECKOUT": str(workspace),
             "BENCH_SAMPLE_ENV": str(sample_env(slug)),
             "SOLVE_ROOT": settings.SOLVE_ROOT,
-            **settings.MODEL_ENV,
+            **settings.credentials(resolved),
         },
-        model,
-        extra,
+        resolved["answer_model"],
     )
 
 
@@ -179,6 +170,11 @@ def score(manifest_id: int, run: str, logs: str) -> None:
     # What produced this tree, from the run's own record: a re-score of last
     # week's run must not be labelled with today's `.env`.
     record = solves.read(run)
+    if "profile" not in record:
+        raise SystemExit(
+            f"run {run} predates run profiles: its record names no profile, "
+            f"so its score cannot be labelled with one; solve it again"
+        )
     slug = load_manifest(manifest_id)["sample"]
     env_dir = sample_env(slug)
     credentials = dotenv_values(env_dir / ".env")
@@ -192,13 +188,7 @@ def score(manifest_id: int, run: str, logs: str) -> None:
             "-T",
             f"run={run}",
             "-T",
-            f"agent={record['agent']}",
-            "-T",
-            f"agent_model={record['agent_model']}",
-            "-T",
-            f"agent_version={record['agent_version']}",
-            "-T",
-            f"model_target={settings.SCORE_MODEL}",
+            f"profile={record['profile']}",
             "--max-samples",
             "1",
         ],
@@ -209,7 +199,6 @@ def score(manifest_id: int, run: str, logs: str) -> None:
             "BENCH_CHECKOUT": str(tree),
         },
         settings.SCORE_MODEL,
-        (),
     )
 
 
@@ -254,21 +243,7 @@ def _capture_verb(args: argparse.Namespace) -> None:
 def _task(args: argparse.Namespace) -> None:
     run = args.run or uuid.uuid4().hex
     print(f"run: {run}", flush=True)
-    extra: list[str] = []
-    for arg in args.model_arg:
-        extra += ["-M", arg]
-    if args.reasoning_effort:
-        extra += ["--reasoning-effort", args.reasoning_effort]
-    solve(
-        args.manifest,
-        args.model,
-        args.agent,
-        args.agent_model,
-        args.agent_version,
-        run,
-        args.logs,
-        tuple(extra),
-    )
+    solve(args.manifest, args.profile, run, args.logs)
     score(args.manifest, run, args.logs)
     print(f"tree: {solves.tree(run)}")
 
@@ -299,36 +274,9 @@ def _parser() -> argparse.ArgumentParser:
     task.set_defaults(handler=_task)
     task.add_argument("--manifest", type=int, required=True)
     task.add_argument(
-        "--model",
-        default=settings.ANSWER_MODEL,
-        help="provider/model that answers the agent; the default is the one "
-        "BENCH_ANSWER_MODEL names",
-    )
-    task.add_argument(
-        "--agent",
-        default=settings.AGENT,
-        help="which agent solves it: a row of src/agents/registry.py",
-    )
-    task.add_argument(
-        "--agent-model",
-        default=settings.AGENT_MODEL,
-        help="the wire model that agent formats its requests for",
-    )
-    task.add_argument(
-        "--agent-version",
-        default=settings.AGENT_VERSION,
-        help="the version of that agent to install in the sandbox",
-    )
-    task.add_argument(
-        "--model-arg",
-        action="append",
-        default=[],
-        help="native model argument for --model, repeatable (key=value)",
-    )
-    task.add_argument(
-        "--reasoning-effort",
-        choices=EFFORTS,
-        help="effort the answering model is asked to spend on reasoning",
+        "--profile",
+        required=True,
+        help="who solves it: a profile in runs.yaml (agent, model, effort)",
     )
     task.add_argument("--run", help="reuse a run id instead of minting one")
     task.add_argument(

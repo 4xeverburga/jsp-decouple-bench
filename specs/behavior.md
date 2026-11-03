@@ -4,7 +4,7 @@ Three verbs, all through `main.py`:
 
 ```bash
 uv run python main.py manifests                              # list them
-uv run python main.py task  --manifest <id> --model <p/m>    # solve, then score
+uv run python main.py task  --manifest <id> --profile <name> # solve, then score
 uv run python main.py score --manifest <id> --run <run_id>   # score a kept tree
 ```
 
@@ -42,13 +42,12 @@ export BENCH_BASE_URL=http://localhost:8090 APP_HTTP_PORT=8090   # the seed's ta
 set -a; . src/samples/mamute/env/.env; set +a   # the sample's credentials
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=score -T run=<run_id> \
-  -T agent=opencode -T agent_model=opencode-go/deepseek-v4.1-flash \
-  -T agent_version=1.19.5 -T model_target=mockllm/model \
+  -T profile=opencode-deepseek-flash \
   --model mockllm/model --max-samples 1
 ```
 
-`agent`/`agent_model`/`agent_version`/`model_target` are labels in this
-phase; `--model` is the model Inspect demands, and `BENCH_SCORE_MODEL` is
+`profile` is a label in this phase (the driver takes it from the run's
+record); `--model` is the model Inspect demands, and `BENCH_SCORE_MODEL` is
 what the driver passes there. One sample at a time: the cases share the
 published port.
 
@@ -57,7 +56,7 @@ published port.
 1. a workspace cut from the pin — `solves.materialise`, which also refuses a
    pin that carries a stack file;
 2. `BENCH_SAMPLE_ENV`, the sample's `env/`, for the sandbox's `solve.yaml`;
-3. `SOLVE_ROOT`, and the answering model's credentials (`settings.MODEL_ENV`).
+3. `SOLVE_ROOT`, and the profile's credentials (`settings.credentials`).
 
 ```bash
 export RUN=$(uv run python -c 'import uuid; print(uuid.uuid4().hex)')
@@ -66,12 +65,10 @@ from src.bench import solves; from src.bench.seeds import pin; \
 solves.materialise('$RUN', Path(settings.checkout()), pin('mamute'))"
 export BENCH_CHECKOUT=$PWD/out/workspaces/$RUN
 export BENCH_SAMPLE_ENV=$PWD/src/samples/mamute/env SOLVE_ROOT=/workspace
-set -a; . .env; set +a                          # ANSWER_MODEL's keys
+set -a; . .env; set +a                          # the profile's keys
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=solve -T run=$RUN \
-  -T agent=opencode -T agent_model=opencode-go/deepseek-v4.1-flash \
-  -T agent_version=1.19.5 \
-  -T model_target=openai-api/opencode-go/deepseek-v4.1-flash \
+  -T profile=opencode-deepseek-flash \
   --model openai-api/opencode-go/deepseek-v4.1-flash
 ```
 
@@ -82,15 +79,20 @@ stale `BENCH_CHECKOUT` shows: the score phase trusts it.
 
 ## Agents and answerers
 
-Two independent choices, joined by the bridge:
+Two independent choices, joined by the bridge, and named together by one
+profile in `runs.yaml` (`--profile`):
 
-| | configured by | what it decides |
+| | profile keys | what it decides |
 |---|---|---|
-| **agent** | `AGENT`, `AGENT_MODEL`, `AGENT_VERSION` (`--agent…`) | which implementation and tool set solves the work order |
-| **answerer** | `BENCH_ANSWER_MODEL`, `BENCH_MODEL_ENV` (`--model`) | which model generates the tokens, and so what a score is attributed to |
+| **agent** | `agent`, `agent_model`, `agent_version` | which implementation and tool set solves the work order |
+| **answerer** | `answer_model`, `model_env`, `reasoning_effort`, `model_args` | which model generates the tokens, and so what a score is attributed to |
+
+The task builds the answering `Model` itself, so it is not Inspect's active
+model and the eval's `--reasoning-effort` / `-M` would never reach it: the
+profile's effort and args are set on that model directly.
 
 The native `react` agent uses the answerer directly and has sandbox-backed
-shell and text-editor tools. Its `AGENT_MODEL` and `AGENT_VERSION` values
+shell and text-editor tools. Its `agent_model` and `agent_version` values
 are recorded labels; they do not select a second model or CLI version.
 The CLI agents use `agents.aliases()` to map the name a CLI sends onto the
 `Model` the eval built. Two constraints survive that:
@@ -98,15 +100,15 @@ The CLI agents use `agents.aliases()` to map the name a CLI sends onto the
 - the **wire model** must exist in the CLI's own catalogue. The CLI checks it
   before sending anything, so a version that predates the slug refuses it and
   no alias can rescue it (opencode 1.14.42 vs `deepseek-v4.1-flash`);
-- the **answerer's provider** must have its credentials named in
-  `BENCH_MODEL_ENV` and set in `.env`. The agent needs none of its own: its
+- the **answerer's provider** must have its credentials named in the
+  profile's `model_env` and set in `.env`. The agent needs none of its own: its
   CLI sandbox gets a dummy credential and the bridge answers. Native ReAct
   uses the answerer's configured credentials directly.
 
-`BENCH_MODEL_ENV` is what keeps a new provider out of the code: it lists the
+`model_env` is what keeps a new provider out of the code: it lists the
 variable names the provider reads — one `*_API_KEY` for an Inspect provider,
 `<SERVICE>_API_KEY` + `<SERVICE>_BASE_URL` for an OpenAI-compatible gateway,
-nothing for `mockllm` — and `settings.MODEL_ENV` forwards exactly those. Each
+nothing for `mockllm` — and `settings.credentials` forwards exactly those. Each
 named variable is required; an empty list is a real answer, an absent one is
 an error.
 
@@ -135,7 +137,7 @@ task type.
 2. Inspect boots the **solve sandbox** from `env/solve.yaml`: the sample's
    toolchain, the workspace writable, and the database as a sidecar.
 3. The agent runs inside it with `work_order(manifest)` as its prompt:
-   `AGENT` in `.env`, one entry of `src/agents/`, with the answerer model
+   the profile's `agent`, one entry of `src/agents/`, with the answerer model
    passed directly to native `react` or bridged to a CLI agent.
 4. On cleanup, `solves.capture` writes `out/solves/<run_id>/`: `record.json`,
    `diff.patch` (new files included) and `tree/`.

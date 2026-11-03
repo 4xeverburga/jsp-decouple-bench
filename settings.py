@@ -6,7 +6,11 @@ Two kinds of value live here, and only one of them is a parameter:
   viewport, the locale, the clock, the timeouts, the model names. They are
   required: there are no defaults, so a missing key is a configuration
   error, not a silent fallback. The shell environment is not consulted for
-  them; `.env` is the single source of truth.
+  them; `.env` is the single source of truth. `.env` also holds the
+  credentials a run profile names, and nothing about the run itself.
+- **Run profiles**, from `runs.yaml` — who solves a manifest, with which
+  model and effort. Named, tracked, chosen per invocation with
+  `--profile`; see `profile`.
 - **Run inputs**, from the process environment — the checkout under test,
   the URL its stack publishes, the sample's own env folder. They change
   from run to run and are set by the driver (`src/bench/cli.py`), so they
@@ -19,6 +23,7 @@ import os
 import sys
 from pathlib import Path
 
+import yaml
 from dotenv import dotenv_values
 
 ROOT = Path(__file__).resolve().parent
@@ -44,21 +49,6 @@ def _integer(name: str) -> int:
 
 def _flag(name: str) -> bool:
     return _text(name) == "1"
-
-
-def _names(name: str) -> list[str]:
-    """A required list of variable names, possibly empty.
-
-    Absent is an error like any other key, but an empty value is a real
-    answer: a mock or local model needs no credential at all.
-    """
-    value = _ENV.get(name)
-    if value is None:
-        raise KeyError(
-            f"{name} is missing from {ENV_FILE}: copy .env.example to .env "
-            f"and fill it in (empty is allowed, absent is not)"
-        )
-    return value.split()
 
 
 # --- storage. Relative to the repository root; never a per-run choice. -----
@@ -106,26 +96,62 @@ STACK_TRACES_SERVICE = "collector"
 STACK_TRACES_FILE = "/traces/traces.jsonl"
 TRACE_FLUSH_WAIT_S = 8
 
-# --- the agent the solve phase runs. These are recorded with every solve.
-# CLI agents use all three; ReAct uses the answer model directly, so its
-# model and version fields are labels only. `src/agents/` defines agents. --
-AGENT = _text("AGENT")
-# For CLI agents, this is the wire name the CLI formats its requests for.
-# Native ReAct records the value as a label; it is not the answer model.
-AGENT_MODEL = _text("AGENT_MODEL")
-AGENT_VERSION = _text("AGENT_VERSION")
+# --- who solves a run: a named profile in `runs.yaml`, never `.env`. -----
+# A profile is a choice, not a secret, so it is tracked; `.env` only holds
+# the credentials a profile's `model_env` names. `src/agents/` defines the
+# agents a profile can name.
+RUNS_FILE = ROOT / "runs.yaml"
+PROFILE_KEYS = (
+    "agent",
+    "agent_model",
+    "agent_version",
+    "answer_model",
+    "model_env",
+    "reasoning_effort",
+    "model_args",
+)
+EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
 
-# --- the model that answers, and the variables its provider reads. --------
-# WHICH variables those are is `.env`'s business (`BENCH_MODEL_ENV`), not
-# this file's: a provider reads its credential from the process environment
-# under a name of its own — one `*_API_KEY` for Inspect's native providers,
-# `<SERVICE>_API_KEY` + `<SERVICE>_BASE_URL` for an OpenAI-compatible
-# gateway — so they are passed through untouched. A new answerer is two
-# lines in `.env` and nothing here. Native ReAct uses these credentials
-# directly; a CLI agent's sandbox gets a dummy credential and the bridge
-# answers.
-ANSWER_MODEL = _text("BENCH_ANSWER_MODEL")
-MODEL_ENV = {name: _text(name) for name in _names("BENCH_MODEL_ENV")}
+
+def profile(name: str) -> dict:
+    """The run profile called ``name``, exactly as `runs.yaml` spells it.
+
+    Every key is required and no other is allowed, so a typo is an error
+    and not a value that silently never applies. Credentials are not part
+    of it: `credentials` resolves `model_env` against `.env`.
+    """
+    profiles = yaml.safe_load(RUNS_FILE.read_text())
+    if name not in profiles:
+        raise KeyError(
+            f"no profile {name!r} in {RUNS_FILE}; it has: "
+            f"{', '.join(sorted(profiles))}"
+        )
+    chosen = profiles[name]
+    missing = [key for key in PROFILE_KEYS if key not in chosen]
+    unknown = sorted(set(chosen) - set(PROFILE_KEYS))
+    if missing or unknown:
+        raise KeyError(
+            f"profile {name!r} in {RUNS_FILE}: missing {missing}, "
+            f"unknown {unknown}"
+        )
+    if chosen["reasoning_effort"] not in EFFORTS:
+        raise ValueError(
+            f"profile {name!r}: reasoning_effort must be one of {EFFORTS}"
+        )
+    return {key: chosen[key] for key in PROFILE_KEYS}
+
+
+def credentials(chosen: dict) -> dict[str, str]:
+    """The values of the variables a profile's provider reads, from `.env`.
+
+    WHICH variables is the profile's business: a provider reads its
+    credential under a name of its own — one `*_API_KEY` for Inspect's
+    native providers, `<SERVICE>_API_KEY` + `<SERVICE>_BASE_URL` for an
+    OpenAI-compatible gateway. A CLI agent's sandbox never sees them: it
+    gets a dummy credential and the bridge answers.
+    """
+    return {name: _text(name) for name in chosen["model_env"]}
+
 
 # --- the model the score phase is labelled with. It answers nothing, but
 # Inspect requires one; `mockllm/model` makes that explicit in the log. ----

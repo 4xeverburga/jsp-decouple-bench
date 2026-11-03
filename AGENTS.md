@@ -14,7 +14,8 @@ this file is not for you.
 | every parameter: timeouts, viewport, locale, models, paths | `settings.py` |
 | the values of those parameters | `.env` (untracked, from `.env.example`) |
 | agents the solve can run | `src/agents/` |
-| the model that answers, and the variables its provider reads | `BENCH_ANSWER_MODEL`, `BENCH_MODEL_ENV` in `.env` |
+| who solves a run: agent, its pin, the model that answers, its effort | a named profile in `runs.yaml` |
+| the credentials a profile names | `.env` |
 | the answer key: flows and goldens | `src/samples/<sample>/cases/` |
 | the stack, Containerfile, .env, OpenTelemetry collector | `src/samples/<sample>/env/` |
 | starting and removing a case's stack | `src/bench/stack.py` |
@@ -82,14 +83,16 @@ modules and the lifecycle.
 cp .env.example .env        # once per checkout; settings.py reads nothing else
 export BENCH_CHECKOUT=/abs/checkout
 
-uv run python main.py task --manifest 3 --model anthropic/claude-sonnet-4-5
+uv run python main.py task --manifest 3 --profile opencode-deepseek-flash
 ```
 
-`--agent codex --agent-model gpt-5-codex --agent-version <its pin>` changes
-who solves it; `AGENT`, `AGENT_MODEL` and `AGENT_VERSION` in `.env` are the
-default trio, and they must describe the same agent. `--model` names what
-answers instead of `BENCH_ANSWER_MODEL`, which is the only thing a score is
-attributed to: the agent's model name is just the format of its request.
+`--profile` is required and names a row of `runs.yaml`: the agent, its
+version, the wire model it asks for, the `answer_model` that answers, the
+variables that provider reads, the reasoning effort and the model args.
+Every key is required. A new run setup is a new profile, not an edit to an
+old one: the record keeps the profile's name and what it resolved to.
+`answer_model` is the only thing a score is attributed to: the agent's
+model name is just the format of its request.
 
 The solve runs one agent in its own workspace, then every scorer
 assigned to the manifest grades the tree it left. `out/solves/<run id>/` keeps the tree,
