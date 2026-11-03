@@ -33,18 +33,25 @@ compared to another model's.
 | `out/solves/<run>/record.json` | agent, agent_model, agent_version, model, manifest_id, diff_bytes | what ran, and what answered |
 | `out/solves/<run>/diff.patch` | what the tree gained, from `git diff --binary` | the static evidence (§5) |
 | `out/solves/<run>/tree/` | the workspace the agent left | what will be scored |
-| `out/solves/<run>/agent/session.tar` | the agent CLI's **own** state directory, copied out of the sandbox before it is destroyed (`solves.keep_agent`) | the tool calls (§1) |
-| `out/evals/*.eval` | Inspect's log: the work order and the scores, **not** the tool calls | that the sample completed |
+| `out/solves/<run>/agent/session.tar` | the CLI agent's **own** state directory, copied before its sandbox is destroyed (`solves.keep_agent`) | CLI tool calls (§1) |
+| `out/evals/*.eval` | Inspect's log: the work order, the scores, and the tool calls of a native ReAct run — plus whatever the bridge converted for a CLI | that the sample completed, and how the agent got there |
 | `out/workspaces/<run>/` | the pre-agent tree, materialised from the pin | a blank to compare the diff against |
 
-For `opencode` the archive expands to `opencode.db` (SQLite), `log/` and
-`snapshot/` (the CLI's own git baseline of the workspace). The other CLIs
-keep their record elsewhere — `agents.state(name)` in `src/bench/agents.py`
-is the registry, and `_keep_agent` tars whatever directory it names.
+Native `react` does not create `session.tar`; its tool calls are in the
+Inspect eval log. For `opencode` the archive expands to `opencode.db`
+(SQLite), `log/` and `snapshot/` (the CLI's own git baseline of the
+workspace). The other CLIs keep their record elsewhere —
+`agents.state(name)` in `src/agents/` is the registry, and `_keep_agent`
+tars whatever directory it names.
 
-**A missing or empty `session.tar` is `unauditable`, never `clean`.** The
-eval log does not contain the tool calls, so with the archive gone there is
-nothing to read: the sandbox died with it.
+For a CLI agent, a missing or empty `session.tar` costs you the agent's own
+record, and never turns the run `clean`. It does not always end the audit:
+this `inspect_swe` bridges a CLI's events into the transcript, so
+`out/evals/*.eval` may still hold the tool calls — the 2026-10-29
+`decouple-slice` opencode log carries 229 messages and 113 `bash`/`read`
+tool results. Read the log first; what the bridge did not convert is what
+the archive was for. For native `react`, read the tool calls from the
+eval log: it has no archive.
 
 ## The four things that make a run unusable
 
@@ -70,6 +77,10 @@ tag that still had the pre-decoupling code, it becomes finding 2.
 
 Evidence has to be citable, so reduce the agent's record to one line per
 event and keep the numbering stable for the rest of the audit:
+
+For a native `react` run, skip archive extraction: read the run's tool and
+message events from its Inspect eval log and preserve them in a numbered
+transcript. For a CLI run, use its archived session as below.
 
 ```bash
 RUN=out/solves/<run_id>

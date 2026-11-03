@@ -27,13 +27,15 @@ What is done, what is next, and what is parked. Decisions of record live in
    `entrypoint.sh`, a one-shot bootstrap and the OpenTelemetry agent.
    `src/samples/mamute/env/` and `src/samples/openclinica/env/` are the two
    reference shapes.
-4. **Prove the other agents.** `src/bench/agents.py` registers `opencode`,
+4. **Prove the other CLI agents.** `src/agents/registry.py` registers `opencode`,
    `codex`, `claude` and `gemini`, and `--agent` selects one, but only
    `opencode` has run. Each of the others needs: a version whose own
    catalogue knows the wire name (`AGENT_MODEL`), its session directory
    confirmed against `agents.state()`, and a first run read before any
    score from it is quoted. What differs is the wire name, the bridge
-   prefix and where the CLI writes its record.
+   prefix and where the CLI writes its record. The native `react` agent is
+   implemented in `src/agents/react.py`; its tool and provider compatibility
+   still needs a real slice run.
 
 ## Parked
 
@@ -82,8 +84,8 @@ What is done, what is next, and what is parked. Decisions of record live in
 - `network_isolation` retired: with one scoring service there is no network
   contract left to grade.
 - Solve is agent-agnostic: `AGENT`/`AGENT_MODEL`/`AGENT_VERSION` and
-  `--agent`, one registry entry per CLI agent. Only `opencode` is verified
-  (see Next 2 and 4).
+  `--agent` select native ReAct or a registered CLI agent. Only `opencode`
+  is verified end to end (see Next 2 and 4).
 - `templates/` deleted: the stack lives in `src/samples/<slug>/env/`, so
   there is no compose to copy into a pin — and a pin that carries one is
   refused at the first solve.

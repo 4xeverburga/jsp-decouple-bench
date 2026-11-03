@@ -34,7 +34,8 @@ from inspect_ai.util import sandbox as host_sandbox
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import settings  # noqa: E402
-from src.bench import agents, samples, solves  # noqa: E402
+from src import agents  # noqa: E402
+from src.bench import samples, solves  # noqa: E402
 from src.bench.compose import solve_compose  # noqa: E402
 from src.bench.scorers.functional_parity import parity  # noqa: E402
 from src.bench.seeds import manifest as load_manifest  # noqa: E402
@@ -88,21 +89,23 @@ async def capture_solution(state: TaskState) -> None:
 
 
 async def _keep_agent(run: str, agent: str) -> None:
-    """Copy the CLI's session record out before the sandbox is removed.
+    """Copy a CLI session record out before the sandbox is removed.
 
     The library hands the agent's stdout back in memory and drops it after
-    the run, and the eval log holds the work order and the scores but not
-    the tool calls in between, so this is the only way a finished run can
-    be read afterwards. Where that record lives is the agent's own
-    business: `agents.state(name)` says.
+    the run, so CLI tool calls are kept from the agent's state directory.
+    Native ReAct has no separate state directory; its tool calls are in the
+    Inspect eval log.
     """
+    state = agents.state(agent)
+    if state is None:
+        return
     try:
         box = host_sandbox()
         done = await box.exec(
             [
                 "sh",
                 "-c",
-                f"cd {agents.state(agent)} && tar -cf - . | base64 -w0",
+                f"cd {state} && tar -cf - . | base64 -w0",
             ]
         )
     except Exception:  # no sandbox left, or nothing to copy

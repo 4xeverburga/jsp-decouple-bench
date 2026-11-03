@@ -11,7 +11,6 @@ jsp-decouple-bench/
 ├── ROADMAP.md               # direction
 ├── specs/                   # modules.md, behavior.md
 ├── seeds/                   # samples.json, task_types.json, manifests.json
-├── src/samples/<slug>/env/  # the stack: compose, Containerfile, .env, OTel
 ├── out/                     # gitignored; ALL output
 │   ├── solves/<run_id>/     # record.json, diff.patch, tree/
 │   ├── workspaces/<run_id>/ # the tree an agent is given
@@ -19,6 +18,7 @@ jsp-decouple-bench/
 │   ├── traces/<slug>/       # a case's spans, taken before `down -v`
 │   └── evidence/<slug>/     # a failing case's screenshot
 └── src/
+    ├── agents/              # native ReAct agent and CLI agent registry
     ├── bench/               # the harness
     └── samples/<slug>/      # one folder per sample; there will be many
         ├── cases/<case>/    # the answer key: case.json, flow.py, expect.json
@@ -51,6 +51,7 @@ algorithm and the shape rules.
 
 ```
 main.py → cli → solves, stack, compose, seeds, settings
+        → agents → inspect_ai / inspect_swe
         → scorers → stack, settings   (a scorer never imports another scorer)
 ```
 
@@ -58,8 +59,12 @@ main.py → cli → solves, stack, compose, seeds, settings
   because the repository root is on `sys.path` at every entry point.
 - Only `stack.py` talks to `docker compose` for scoring; scorers ask it for
   a running stack and never shell out themselves.
-- Only `main.py` imports `inspect_swe`: the agent is the one place the
-  evaluated party enters the code.
+- `src/agents/react.py` builds the Inspect-native ReAct agent using
+  sandbox-backed shell and text-editor tools. `src/agents/registry.py` is
+  the table of every agent a solve can run — the `inspect_swe` CLI rows and
+  their model bridge, plus the native row, which has no bridge (`param=None`).
+- Agent implementations are selected through `src/agents/`; the harness
+  does not depend on a particular CLI agent.
 - Nothing under `src/samples/` is Python the bench imports. A flow is loaded
   **by path**, so adding a case never means touching `src/bench`.
 

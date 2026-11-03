@@ -106,13 +106,12 @@ STACK_TRACES_SERVICE = "collector"
 STACK_TRACES_FILE = "/traces/traces.jsonl"
 TRACE_FLUSH_WAIT_S = 8
 
-# --- the agent the solve phase runs. Three values that describe ONE
-# agent, so switching AGENT means taking its version and its wire model
-# along: `src/bench/agents.py` is what each name means. -------------------
+# --- the agent the solve phase runs. These are recorded with every solve.
+# CLI agents use all three; ReAct uses the answer model directly, so its
+# model and version fields are labels only. `src/agents/` defines agents. --
 AGENT = _text("AGENT")
-# The wire name: the string the CLI formats its requests for. It must be
-# one its own catalogue knows (this is what refuses a name before any
-# request is made), and it is NOT the model that answers.
+# For CLI agents, this is the wire name the CLI formats its requests for.
+# Native ReAct records the value as a label; it is not the answer model.
 AGENT_MODEL = _text("AGENT_MODEL")
 AGENT_VERSION = _text("AGENT_VERSION")
 
@@ -122,8 +121,9 @@ AGENT_VERSION = _text("AGENT_VERSION")
 # under a name of its own — one `*_API_KEY` for Inspect's native providers,
 # `<SERVICE>_API_KEY` + `<SERVICE>_BASE_URL` for an OpenAI-compatible
 # gateway — so they are passed through untouched. A new answerer is two
-# lines in `.env` and nothing here. They follow the ANSWERER, not the agent:
-# the agent's own sandbox gets a dummy credential and the bridge answers.
+# lines in `.env` and nothing here. Native ReAct uses these credentials
+# directly; a CLI agent's sandbox gets a dummy credential and the bridge
+# answers.
 ANSWER_MODEL = _text("BENCH_ANSWER_MODEL")
 MODEL_ENV = {name: _text(name) for name in _names("BENCH_MODEL_ENV")}
 

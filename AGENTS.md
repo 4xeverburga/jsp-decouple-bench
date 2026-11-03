@@ -12,7 +12,7 @@ this file is not for you.
 | the graded cases, the work order and the run's budget | `seeds/manifests.json` |
 | every parameter: timeouts, viewport, locale, models, paths | `settings.py` |
 | the values of those parameters | `.env` (untracked, from `.env.example`) |
-| the CLI agents the solve can run, and what each needs | `src/bench/agents.py` |
+| agents the solve can run | `src/agents/` |
 | the model that answers, and the variables its provider reads | `BENCH_ANSWER_MODEL`, `BENCH_MODEL_ENV` in `.env` |
 | the answer key: flows and goldens | `src/samples/<sample>/cases/` |
 | the stack, Containerfile, .env, OpenTelemetry collector | `src/samples/<sample>/env/` |
@@ -90,7 +90,7 @@ default trio, and they must describe the same agent. `--model` names what
 answers instead of `BENCH_ANSWER_MODEL`, which is the only thing a score is
 attributed to: the agent's model name is just the format of its request.
 
-The solve runs one CLI agent in its own workspace, then every scorer
+The solve runs one agent in its own workspace, then every scorer
 assigned to the manifest grades the tree it left. `out/solves/<run id>/` keeps the tree,
 the diff and a record of what ran. `python main.py score --manifest N --run ID`
 grades a kept tree again without paying for the agent.

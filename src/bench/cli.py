@@ -307,7 +307,7 @@ def _parser() -> argparse.ArgumentParser:
     task.add_argument(
         "--agent",
         default=settings.AGENT,
-        help="which CLI agent solves it: a name in src/bench/agents.py",
+        help="which agent solves it: a row of src/agents/registry.py",
     )
     task.add_argument(
         "--agent-model",

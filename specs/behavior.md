@@ -86,18 +86,22 @@ Two independent choices, joined by the bridge:
 
 | | configured by | what it decides |
 |---|---|---|
-| **agent** | `AGENT`, `AGENT_MODEL`, `AGENT_VERSION` (`--agent…`) | which CLI drives, the system prompt and tool set it uses, and the model name it asks the bridge for |
+| **agent** | `AGENT`, `AGENT_MODEL`, `AGENT_VERSION` (`--agent…`) | which implementation and tool set solves the work order |
 | **answerer** | `BENCH_ANSWER_MODEL`, `BENCH_MODEL_ENV` (`--model`) | which model generates the tokens, and so what a score is attributed to |
 
-Any agent can be answered by any model: `agents.aliases()` maps the name the
-CLI sends onto the `Model` the eval built. Two constraints survive that:
+The native `react` agent uses the answerer directly and has sandbox-backed
+shell and text-editor tools. Its `AGENT_MODEL` and `AGENT_VERSION` values
+are recorded labels; they do not select a second model or CLI version.
+The CLI agents use `agents.aliases()` to map the name a CLI sends onto the
+`Model` the eval built. Two constraints survive that:
 
 - the **wire model** must exist in the CLI's own catalogue. The CLI checks it
   before sending anything, so a version that predates the slug refuses it and
   no alias can rescue it (opencode 1.14.42 vs `deepseek-v4.1-flash`);
 - the **answerer's provider** must have its credentials named in
   `BENCH_MODEL_ENV` and set in `.env`. The agent needs none of its own: its
-  sandbox gets a dummy credential and the bridge answers.
+  CLI sandbox gets a dummy credential and the bridge answers. Native ReAct
+  uses the answerer's configured credentials directly.
 
 `BENCH_MODEL_ENV` is what keeps a new provider out of the code: it lists the
 variable names the provider reads — one `*_API_KEY` for an Inspect provider,
@@ -106,9 +110,11 @@ nothing for `mockllm` — and `settings.MODEL_ENV` forwards exactly those. Each
 named variable is required; an empty list is a real answer, an absent one is
 an error.
 
-What is proven: `opencode` 1.19.5 answered by
+What is proven end to end: `opencode` 1.19.5 answered by
 `opencode-go/deepseek-v4.1-flash`. `codex`, `claude` and `gemini` are
-registered and selectable; `ROADMAP.md` says what proving one takes.
+registered and selectable; the native `react` agent is implemented but
+still needs a real slice run before its provider/tool compatibility is
+considered proven.
 
 ## The unit of work
 
@@ -129,8 +135,8 @@ task type.
 2. Inspect boots the **solve sandbox** from `env/solve.yaml`: the sample's
    toolchain, the workspace writable, and the database as a sidecar.
 3. The agent runs inside it with `work_order(manifest)` as its prompt:
-   `AGENT` in `.env`, one entry of `src/bench/agents.py`, bridged so that
-   `BENCH_ANSWER_MODEL` is what answers.
+   `AGENT` in `.env`, one entry of `src/agents/`, with the answerer model
+   passed directly to native `react` or bridged to a CLI agent.
 4. On cleanup, `solves.capture` writes `out/solves/<run_id>/`: `record.json`,
    `diff.patch` (new files included) and `tree/`.
 

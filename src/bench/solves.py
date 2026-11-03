@@ -54,9 +54,11 @@ def _refuse_stack_files(tree: Path) -> None:
 def keep_agent(run_id: str, archive: bytes) -> Path:
     """The agent's own record of the run, as it left it.
 
-    Neither the database nor the log survives the container, and they are
-    the only place a run's tool calls are written down: the eval log keeps
-    the work order and the scores, not what the agent did between them.
+    Neither the database nor the log survives the container, and for a CLI
+    that directory holds more than the transcript does: the eval log
+    carries whatever the bridge converted and nothing for what it did not.
+    Native ReAct keeps no directory — its trajectory is the log — so this
+    is only called for a row that names one.
     """
     target = location(run_id) / "agent"
     target.mkdir(parents=True, exist_ok=True)
