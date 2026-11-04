@@ -1,0 +1,148 @@
+{
+  "sample": "online-study-system",
+  "case": "admin-student-flow__remove-student-cascades",
+  "sample_commit": "2523274af7764f422ed9f49d847d78faddf2e74e",
+  "captured_at": "2026-11-04T19:33:56+00:00",
+  "requests": [
+    {
+      "label": "SERVER GET /Examination_System/login -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER POST /Examination_System/login -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "ResponseFacade.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/admin/showCourse -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 4,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/admin/showStudent -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student",
+          "count": 2,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/admin/removeStudent -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL DELETE student_course",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL DELETE student",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL DELETE userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "ResponseFacade.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/admin/showStudent -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student",
+          "count": 2,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

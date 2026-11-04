@@ -206,7 +206,8 @@
       ]
     },
     "scorers": [
-      "functional_parity"
+      "functional_parity",
+      "trace_similarity"
     ],
     "name": "admin-course-flow",
     "id": 5,
@@ -248,7 +249,8 @@
       ]
     },
     "scorers": [
-      "functional_parity"
+      "functional_parity",
+      "trace_similarity"
     ],
     "name": "admin-student-flow",
     "id": 6,
@@ -291,7 +293,8 @@
       ]
     },
     "scorers": [
-      "functional_parity"
+      "functional_parity",
+      "trace_similarity"
     ],
     "name": "exam-flow",
     "id": 7,
@@ -331,7 +334,8 @@
       ]
     },
     "scorers": [
-      "functional_parity"
+      "functional_parity",
+      "trace_similarity"
     ],
     "name": "out-course-flow",
     "id": 8,
@@ -371,7 +375,8 @@
       ]
     },
     "scorers": [
-      "functional_parity"
+      "functional_parity",
+      "trace_similarity"
     ],
     "name": "recharge-flow",
     "id": 9,
@@ -413,7 +418,8 @@
       ]
     },
     "scorers": [
-      "functional_parity"
+      "functional_parity",
+      "trace_similarity"
     ],
     "name": "select-course-flow",
     "id": 10,
@@ -456,7 +462,8 @@
       ]
     },
     "scorers": [
-      "functional_parity"
+      "functional_parity",
+      "trace_similarity"
     ],
     "name": "study-flow",
     "id": 11,
@@ -498,7 +505,8 @@
       ]
     },
     "scorers": [
-      "functional_parity"
+      "functional_parity",
+      "trace_similarity"
     ],
     "name": "teacher-mark-flow",
     "id": 12,

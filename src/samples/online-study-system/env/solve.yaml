@@ -1,0 +1,42 @@
+# The online-study-system solve sandbox: the checkout, writable, and the MySQL
+# its app uses.
+#
+# The agent runs inside this, so it never has the docker socket and never
+# sees the supervisor's home. The image is built from toolbox/Containerfile;
+# the sandbox only guarantees where it may write.
+#
+# Writable host binds are refused by Inspect unless the project opts in:
+# that is what the escape hatch below is for, and it is deliberate here.
+x-inspect_docker_sandbox:
+  unsafe_allow_writable_host_mounts: true
+
+name: application-mysql
+
+services:
+  workspace:
+    x-default: true
+    build:
+      # The tree is the context, exactly as it is for the scoring image: the
+      # toolbox warms `~/.m2` from the pin's own pom, so the agent's first
+      # `mvn` is seconds instead of the cold download. The mount below shadows
+      # whatever was copied in, so the copy in the image is never what the
+      # agent reads. Built once per pin; `docker compose up` reuses the image
+      # and does not rebuild it.
+      context: ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}
+      dockerfile: ${BENCH_SAMPLE_ENV:?set by the bench}/toolbox/Containerfile
+    image: bench-solve-online-study-system:local
+    init: true
+    command: tail -f /dev/null
+    volumes:
+      - ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}:${SOLVE_ROOT:?set SOLVE_ROOT}
+    working_dir: ${SOLVE_ROOT:?set SOLVE_ROOT}
+
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: online_study_system
+    volumes:
+      # Same seed as the scoring stack: the schema and rows of the tree's dump.
+      - ./init-db.sh:/docker-entrypoint-initdb.d/10-schema.sh:ro
+      - ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}/sql/online_study_system.sql:/schema.sql:ro

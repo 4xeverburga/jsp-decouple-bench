@@ -1,0 +1,109 @@
+# Online Study System — the scoring stack.
+#
+# One host port is configurable, so the app can run on any free port without
+# editing this file:
+#   APP_HTTP_PORT   host port for the app   (default 8091)
+#
+# The database publishes nothing: it is reached from inside `data` only, and
+# its schema and seed rows are the tree's own dump, loaded once while MySQL
+# initialises the volume.
+#
+# Credentials come from this folder's .env (synthetic and deterministic).
+#
+# Networks:
+#   api    front <-> back
+#   data   back <-> db
+# `front` is on both today: the app is still server-rendered and reads the
+# database directly.
+#
+# Traces: the app runs under the OpenTelemetry Java agent (CATALINA_OPTS) and
+# exports to `collector`, which writes them to the `traces` volume. Nothing
+# waits on the collector's health, so a dead one cannot change what the app
+# does.
+name: online-study-system
+
+networks:
+  api: {}
+  data: {}
+
+services:
+  collector:
+    image: otel/opentelemetry-collector-contrib:0.140.0
+    networks:
+      - api
+    # the named volume is root-owned; the image's default user is not
+    user: "0"
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otel/config.yaml:ro
+      - traces:/traces
+
+  db:
+    image: mysql:5.7
+    networks:
+      - data
+    environment:
+      MYSQL_ROOT_PASSWORD: ${OSS_DB_PASSWORD:?set .env (cp from .env.example)}
+      MYSQL_DATABASE: ${OSS_DB_NAME:?set .env (cp from .env.example)}
+    volumes:
+      - db-data:/var/lib/mysql
+      # First boot only: the seed is part of the tree under test, and the
+      # client charset is set in the script (a latin1 client fails the dump).
+      - ./init-db.sh:/docker-entrypoint-initdb.d/10-schema.sh:ro
+      - ${BENCH_CHECKOUT:?set BENCH_CHECKOUT to the tree to score}/sql/online_study_system.sql:/schema.sql:ro
+    healthcheck:
+      # The server is not up (and not listening on TCP) while the seed loads,
+      # so this stays red until the dump is in, which is what `front` waits
+      # for.
+      test:
+        ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 20s
+
+  front:
+    x-default: true
+    build:
+      context: ${BENCH_CHECKOUT:?set BENCH_CHECKOUT to the tree to score}
+      dockerfile: ${BENCH_SAMPLE_ENV:?set by the bench}/Containerfile
+    networks:
+      - api
+      - data
+    depends_on:
+      db:
+        condition: service_healthy
+      collector:
+        condition: service_started
+    ports:
+      - "${APP_HTTP_PORT:-8091}:8080"
+    volumes:
+      - ./entrypoint.sh:/workspace/entrypoint.sh:ro
+    environment:
+      # fail fast instead of booting with empty credentials
+      OSS_DB_HOST: db
+      OSS_DB_NAME: ${OSS_DB_NAME:?set .env (cp from .env.example)}
+      OSS_DB_USER: ${OSS_DB_USER:?set .env (cp from .env.example)}
+      OSS_DB_PASSWORD: ${OSS_DB_PASSWORD:?set .env (cp from .env.example)}
+      # Tomcat's own JVM is the one that hosts the app.
+      CATALINA_OPTS: -javaagent:/opt/otel/javaagent.jar
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:?set .env (cp from .env.example)}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:?set .env (cp from .env.example)}
+      OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:?set .env (cp from .env.example)}
+      OTEL_METRICS_EXPORTER: ${OTEL_METRICS_EXPORTER:?set .env (cp from .env.example)}
+      OTEL_LOGS_EXPORTER: ${OTEL_LOGS_EXPORTER:?set .env (cp from .env.example)}
+      OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:?set .env (cp from .env.example)}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?set .env (cp from .env.example)}
+    healthcheck:
+      # The login page is the one route the app serves without a session, so an
+      # answer from it means Tomcat deployed the context and Spring started.
+      test:
+        ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8080/Examination_System/login"]
+      interval: 5s
+      timeout: 10s
+      retries: 120
+      start_period: 60s
+
+volumes:
+  db-data:
+  traces:

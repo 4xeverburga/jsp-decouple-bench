@@ -30,11 +30,15 @@
     "project_id": "jitwxs/Online_Study_System",
     "source": "https://github.com/4xeverburga/Online_Study_System.git",
     "branch": "main",
-    "commit_sha": "fa9678557543d8c9dfceb8b042335ca55923feed",
+    "commit_sha": "2523274af7764f422ed9f49d847d78faddf2e74e",
     "license": "Apache-2.0",
     "description": "Course/exam management. Spring MVC 4.3, Shiro, JSP/JSTL.",
     "entrypoint": "compose.yaml",
     "target_url": "http://localhost:8091/Examination_System",
+    "solve": {
+      "toolchain": "JDK 8, Maven and Tomcat 9 toolchain",
+      "database": "a MySQL service named db, reachable on port 3306 as root with password root, database online_study_system, already loaded with the schema and the seed rows of the tree's own dump. Use that host, not localhost."
+    },
     "technologies": [
       "java7",
       "jsp",

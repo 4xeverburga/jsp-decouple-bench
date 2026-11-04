@@ -20,13 +20,7 @@ What is done, what is next, and what is parked. Decisions of record live in
    run here: `opencode` 1.19.5, answered by
    `opencode-go/deepseek-v4.1-flash`.** Nothing else is proven — not
    another OpenCode model, not another agent.
-3. **A scoring stack for `online-study-system`.** It has cases but no
-   `src/samples/online-study-system/env/`, so it cannot be scored yet: it
-   needs `compose.yaml`, `Containerfile`, `.env`/`.env.example`, an
-   `entrypoint.sh`, a one-shot bootstrap and the OpenTelemetry agent.
-   `src/samples/mamute/env/` and `src/samples/openclinica/env/` are the two
-   reference shapes.
-4. **Prove the other CLI agents.** `src/agents/registry.py` registers `opencode`,
+3. **Prove the other CLI agents.** `src/agents/registry.py` registers `opencode`,
    `codex`, `claude` and `gemini`, and a profile's `agent` selects one, but only
    `opencode` has run. 
    
@@ -68,8 +62,12 @@ What is done, what is next, and what is parked. Decisions of record live in
   one stack per case, and writes `expect.json`.
 - `functional_parity` reads any SQL dialect the manifest names (`mysql`,
   `postgres`), from inside the case's `db` service.
-- Two samples with a scoring stack: `mamute` (Jetty + MySQL) and
-  `openclinica` (Tomcat 9 + PostgreSQL 9.6), both under the OTel agent.
+- Three samples with a scoring stack: `mamute` (Jetty + MySQL),
+  `openclinica` (Tomcat 9 + PostgreSQL 9.6) and `online-study-system`
+  (Tomcat 9 + MySQL 5.7, the tree's own dump as the seed), all under the OTel
+  agent. `online-study-system` has its eleven cases captured with a
+  `trace.json` each, and manifests 5-12 grade them against
+  `functional_parity` and `trace_similarity`.
 - `.agents/skills/` describe `main.py` and the current sample layout.
 - Samples under `src/samples/<slug>/{cases,env}`.
 - Work orders with no docker, compose or container vocabulary.
@@ -79,7 +77,7 @@ What is done, what is next, and what is parked. Decisions of record live in
   contract left to grade.
 - Solve is agent-agnostic: a `tasks-config.yaml` solve profile (`--profile`) selects
   native ReAct or a registered CLI agent, and the model that answers it. Only `opencode`
-  is verified end to end (see Next 2 and 4).
+  is verified end to end (see Next 2 and 3).
 - `templates/` deleted: the stack lives in `src/samples/<slug>/env/`, so
   there is no compose to copy into a pin — and a pin that carries one is
   refused at the first solve.
