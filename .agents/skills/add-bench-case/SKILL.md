@@ -156,7 +156,7 @@ BENCH_CHECKOUT=$PWD/../mamute \
 ```
 
 What it does, in order: archive the pinned commit into
-`out/workspaces/capture-<id>/` (refusing a pin that carries a stack
+temporary checkout (refusing a pin that carries a stack
 file), build and start **one stack per case** from `env/compose.yaml`,
 snapshot the declared tables, run `flow.py` once, snapshot again, and
 write `expect.json` = `{sample, case, sample_commit, captured_at, db:

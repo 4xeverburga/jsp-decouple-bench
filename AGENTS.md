@@ -129,8 +129,9 @@ loads (`inspect eval main.py@<task type>`). Scoring prints its progress as
 Two solves of one sample, two scores of one kept tree, or a score next to
 a capture can share a host:
 
-- a solve sandbox is its own compose project (Inspect names it), with its
-  own database; its workspace is `out/workspaces/<run id>/`;
+- a solve sandbox is its own compose project, with its own database; its
+  checkout is mounted from a temporary directory outside the repository and
+  removed after Inspect finishes;
 - a scoring or capture stack is its own compose project, on a free host
   port it picks itself (`stack.Stack.base_url`), retried
   `STACK_PORT_ATTEMPTS` times if another process takes it first. The

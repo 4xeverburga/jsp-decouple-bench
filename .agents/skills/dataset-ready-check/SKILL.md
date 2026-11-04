@@ -95,18 +95,22 @@ pin, keep it as a run, keep its diff empty:
 ```bash
 uv run python - <<'PY'
 from pathlib import Path
+import shutil
 from src.bench import solves
 from src.bench.seeds import pin
 
 slug, run = "mamute", "noop-mamute"
-workspace = solves.materialise(run, Path("../mamute").resolve(), pin(slug))
-solves.capture(run, workspace, {
-    # `score` refuses a record with no profile, because the profile is what
-    # labels the verdict; no agent produced this tree.
-    "profile": "none",
-    "agent": "none", "agent_model": "none", "agent_version": "none",
-    "model": "none", "note": "no-op self-check at the pinned tree",
-})
+workspace = solves.materialise(Path("../mamute").resolve(), pin(slug))
+try:
+    solves.capture(run, workspace, workspace.parent / "baseline", {
+        # `score` refuses a record with no profile, because the profile is
+        # what labels the verdict; no agent produced this tree.
+        "profile": "none",
+        "agent": "none", "agent_model": "none", "agent_version": "none",
+        "model": "none", "note": "no-op self-check at the pinned tree",
+    })
+finally:
+    shutil.rmtree(workspace.parent)
 print(solves.location(run) / "tree")
 PY
 
@@ -170,10 +174,9 @@ Checked against the **tree**, not against intentions:
   ```
   `pwd` must be `/workspace`, `/workspace` must hold the tree, the
   supervisor's home must not exist there, and no `BENCH_*` variable may be
-  visible. A run whose `pwd` is
-  `.../jsp-decouple-bench/out/workspaces/<run>` has mounted the checkout at
-  its host path, which names this repository to the agent — that happened,
-  and the tree and the prompt were both clean while it did.
+  visible. `/proc/self/mountinfo` must not identify the repository or the
+  host user's home in the bind source; the host checkout is materialised
+  outside the repository and removed after Inspect finishes.
 - After a real run, `audit-agent-trace` finds no read outside the
   checkout before any score is quoted.
 

@@ -61,17 +61,16 @@ OUT = ROOT / "out"
 EVIDENCE = OUT / "evidence"
 TRACES = OUT / "traces"
 SOLVES = OUT / "solves"
-WORKSPACES = OUT / "workspaces"
 LOGS = OUT / "evals"
+GIT_AUTHOR_EMAIL = _text("GIT_AUTHOR_EMAIL")
 # One lock file per stack slot: how many stacks this host runs at once,
 # across every bench process on it (`stack.running`).
 LOCKS = OUT / "locks"
 
 # --- the solve workspace, as the sandbox sees it. -------------------------
 # Every sample's `env/solve.yaml` mounts the checkout here and the agent
-# starts here. It is deliberately not the host path: that one spells this
-# repository's name, and a `pwd` is enough to send an agent looking for it.
-# One name for every sample, so a new toolbox inherits it.
+# starts here. The host checkout lives in a temporary directory outside the
+# repository; this stable in-container path works for every sample.
 SOLVE_ROOT = "/workspace"
 
 # --- determinism. The goldens were captured with these; not a preference. --

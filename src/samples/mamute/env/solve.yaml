@@ -9,7 +9,7 @@
 x-inspect_docker_sandbox:
   unsafe_allow_writable_host_mounts: true
 
-name: bench-solve-mamute
+name: application-mysql
 
 services:
   workspace:

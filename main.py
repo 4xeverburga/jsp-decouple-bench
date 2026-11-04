@@ -66,9 +66,11 @@ async def capture_solution(state: TaskState) -> None:
     run = state.metadata["run"]
     resolved = state.metadata["resolved"]
     agent = resolved["agent"]
+    checkout = Path(settings.checkout())
     solves.capture(
         run,
-        Path(settings.checkout()),
+        checkout,
+        checkout.parent / "baseline",
         {
             # The name a run was asked for, and what it meant at the time:
             # a profile can be edited after the run, its record cannot.

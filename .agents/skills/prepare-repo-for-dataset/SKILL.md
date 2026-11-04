@@ -143,16 +143,17 @@ the pristine upstream state. A rewritten history destroys that.
   commit changes nothing for the agent.
 - **The pin's history must be unreachable.** The run's checkout is not a
   clone: `solves.materialise` cuts the pin with `git archive <pin>`,
-  unpacks it, then `git init` + one `baseline` commit. What the agent gets
-  is a **fresh repository** — no remote, no refs, no reflog and no parent
-  objects at all — so `git log` cannot walk back to the commits that say
-  this is an eval sample. That is deliberately stronger than a shallow
+  unpacks it into a temporary directory, then `git init` + one generic
+  `Import project source` commit by `Developer`. What the agent gets is a
+  **fresh repository** — no remote, no refs, no reflog and no parent
+  objects at all — so `git log` cannot walk back to the pinned history.
+  That is deliberately stronger than a shallow
   clone (`--depth 1` still records the parent link, dangling), so do not
   "restore" a clone here. Consequence for authoring: the pin only has to
   exist in the repository `BENCH_CHECKOUT` names, at any commit — it does
   not have to be the tip of a branch.
   ```bash
-  # run on any tree under out/workspaces/ or out/solves/*/tree
+  # run on a materialised temporary tree or out/solves/*/tree
   git rev-list --count HEAD     # 1
   git remote -v                 # empty
   git rev-parse HEAD^           # fails: unknown revision
@@ -355,8 +356,9 @@ setup is a new profile rather than a longer command.
 `env/solve.yaml` sandbox: the checkout at `settings.SOLVE_ROOT`, the
 database as a sidecar, and **no runtime socket** — so the agent cannot
 reach the host through the daemon, and its `$HOME` is the sandbox's own.
-`solves.materialise` archives the pin into `out/workspaces/<run>/` and
-refuses a tree that carries a stack file; the agent's session directory is
+`solves.materialise` archives the pin into a temporary directory outside
+the repository and refuses a tree that carries a stack file. The temporary
+checkout is removed after Inspect finishes; the agent's session directory is
 kept as `out/solves/<run>/agent/session.tar`.
 
 Scoring is a separate measurement with no sandbox: the scorer starts the

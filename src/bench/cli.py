@@ -158,30 +158,33 @@ def solve(manifest_id: int, profile: str, run: str, logs: str) -> None:
     resolved = settings.solve_profile(profile)
     chosen = load_manifest(manifest_id)
     slug = chosen["sample"]
-    workspace = solves.materialise(run, Path(settings.checkout()), pin(slug))
-    _build_toolbox(slug, workspace)
-    attempt = _eval(
-        _spec(manifest_id),
-        [
-            "-T",
-            f"manifest_id={manifest_id}",
-            "-T",
-            "phase=solve",
-            "-T",
-            f"run={run}",
-            "-T",
-            f"profile={profile}",
-        ],
-        logs,
-        {
-            "BENCH_CHECKOUT": str(workspace),
-            "BENCH_SAMPLE_ENV": str(sample_env(slug)),
-            "SOLVE_ROOT": settings.SOLVE_ROOT,
-            **settings.credentials(resolved),
-        },
-        resolved["answer_model"],
-    )
-    _require_success(logs, attempt, run, "solve")
+    workspace = solves.materialise(Path(settings.checkout()), pin(slug))
+    try:
+        _build_toolbox(slug, workspace)
+        attempt = _eval(
+            _spec(manifest_id),
+            [
+                "-T",
+                f"manifest_id={manifest_id}",
+                "-T",
+                "phase=solve",
+                "-T",
+                f"run={run}",
+                "-T",
+                f"profile={profile}",
+            ],
+            logs,
+            {
+                "BENCH_CHECKOUT": str(workspace),
+                "BENCH_SAMPLE_ENV": str(sample_env(slug)),
+                "SOLVE_ROOT": settings.SOLVE_ROOT,
+                **settings.credentials(resolved),
+            },
+            resolved["answer_model"],
+        )
+        _require_success(logs, attempt, run, "solve")
+    finally:
+        shutil.rmtree(workspace.parent)
 
 
 def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
@@ -249,20 +252,24 @@ def capture(manifest_id: int, cases: list[str]) -> None:
     if unknown:
         raise SystemExit(f"manifest {manifest_id} has no case(s): {unknown}")
     commit = pin(slug)
-    tree = solves.materialise(
-        f"capture-{uuid.uuid4().hex[:8]}",
-        Path(settings.checkout()),
-        commit,
-    )
-    # From here the stack must build the pinned tree, not the worktree the
-    # pin came from — same env the scorer is given. The address is each
-    # stack's own, as in scoring.
-    os.environ["BENCH_CHECKOUT"] = str(tree)
-    credentials = dotenv_values(sample_env(slug) / ".env")
-    for key, value in credentials.items():
-        if value is not None:
-            os.environ[key] = value
-    freezing.run(slug, wanted, commit, chosen["bindings"]["db"]["options"])
+    tree = solves.materialise(Path(settings.checkout()), commit)
+    previous_checkout = os.environ.get("BENCH_CHECKOUT")
+    try:
+        # From here the stack must build the pinned tree, not the worktree
+        # the pin came from — same env the scorer is given. The address is
+        # each stack's own, as in scoring.
+        os.environ["BENCH_CHECKOUT"] = str(tree)
+        credentials = dotenv_values(sample_env(slug) / ".env")
+        for key, value in credentials.items():
+            if value is not None:
+                os.environ[key] = value
+        freezing.run(slug, wanted, commit, chosen["bindings"]["db"]["options"])
+    finally:
+        if previous_checkout is None:
+            os.environ.pop("BENCH_CHECKOUT", None)
+        else:
+            os.environ["BENCH_CHECKOUT"] = previous_checkout
+        shutil.rmtree(tree.parent)
 
 
 def _capture_verb(args: argparse.Namespace) -> None:

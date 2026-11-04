@@ -68,10 +68,9 @@ only a label.
 
 ```bash
 export RUN=$(uv run python -c 'import uuid; print(uuid.uuid4().hex)')
-uv run python -c "from pathlib import Path; import settings; \
+export BENCH_CHECKOUT=$(uv run python -c "from pathlib import Path; import settings; \
 from src.bench import solves; from src.bench.seeds import pin; \
-solves.materialise('$RUN', Path(settings.checkout()), pin('mamute'))"
-export BENCH_CHECKOUT=$PWD/out/workspaces/$RUN
+print(solves.materialise(Path(settings.checkout()), pin('mamute')))")
 export BENCH_SAMPLE_ENV=$PWD/src/samples/mamute/env SOLVE_ROOT=/workspace
 set -a; . .env; set +a                          # the profile's keys
 uv run inspect eval main.py@decouple_slice \

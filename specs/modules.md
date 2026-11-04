@@ -14,7 +14,6 @@ jsp-decouple-bench/
 │   └── prompts/             # task_types/<name>.md, manifests/<name>.md
 ├── out/                     # gitignored; ALL output
 │   ├── solves/<run_id>/     # record.json, diff.patch, tree/
-│   ├── workspaces/<run_id>/ # the tree an agent is given
 │   ├── evals/               # Inspect logs
 │   ├── traces/<slug>/       # a case's spans, taken before `down -v`
 │   └── evidence/<slug>/     # a failing case's screenshot
@@ -148,10 +147,14 @@ What a new sample's `env/solve.yaml` and `env/toolbox/Containerfile` have
 to honour, so that nothing has to be special-cased per sample:
 
 - **Mount the checkout at `settings.SOLVE_ROOT`** (`/workspace`), never at
-  the host path: `- ${BENCH_CHECKOUT:?}:${SOLVE_ROOT:?}`, `working_dir:
-  ${SOLVE_ROOT:?}`. The host path spells this repository's name, and `pwd`
-  is enough to send an agent looking for it; the driver passes `SOLVE_ROOT`
-  to `docker compose` and starts the agent there.
+  a path inside the repository: `- ${BENCH_CHECKOUT:?}:${SOLVE_ROOT:?}`,
+  `working_dir: ${SOLVE_ROOT:?}`. The host-side checkout is materialised in
+  a temporary directory outside the repository and removed after Inspect
+  finishes; a pristine baseline stays beside it, outside the bind mount.
+  This keeps the host bind source out of `/proc/self/mountinfo` and lets the
+  host compute the diff without running Git against the agent-writable
+  `.git/`. The driver passes `SOLVE_ROOT` to `docker compose` and starts the
+  agent there.
 - **Put every tool in `/usr/local/bin`.** The agent's shell is given
   `PATH=/usr/local/bin:/usr/bin:/bin` regardless of what the image sets, so
   an `ENV PATH=` line reaches the image's own shell and nothing else.

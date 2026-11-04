@@ -11,9 +11,11 @@ after a golden is corrected, say — without paying for the agent again.
 """
 
 import json
+import os
 import re
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 import settings
@@ -30,6 +32,18 @@ STACK_FILE = re.compile(
     r"|entrypoint\.sh|bootstrap\.sh|\.env)$",
     re.IGNORECASE,
 )
+
+
+def _git_environment() -> dict[str, str]:
+    """Keep host Git commands independent of user and inherited Git config."""
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.startswith("GIT_")
+    }
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    return env
 
 
 # Where the CLI keeps its session database and log is the agent's own
@@ -67,52 +81,163 @@ def keep_agent(run_id: str, archive: bytes) -> Path:
     return path
 
 
-def materialise(run_id: str, repo: Path, pin: str) -> Path:
-    """The pinned tree, as a baseline commit, if it carries no stack file."""
-    tree = settings.WORKSPACES / run_id
-    if tree.exists():
-        shutil.rmtree(tree)
-    tree.mkdir(parents=True)
-    archive = subprocess.run(
-        ["git", "-C", str(repo), "archive", pin],
-        capture_output=True,
-        check=True,
-    ).stdout
-    subprocess.run(["tar", "-x", "-C", str(tree)], input=archive, check=True)
-    _refuse_stack_files(tree)
-    git = ["git", "-C", str(tree), "-c", "user.name=bench"]
-    git += ["-c", "user.email=bench@localhost"]
-    subprocess.run([*git, "init", "-q"], check=True)
-    subprocess.run([*git, "add", "-A"], check=True)
-    subprocess.run([*git, "commit", "-qm", "baseline"], check=True)
-    return tree
+def materialise(repo: Path, pin: str) -> Path:
+    """Make an isolated, temporary checkout without benchmark identifiers."""
+    root = Path(tempfile.mkdtemp(prefix="application-"))
+    root.chmod(0o755)
+    tree = root / "workspace"
+    baseline = root / "baseline"
+    tree.mkdir()
+    baseline.mkdir()
+    complete = False
+    try:
+        archive = subprocess.run(
+            ["git", "-C", str(repo), "archive", pin],
+            capture_output=True,
+            check=True,
+        ).stdout
+        subprocess.run(
+            ["tar", "-x", "-C", str(baseline)],
+            input=archive,
+            check=True,
+        )
+        _refuse_stack_files(baseline)
+        git_env = _git_environment()
+        git = ["git", "-C", str(baseline), "-c", "user.name=Developer"]
+        git += ["-c", f"user.email={settings.GIT_AUTHOR_EMAIL}"]
+        subprocess.run([*git, "init", "-q"], env=git_env, check=True)
+        subprocess.run(
+            [
+                *git,
+                "-c",
+                "core.fsmonitor=false",
+                "-c",
+                "core.hooksPath=/dev/null",
+                "add",
+                "-A",
+            ],
+            env=git_env,
+            check=True,
+        )
+        subprocess.run(
+            [
+                *git,
+                "-c",
+                "core.hooksPath=/dev/null",
+                "commit",
+                "-qm",
+                "Import project source",
+            ],
+            env=git_env,
+            check=True,
+        )
+        shutil.copytree(
+            baseline,
+            tree,
+            symlinks=True,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns(".git"),
+        )
+        git = ["git", "-C", str(tree), "-c", "user.name=Developer"]
+        git += ["-c", f"user.email={settings.GIT_AUTHOR_EMAIL}"]
+        subprocess.run([*git, "init", "-q"], env=git_env, check=True)
+        subprocess.run(
+            [
+                *git,
+                "-c",
+                "core.fsmonitor=false",
+                "-c",
+                "core.hooksPath=/dev/null",
+                "add",
+                "-A",
+            ],
+            env=git_env,
+            check=True,
+        )
+        subprocess.run(
+            [
+                *git,
+                "-c",
+                "core.hooksPath=/dev/null",
+                "commit",
+                "-qm",
+                "Import project source",
+            ],
+            env=git_env,
+            check=True,
+        )
+        complete = True
+        return tree
+    finally:
+        if not complete:
+            shutil.rmtree(root)
 
 
 def location(run_id: str) -> Path:
     return settings.SOLVES / run_id
 
 
-def capture(run_id: str, checkout: Path, record: dict) -> Path:
+def capture(
+    run_id: str, checkout: Path, baseline: Path, record: dict
+) -> Path:
     """Copy the tree aside and record what produced it."""
     target = location(run_id)
     tree = target / "tree"
     target.mkdir(parents=True, exist_ok=True)
     if tree.exists():
         shutil.rmtree(tree)
-    shutil.copytree(checkout, tree, symlinks=True)
-    # Intent-to-add first: a plain `git diff` drops new files, which is most
-    # of what an agent writes.
+    shutil.copytree(
+        checkout,
+        tree,
+        symlinks=True,
+        ignore=shutil.ignore_patterns(".git"),
+    )
+    for path in baseline.iterdir():
+        if path.name == ".git":
+            continue
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+    shutil.copytree(
+        checkout,
+        baseline,
+        symlinks=True,
+        dirs_exist_ok=True,
+        ignore=shutil.ignore_patterns(".git"),
+    )
+    git_env = _git_environment()
+    git = ["git", "-C", str(baseline)]
     subprocess.run(
-        ["git", "-C", str(checkout), "add", "-N", "."],
-        capture_output=True,
+        [
+            *git,
+            "-c",
+            "core.fsmonitor=false",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "add",
+            "-N",
+            ".",
+        ],
+        env=git_env,
+        check=True,
     )
     diff = subprocess.run(
-        ["git", "-C", str(checkout), "diff", "--binary"],
+        [
+            *git,
+            "-c",
+            "core.fsmonitor=false",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "diff",
+            "--binary",
+            "--no-ext-diff",
+            "--no-textconv",
+        ],
+        env=git_env,
         capture_output=True,
+        check=True,
     ).stdout
-    subprocess.run(
-        ["git", "-C", str(checkout), "reset", "-q"], capture_output=True
-    )
     (target / "diff.patch").write_bytes(diff)
     record = dict(record, run_id=run_id, diff_bytes=len(diff))
     (target / "record.json").write_text(json.dumps(record, indent=2) + "\n")

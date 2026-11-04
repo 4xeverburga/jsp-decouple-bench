@@ -10,7 +10,7 @@
 x-inspect_docker_sandbox:
   unsafe_allow_writable_host_mounts: true
 
-name: bench-solve-openclinica
+name: application-postgres
 
 services:
   workspace:
