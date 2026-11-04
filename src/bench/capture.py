@@ -6,8 +6,7 @@ touched — never from the tree under test, and never hand-edited. This is
 the old `case-capture` step, host-driven for the same reason scoring is:
 the stack is a plain compose project and the browser is the host's.
 
-    BENCH_CHECKOUT=../openclinica BENCH_BASE_URL=http://localhost:8092 \\
-      uv run python main.py capture --manifest 13
+    BENCH_CHECKOUT=../openclinica uv run python main.py capture --manifest 13
 
 It cuts a tree from the pin, builds the sample's stack from it, runs each
 case's flow once, and writes `expect.json` beside the `flow.py` that drove
@@ -48,7 +47,9 @@ async def one(slug: str, case: str, commit: str, target: db.Target) -> Path:
     _say(f"{case}: starting a stack")
     async with running(slug) as stack:
         before = await db.snapshot(stack, target, names)
-        artifacts, shot = await asyncio.to_thread(drive, slug, case)
+        artifacts, shot = await asyncio.to_thread(
+            drive, slug, case, stack.base_url
+        )
         after = await db.snapshot(stack, target, names)
         collected = await keep_trace(stack, slug, case)
     if collected is None:

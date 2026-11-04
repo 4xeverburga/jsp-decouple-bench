@@ -143,9 +143,10 @@ dialect is the manifest's (`bindings.db.options.dialect`, `mysql` or
 
 The stack is the bench's (`src/samples/<sample>/env/`), so the sample
 must have one before a case can be captured. `BENCH_CHECKOUT` names the
-sample's **repository** (the pin is cut from it); the address its stack
-publishes is the sample's `target_url` in `seeds/samples.json`, which the
-driver derives — never export a port or a URL by hand:
+sample's **repository** (the pin is cut from it); each case's stack
+picks a free host port itself and plays against the sample's `target_url`
+in `seeds/samples.json` on that port — never export a port or a URL by
+hand:
 
 ```bash
 cd jsp-decouple-bench

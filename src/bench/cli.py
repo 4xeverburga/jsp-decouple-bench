@@ -24,7 +24,6 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
-from urllib.parse import urlsplit
 
 from dotenv import dotenv_values
 from inspect_ai.log import list_eval_logs, read_eval_log
@@ -36,7 +35,7 @@ from . import solves
 from .compose import sample_env, solve_compose
 from .seeds import manifest as load_manifest
 from .seeds import manifests as all_manifests
-from .seeds import pin, sample
+from .seeds import pin
 
 TASKS = settings.ROOT / "main.py"
 
@@ -47,39 +46,32 @@ def _tool(name: str) -> list[str]:
     return [found] if found else ["uv", "run", name]
 
 
-def _published(slug: str) -> dict[str, str]:
-    """Where a sample's stack answers, and the port it answers on.
-
-    One seed field answers both: `target_url` is the address the flows
-    drive — context path included — and its port is the host port the
-    stack has to publish for that address to reach the app. Deriving the
-    two together is what stops the URL a case is played against from
-    drifting away from the port compose binds.
-    """
-    url = sample(slug)["target_url"]
-    port = urlsplit(url).port
-    if port is None:
-        raise SystemExit(f"sample {slug} target_url has no port: {url}")
-    return {"BENCH_BASE_URL": url, "APP_HTTP_PORT": str(port)}
-
-
 def _eval(
     spec: str,
     args: list[str],
     logs: str,
     env: dict[str, str],
     model: str,
-) -> None:
-    """One `inspect eval`; `model` is the eval's model.
+) -> str:
+    """One `inspect eval`; `model` is the eval's model. Returns its attempt.
 
-    It is not what answers a solve's calls: the task builds that model
-    itself, from the profile, with the profile's effort and arguments.
+    `model` is not what answers a solve's calls: the task builds that
+    model itself, from the profile, with the profile's effort and
+    arguments.
+
+    The attempt is a fresh id, written to the log's eval metadata, and the
+    only thing that tells this invocation's log apart: two scores of one
+    run — side by side, or today's and last week's — share every task
+    argument.
     """
+    attempt = uuid.uuid4().hex
     argv = [
         *_tool("inspect"),
         "eval",
         spec,
         *args,
+        "--metadata",
+        f"attempt={attempt}",
         "--model",
         model,
         "--display",
@@ -90,20 +82,23 @@ def _eval(
     subprocess.run(
         argv, cwd=settings.ROOT, env={**os.environ, **env}, check=True
     )
+    return attempt
 
 
-def _require_success(logs: str, run: str, phase: str) -> None:
-    """Stop unless this run's `phase` eval finished as a success.
+def _require_success(logs: str, attempt: str, run: str, phase: str) -> None:
+    """Stop unless the eval `attempt` names finished as a success.
 
     `inspect eval` exits 0 when a task errors or is interrupted, and a
     solve's cleanup still keeps the untouched tree. Scoring that tree would
     grade an agent that never ran as one that changed nothing, so a phase
     that did not succeed ends the run here, with Inspect's own reason.
+
+    The log is found by its attempt, not by run and phase: those are
+    shared by every score of one run, so they could name another one's.
     """
     for info in list_eval_logs(logs):
         header = read_eval_log(info, header_only=True)
-        args = header.eval.task_args
-        if args.get("run") == run and args.get("phase") == phase:
+        if header.eval.metadata.get("attempt") == attempt:
             if header.status == "success":
                 return
             reason = header.error.message if header.error else header.status
@@ -111,7 +106,9 @@ def _require_success(logs: str, run: str, phase: str) -> None:
                 f"{phase} of run {run} did not succeed ({header.status}): "
                 f"{reason}; log: {info.name}"
             )
-    raise SystemExit(f"no {phase} log for run {run} in {logs}")
+    raise SystemExit(
+        f"no {phase} log for run {run} (attempt {attempt}) in {logs}"
+    )
 
 
 def _spec(manifest_id: int) -> str:
@@ -165,7 +162,7 @@ def solve(
     slug = chosen["sample"]
     workspace = solves.materialise(run, Path(settings.checkout()), pin(slug))
     _build_toolbox(slug, workspace)
-    _eval(
+    attempt = _eval(
         _spec(manifest_id),
         [
             "-T",
@@ -188,7 +185,7 @@ def solve(
         },
         resolved["answer_model"],
     )
-    _require_success(logs, run, "solve")
+    _require_success(logs, attempt, run, "solve")
 
 
 def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
@@ -212,7 +209,7 @@ def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
     slug = load_manifest(manifest_id)["sample"]
     env_dir = sample_env(slug)
     credentials = dotenv_values(env_dir / ".env")
-    _eval(
+    attempt = _eval(
         _spec(manifest_id),
         [
             "-T",
@@ -225,19 +222,20 @@ def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
             f"profile={record['profile']}",
             "-T",
             f"score_profile={score_profile}",
+            # Cases replay side by side: each stack picks its own port,
+            # and `stack.running` bounds how many are up on the host.
             "--max-samples",
-            "1",
+            str(settings.SCORE_MAX_SAMPLES),
         ],
         logs,
         {
             **{k: v for k, v in credentials.items() if v is not None},
-            **_published(slug),
             **settings.credentials(judge),
             "BENCH_CHECKOUT": str(tree),
         },
         settings.SCORE_MODEL,
     )
-    _require_success(logs, run, "score")
+    _require_success(logs, attempt, run, "score")
 
 
 def capture(manifest_id: int, cases: list[str]) -> None:
@@ -245,10 +243,9 @@ def capture(manifest_id: int, cases: list[str]) -> None:
 
     `BENCH_CHECKOUT` names the sample's repository here, as it does for
     `task`: the pin is cut from it and only then becomes the tree the
-    stack builds. The address the stack publishes — `BENCH_BASE_URL`, and
-    the `APP_HTTP_PORT` that serves it — comes from the sample's
-    `target_url`, exactly as it does for scoring, because the golden is
-    normalized against it.
+    stack builds. Each case's stack picks its own port, as in scoring; the
+    golden does not record it, because parity normalizes the base URL out
+    and the span condenser erases hosts.
     """
     chosen = load_manifest(manifest_id)
     slug = chosen["sample"]
@@ -263,10 +260,9 @@ def capture(manifest_id: int, cases: list[str]) -> None:
         commit,
     )
     # From here the stack must build the pinned tree, not the worktree the
-    # pin came from — same env the scorer is given, down to the address it
-    # publishes on, because the golden is normalized against that URL.
+    # pin came from — same env the scorer is given. The address is each
+    # stack's own, as in scoring.
     os.environ["BENCH_CHECKOUT"] = str(tree)
-    os.environ.update(_published(slug))
     credentials = dotenv_values(sample_env(slug) / ".env")
     for key, value in credentials.items():
         if value is not None:

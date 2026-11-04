@@ -72,9 +72,10 @@ solve_profiles:
 
   # The zero-cost smoke profile: the whole pipeline with an answerer that
   # never reaches a provider. Kept beside the real one so neither name lies
-  # about which one it is.
+  # about which one it is. Its agent is the capped `react-mock` row: the
+  # mock never calls submit(), so the cap is what ends the solve.
   react-mock:
-    agent: react
+    agent: react-mock
     agent_model: none
     agent_version: none
     answer_model: mockllm/model

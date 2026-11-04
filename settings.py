@@ -13,10 +13,11 @@ Two kinds of value live here, and only one of them is a parameter:
   which model judges its spans (`score_profiles`, chosen with
   `--score-profile`). Named, tracked, chosen per invocation; see
   `solve_profile` and `score_profile`.
-- **Run inputs**, from the process environment — the checkout under test,
-  the URL its stack publishes, the sample's own env folder. They change
-  from run to run and are set by the driver (`src/bench/cli.py`), so they
-  cannot live in a file.
+- **Run inputs**, from the process environment — the checkout under test
+  and the sample's own env folder. They change from run to run and are set
+  by the driver (`src/bench/cli.py`), so they cannot live in a file. The
+  address a stack publishes is not one: every stack picks a free host port
+  of its own and carries the URL it answers on (`stack.Stack.base_url`).
 
 Copy the template once: `cp .env.example .env`. `.env` is untracked.
 """
@@ -62,6 +63,9 @@ TRACES = OUT / "traces"
 SOLVES = OUT / "solves"
 WORKSPACES = OUT / "workspaces"
 LOGS = OUT / "evals"
+# One lock file per stack slot: how many stacks this host runs at once,
+# across every bench process on it (`stack.running`).
+LOCKS = OUT / "locks"
 
 # --- the solve workspace, as the sandbox sees it. -------------------------
 # Every sample's `env/solve.yaml` mounts the checkout here and the agent
@@ -87,6 +91,17 @@ STACK_HEALTHY_TIMEOUT_S = _integer("STACK_HEALTHY_TIMEOUT_S")
 STACK_POLL_INTERVAL_S = _integer("STACK_POLL_INTERVAL_S")
 STACK_REPORT_INTERVAL_S = _integer("STACK_REPORT_INTERVAL_S")
 STACK_PROJECT_PREFIX = _text("STACK_PROJECT_PREFIX")
+# A stack publishes on a free port it picks itself, so two stacks of one
+# sample can run side by side. Another process can take that port between
+# the pick and `up`; the stack then picks again, this many times at most.
+STACK_PORT_ATTEMPTS = _integer("STACK_PORT_ATTEMPTS")
+# How many stacks may be up on this host at once, all processes together:
+# each is a JVM and a database, and an overloaded host turns into
+# healthcheck timeouts, not into a slower run.
+STACK_MAX_LIVE = _integer("STACK_MAX_LIVE")
+# How many cases one score replays at once (`inspect eval --max-samples`).
+# Every case still has its own stack; STACK_MAX_LIVE bounds them all.
+SCORE_MAX_SAMPLES = _integer("SCORE_MAX_SAMPLES")
 
 # --- the spans a case produces, kept before its stack is removed. ---------
 # Every sample's stack names its collector `collector` and has it write
@@ -193,11 +208,6 @@ SCORE_MODEL = _text("BENCH_SCORE_MODEL")
 def checkout() -> str:
     """The tree under test: what the agent edited, or what it left behind."""
     return os.environ["BENCH_CHECKOUT"]
-
-
-def base_url() -> str:
-    """Where the running stack publishes the app, for this run only."""
-    return os.environ["BENCH_BASE_URL"]
 
 
 # Case flows do `import settings`, so the repository root must be importable

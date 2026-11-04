@@ -73,10 +73,12 @@ modules and the lifecycle.
     at the repository root and nowhere else; it reads `.env`, which is the
     only source of parameters. A missing key is an error with the key's
     name, never a fallback that hides a broken setup.
-    Only the per-run inputs (`BENCH_CHECKOUT`, `BENCH_BASE_URL`,
-    `BENCH_SAMPLE_ENV`) come from the process environment, and the driver
-    derives each of them per invocation: the address a stack publishes is
-    the sample's `target_url`, never something the caller remembered.
+    Only the per-run inputs (`BENCH_CHECKOUT`, `BENCH_SAMPLE_ENV`) come
+    from the process environment, and the driver derives each of them per
+    invocation. The address a stack publishes is not an input at all:
+    every stack picks a free host port itself and carries its own URL —
+    the sample's `target_url` with that port — so nothing about it is
+    remembered by the caller or shared between two stacks.
 
 ## Running one
 
@@ -112,13 +114,37 @@ from the pinned tree: one stack per case, the flow played once, the rows
 snapshotted before and after, written to `expect.json` beside the
 `flow.py` that drove it, and the spans of that same run, condensed, to
 `trace.json` — the base `trace_similarity` compares against. It reads `BENCH_CHECKOUT` (the sample's
-repository, as `task` does) and publishes on the sample's `target_url`,
-like scoring.
+repository, as `task` does) and, like scoring, gives each case's stack a
+free port of its own.
 
 There is no Makefile and nothing is built: `main.py` is the whole command
 line (`task`, `score`, `capture`, `manifests`) and also the file Inspect
 loads (`inspect eval main.py@<task type>`). Scoring prints its progress as
 `[stack]` lines; a first build of a sample is minutes long.
+
+## Running side by side
+
+Two solves of one sample, two scores of one kept tree, or a score next to
+a capture can share a host:
+
+- a solve sandbox is its own compose project (Inspect names it), with its
+  own database; its workspace is `out/workspaces/<run id>/`;
+- a scoring or capture stack is its own compose project, on a free host
+  port it picks itself (`stack.Stack.base_url`), retried
+  `STACK_PORT_ATTEMPTS` times if another process takes it first. The
+  goldens do not depend on it: parity normalizes the base URL out and the
+  span condenser erases hosts;
+- `STACK_MAX_LIVE` caps the stacks up on the host, every process
+  together, with one `flock` slot each under `out/locks/`; a case that
+  finds them all taken waits, inside its manifest's score budget;
+- one score replays `SCORE_MAX_SAMPLES` cases at once;
+- the driver finds each `inspect eval`'s log by an `attempt` id it writes
+  to the log's eval metadata, never by run and phase, which every score of
+  one run shares.
+
+Still one at a time: two invocations that pass the same `--run` (each one
+replaces the other's workspace), and a `score` of a run whose solve has
+not finished.
 
 ## Traces
 

@@ -76,8 +76,11 @@ class FlowAssertionError(Exception):
         super().__init__(f"{case}: {reason}")
 
 
-def drive(slug: str, case: str) -> tuple[dict, str | None]:
-    """Run one case's flow against the running stack; report what happened.
+def drive(slug: str, case: str, base_url: str) -> tuple[dict, str | None]:
+    """Run one case's flow against the stack at ``base_url``; report it.
+
+    ``base_url`` is the stack's own (`Stack.base_url`): stacks of one
+    sample run side by side, each on its own port.
 
     The page it ended on is staged beside the artifacts, always: whether
     the case passes is not known here, and the classic failure is DB-only
@@ -89,7 +92,6 @@ def drive(slug: str, case: str) -> tuple[dict, str | None]:
 
     case_dir = settings.SAMPLES / slug / "cases" / case
     flow = load(case_dir / "flow.py", f"flow_{case.replace('-', '_')}")
-    base_url = settings.base_url()
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=settings.HEADLESS)
@@ -118,13 +120,13 @@ def drive(slug: str, case: str) -> tuple[dict, str | None]:
     return actual, shot
 
 
-def play(slug: str, case: str) -> dict:
+def play(slug: str, case: str, base_url: str) -> dict:
     """Run the case's flow and compare it with its frozen golden.
 
     A difference is not left as a list of keys: the page it happened on is
     written to out/evidence, because "the count differs" is not evidence.
     """
-    actual, shot = drive(slug, case)
+    actual, shot = drive(slug, case, base_url)
     expect = golden(slug, case)["artifacts"]
     differing = [key for key in expect if actual.get(key) != expect[key]]
     return {"differing": differing, "screenshot": shot}

@@ -21,13 +21,14 @@ viewport, the locale, the clock, the timeouts and the model names. Copy
 
 Run inputs come from the process environment, because they change per
 invocation: `BENCH_CHECKOUT` (the tree under test) and `BENCH_SAMPLE_ENV`
-(the sample's `env/`). The address a stack publishes is not one of them
-any more: `BENCH_BASE_URL` and the `APP_HTTP_PORT` that serves it are
-derived by the driver from the sample's `target_url` in
-`seeds/samples.json` — one field, so the URL a case is played against
-cannot drift from the port compose binds — and the sample's own
-public-URL variable (`MAMUTE_PUBLIC_URL`) defaults to it. Credentials come
-from the sample's `env/.env`, which `score` exports.
+(the sample's `env/`). The address a stack publishes is not one of them:
+every stack picks a free host port, sets it as that stack's own
+`APP_HTTP_PORT`, and plays its case against the sample's `target_url` in
+`seeds/samples.json` with that port (`Stack.base_url`) — one value, so the
+URL a case is played against cannot drift from the port compose binds,
+and the sample's public-URL variable (`MAMUTE_PUBLIC_URL`) defaults to it.
+The port `target_url` names is not used. Credentials come from the
+sample's `env/.env`, which `score` exports.
 
 ### By hand, with `inspect eval`
 
@@ -41,20 +42,22 @@ log stops describing what happened.
 
 ```bash
 export BENCH_CHECKOUT=$PWD/out/solves/<run_id>/tree
-export BENCH_BASE_URL=http://localhost:8090 APP_HTTP_PORT=8090   # the seed's target_url
 set -a; . src/samples/mamute/env/.env; set +a   # the sample's credentials
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=score -T run=<run_id> \
   -T profile=opencode-v1-deepseek-flash-medium \
   -T score_profile=judge-claude-opus-5.5-high \
-  --model mockllm/model --max-samples 1
+  --model mockllm/model --max-samples 4 --metadata attempt=$(uuidgen)
 ```
 
 Export the judge's credential too (`ANTHROPIC_API_KEY` for that profile).
 `profile` is a label in this phase (the driver takes it from the run's
 record); `--model` is the model Inspect demands, and `BENCH_SCORE_MODEL` is
-what the driver passes there. One sample at a time: the cases share the
-published port.
+what the driver passes there. `--max-samples` is how many cases replay at
+once (the driver passes `SCORE_MAX_SAMPLES`); each has its own stack and
+port, and `STACK_MAX_LIVE` caps the stacks on the host whatever it says.
+`attempt` is how the driver finds this invocation's log; by hand it is
+only a label.
 
 **Solve** needs what the driver would have prepared:
 
@@ -131,7 +134,11 @@ played once, so two gates never grade two different runs of the app. A
 missing trace leaves parity's verdict alone and makes `trace_similarity`
 an error.
 
-Samples run one at a time (`--max-samples 1`): they share the published port.
+Samples run side by side (`--max-samples SCORE_MAX_SAMPLES`): every stack is
+its own compose project on a free host port it picks itself, retried when
+another process takes it first, and `STACK_MAX_LIVE` slots (`flock`s under
+`out/locks/`) cap the stacks up on the host across every bench process. A
+case that finds no free slot waits for one, inside the score budget.
 `stack.py` streams `docker compose` output as `[stack]` lines, because a first
 build is minutes long and silent otherwise.
 

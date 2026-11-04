@@ -97,6 +97,17 @@ AGENTS = {
         env={},
         extra={},
     ),
+    # The native agent capped at a few messages, for `mockllm/model`: an
+    # answerer that never calls `submit()` would otherwise spend the whole
+    # solve budget. Only the smoke profile names it.
+    "react-mock": Agent(
+        solver=react.mock_solver_for,
+        param=None,
+        prefix="",
+        state=None,
+        env={},
+        extra={},
+    ),
 }
 
 

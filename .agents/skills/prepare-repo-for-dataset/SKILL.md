@@ -243,8 +243,10 @@ PostgreSQL — and together they are the inventory a new sample needs:
 | `toolbox/Containerfile` | the agent's toolchain, with tools symlinked into `/usr/local/bin` (the agent's shell is given `PATH=/usr/local/bin:/usr/bin:/bin`) and the build tool's cache warmed from the pin |
 
 Published port: `${APP_HTTP_PORT:-<unused default>}` on the host, always to
-`8080` inside. A sample whose default collides with a locally running
-instance of the same app should pick a different one.
+`8080` inside. The bench sets `APP_HTTP_PORT` to a free port per stack, so
+the default only serves a stack started by hand; the app's public-URL
+variable must default to `http://localhost:${APP_HTTP_PORT:-<default>}`
+so its own links follow the port the stack got.
 
 - **One repository, one application.** The app is one project; the bench
   builds its one service from the tree under test, with the database as a
@@ -375,9 +377,9 @@ prompt and the tree are the two channels we control.
 no defaults, so a half-configured checkout fails on the first command
 instead of producing a quietly different run. Only `BENCH_CHECKOUT`,
 `BENCH_SAMPLE_ENV` and the address a stack publishes change per
-invocation, and the driver derives all three (the address from the
-source's `target_url`): nothing about a run has to be remembered and
-exported by hand.
+invocation; the driver derives the first two and every stack picks its
+own port (the address is the source's `target_url` on it): nothing about a
+run has to be remembered and exported by hand.
 
 ## Checklist (all must be true before authoring starts)
 

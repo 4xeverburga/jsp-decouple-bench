@@ -73,7 +73,9 @@ def replayed_case(slug: str, options: dict) -> Solver:
         async with running(slug) as stack:
             before = await db.snapshot(stack, target, list(specs))
             try:
-                artifacts = await asyncio.to_thread(play, slug, case)
+                artifacts = await asyncio.to_thread(
+                    play, slug, case, stack.base_url
+                )
             except FlowAssertionError as error:
                 failure = {
                     "reason": error.reason,
