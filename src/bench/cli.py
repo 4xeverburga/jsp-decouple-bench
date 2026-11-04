@@ -184,7 +184,22 @@ def solve(manifest_id: int, profile: str, run: str, logs: str) -> None:
         )
         _require_success(logs, attempt, run, "solve")
     finally:
-        shutil.rmtree(workspace.parent)
+        _discard(workspace.parent)
+
+
+def _discard(path: Path) -> None:
+    """Remove a run's temporary directory, best effort.
+
+    The sandbox writes as root over the bind mount (logs/, target/), so
+    the removal can hit files this user cannot unlink. The kept tree,
+    the diff and the record are already written when this runs, so a
+    leftover directory is residue, not a lost run — say so and move on
+    instead of failing a run that succeeded.
+    """
+    try:
+        shutil.rmtree(path)
+    except (PermissionError, FileNotFoundError) as error:
+        print(f"warning: {path} not fully removed: {error}", file=sys.stderr)
 
 
 def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
@@ -269,7 +284,7 @@ def capture(manifest_id: int, cases: list[str]) -> None:
             os.environ.pop("BENCH_CHECKOUT", None)
         else:
             os.environ["BENCH_CHECKOUT"] = previous_checkout
-        shutil.rmtree(tree.parent)
+        _discard(tree.parent)
 
 
 def _capture_verb(args: argparse.Namespace) -> None:
