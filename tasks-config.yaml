@@ -36,6 +36,7 @@ solve_profiles:
     model_env: [OPENCODE_GO_API_KEY, OPENCODE_GO_BASE_URL]
     reasoning_effort: medium
     model_args: {}
+    compaction: none
 
   # A different family on the same agent and gateway. `glm-5.3-flash` is
   # the id `opencode-go` lists (verified against models.opencode.ai); the
@@ -49,6 +50,7 @@ solve_profiles:
     model_env: [OPENCODE_GO_API_KEY, OPENCODE_GO_BASE_URL]
     reasoning_effort: high
     model_args: {}
+    compaction: none
 
   claude-code-sonnet-5.5-medium:
     agent: claude
@@ -58,6 +60,7 @@ solve_profiles:
     model_env: [ANTHROPIC_API_KEY]
     reasoning_effort: medium
     model_args: {}
+    compaction: none
 
   # Not reliable since it has the sub usage limits
   claude-code-sonnet-5.5-medium-subscription:
@@ -68,6 +71,7 @@ solve_profiles:
     model_env: [ANTHROPIC_AUTH_TOKEN]
     reasoning_effort: medium
     model_args: {}
+    compaction: none
 
   # The native agent on the same answerer and provider as
   # `opencode-v1-deepseek-flash-medium`, at `high` effort: the two profiles
@@ -83,6 +87,37 @@ solve_profiles:
     model_env: [OPENCODE_GO_API_KEY, OPENCODE_GO_BASE_URL]
     reasoning_effort: high
     model_args: {}
+    compaction: none
+
+  # The same native agent on GLM: no CLI bridge, the eval's own model
+  # answers. Same gateway as the opencode profiles, so a verdict from one
+  # is not comparable with the other's on agent behaviour — only the
+  # answerer is the same family.
+  react-glm53-flash:
+    agent: react
+    agent_model: none
+    agent_version: none
+    answer_model: openai-api/opencode-go/glm-5.3-flash
+    model_env: [OPENCODE_GO_API_KEY, OPENCODE_GO_BASE_URL]
+    reasoning_effort: high
+    model_args: {}
+    compaction: none
+
+  # The same again, with Inspect's automatic compaction: as the
+  # conversation nears the model's context window it is compacted
+  # (provider-native first, summary fallback) instead of ending the run
+  # on overflow. A different agent behaviour, so its runs are not
+  # comparable with `react-glm53-flash`'s — that is why it is a new
+  # profile and not an edit to the old one.
+  react-glm53-flash-auto:
+    agent: react
+    agent_model: none
+    agent_version: none
+    answer_model: openai-api/opencode-go/glm-5.3-flash
+    model_env: [OPENCODE_GO_API_KEY, OPENCODE_GO_BASE_URL]
+    reasoning_effort: high
+    model_args: {}
+    compaction: CompactionAuto
 
   # The zero-cost smoke profile: the whole pipeline with an answerer that
   # never reaches a provider. Kept beside the real one so neither name lies
@@ -96,6 +131,7 @@ solve_profiles:
     model_env: []
     reasoning_effort: none
     model_args: {}
+    compaction: none
 
 # --- score_profiles: who judges a tree -----------------------------------
 #

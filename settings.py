@@ -125,6 +125,7 @@ SOLVE_PROFILE_KEYS = (
     "model_env",
     "reasoning_effort",
     "model_args",
+    "compaction",
 )
 SCORE_PROFILE_KEYS = (
     "judge_model",
@@ -135,6 +136,12 @@ SCORE_PROFILE_KEYS = (
     "max_retries",
 )
 EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+# What a solve profile may ask for context-window handling. `none` is the
+# only value a CLI agent accepts: a CLI manages its own context, and there
+# is no way to inject a strategy into it. `CompactionAuto` is Inspect's
+# native-first, summary-fallback strategy, and only the native agent can
+# carry it.
+COMPACTIONS = ("none", "CompactionAuto")
 
 
 def _profile(section: str, keys: tuple[str, ...], name: str) -> dict:
@@ -176,7 +183,13 @@ def solve_profile(name: str) -> dict:
     Credentials are not part of it: `credentials` resolves `model_env`
     against `.env`.
     """
-    return _profile("solve_profiles", SOLVE_PROFILE_KEYS, name)
+    chosen = _profile("solve_profiles", SOLVE_PROFILE_KEYS, name)
+    if chosen["compaction"] not in COMPACTIONS:
+        raise ValueError(
+            f"solve_profiles {name!r}: compaction must be one of "
+            f"{COMPACTIONS}"
+        )
+    return chosen
 
 
 def score_profile(name: str) -> dict:

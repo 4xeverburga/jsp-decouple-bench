@@ -177,6 +177,7 @@ def _manifest_task(
                 resolved["agent_model"],
                 resolved["agent_version"],
                 settings.SOLVE_ROOT,
+                resolved["compaction"],
             ),
             cleanup=capture_solution,
             description=kind["description"],

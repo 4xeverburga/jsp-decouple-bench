@@ -133,9 +133,16 @@ class Stack:
         A retry removes what the failed `up` created, volumes included, so
         the stack that finally answers still has a pristine database. The
         built image is kept: only the first attempt pays for the build.
+
+        The build itself is serialized host-wide by the build lock: two
+        stacks of one sample build the SAME image tag, and concurrent
+        builds of one tag race — one `up --build` fails while the other
+        holds the build. The lock is held for the whole `up --build`, so
+        a start also never interleaves with another stack's build.
         """
         for _ in range(settings.STACK_PORT_ATTEMPTS):
             self._publish(_free_port())
+            build = _await_build()
             try:
                 self._stream(
                     ("up", "-d", "--build"), settings.STACK_BUILD_TIMEOUT_S
@@ -144,6 +151,8 @@ class Stack:
                 _say(f"port of {self.base_url} was taken; picking another")
                 self._remove(("down", "-v", "--remove-orphans"))
                 continue
+            finally:
+                build.close()
             _say(f"{self.project} publishes {self.base_url}")
             self._await_ready()
             return
@@ -264,6 +273,38 @@ async def _slot() -> IO:
             )
             reported = True
         await asyncio.sleep(settings.STACK_POLL_INTERVAL_S)
+
+
+def _try_build() -> IO | None:
+    """The host's build slot, held until closed; None if someone builds.
+
+    One exclusive `flock` on one file, shared by every bench process on
+    the host and freed by the kernel when the process that held it dies,
+    whatever killed it — the same shape as a stack slot, but for builds:
+    a slot caps how many stacks are UP, this caps how many are BUILDING,
+    because two builds of one image tag cannot run side by side.
+    """
+    settings.LOCKS.mkdir(parents=True, exist_ok=True)
+    handle = open(settings.LOCKS / "build.lock", "w")
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        handle.close()
+        return None
+    return handle
+
+
+def _await_build() -> IO:
+    """Wait for the build slot, polling, so a time limit can cancel it."""
+    reported = False
+    while True:
+        handle = _try_build()
+        if handle is not None:
+            return handle
+        if not reported:
+            _say("another stack is building; waiting for the build lock")
+            reported = True
+        time.sleep(settings.STACK_POLL_INTERVAL_S)
 
 
 @asynccontextmanager

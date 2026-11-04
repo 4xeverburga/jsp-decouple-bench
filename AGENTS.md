@@ -95,7 +95,9 @@ uv run python main.py score --manifest 3 --run <id> \
 `--profile` is required and names a `solve_profiles` entry of
 `tasks-config.yaml`: the agent, its
 version, the wire model it asks for, the `answer_model` that answers, the
-variables that provider reads, the reasoning effort and the model args.
+variables that provider reads, the reasoning effort, the model args and
+the `compaction` the native agent may carry (`none`, or `CompactionAuto`
+— a CLI manages its own context, so a CLI profile must ask for `none`).
 Every key is required. A new run setup is a new profile, not an edit to an
 old one: the record keeps the profile's name and what it resolved to.
 `answer_model` is the only thing a score is attributed to: the agent's
@@ -104,6 +106,17 @@ required on `score`, and names a `score_profiles` entry:
 the model that judges the spans, the variables its provider reads, its
 effort, its args and its output budget. A trace verdict is attributed to
 that judge, so keep it fixed across the runs you compare.
+
+The OpenCode gateway refuses a request that carries no session header, so
+a model it serves must send one. A solve gets that for free: `main.py`
+builds `answer_model` with `x-opencode-session` set to a fresh id per
+run, which is also what groups one run's calls together. A judge does
+not: `trace_similarity/judge.py` passes `model_args` through untouched,
+so a `score_profiles` entry whose `judge_model` starts with
+`openai-api/opencode-go/` must carry
+`model_args.default_headers.x-opencode-session` itself. Without it every
+judge call answers `400 MissingSessionID`, after the stack is up and as
+an `error` — not a `fail`, and never a pass.
 
 `task` only solves: one agent in its own workspace, and
 `out/solves/<run id>/` keeps the tree, the diff and a record of what ran.
@@ -140,6 +153,13 @@ a capture can share a host:
 - `STACK_MAX_LIVE` caps the stacks up on the host, every process
   together, with one `flock` slot each under `out/locks/`; a case that
   finds them all taken waits, inside its manifest's score budget;
+- the build is serialized host-wide by one more `flock`,
+  `out/locks/build.lock`: two stacks of one sample build the SAME image
+  tag, and concurrent builds of one tag race — one `compose up --build`
+  fails while the other holds the build. The lock is held for the whole
+  `up --build`, so a start never interleaves with another stack's build
+  either; builds of different samples queue behind it too, which costs
+  minutes only on a cold cache;
 - one score replays `SCORE_MAX_SAMPLES` cases at once;
 - the driver finds each `inspect eval`'s log by an `attempt` id it writes
   to the log's eval metadata, never by run and phase, which every score of
@@ -167,6 +187,17 @@ base again.
 
 In a Containerfile, add new layers **last**: one above the Maven layer
 invalidates its cache and costs a long, silent download.
+
+## Comments 
+Default to none. Most code needs no comment, and a stale one costs more than a
+missing one — it is read as current and believed.
+
+A comment earns its place only if it says something **the code cannot say and
+these docs do not already say**: a measured number behind a threshold, an
+external quirk (HTTP Archive tags Next.js and GSAP under one raw category), a
+failure mode a real bug taught, or a non-obvious constraint binding two distant
+places together.
+
 
 ## Before a score is quoted
 

@@ -35,7 +35,10 @@
         "/answer/{question.id}"
       ]
     },
-    "scorers": ["functional_parity", "trace_similarity"],
+    "scorers": [
+      "functional_parity",
+      "trace_similarity"
+    ],
     "name": "answer-flow",
     "id": 1,
     "sample": "mamute"
@@ -73,7 +76,10 @@
         "/{question.id}-{sluggedTitle}"
       ]
     },
-    "scorers": ["functional_parity", "trace_similarity"],
+    "scorers": [
+      "functional_parity",
+      "trace_similarity"
+    ],
     "name": "ask-flow",
     "id": 2,
     "sample": "mamute"
@@ -116,7 +122,10 @@
         "/question/{question.id}/voto/positivo"
       ]
     },
-    "scorers": ["functional_parity", "trace_similarity"],
+    "scorers": [
+      "functional_parity",
+      "trace_similarity"
+    ],
     "name": "vote-flow",
     "id": 3,
     "sample": "mamute"
@@ -155,7 +164,10 @@
         "/question/watched/{question.id}"
       ]
     },
-    "scorers": ["functional_parity", "trace_similarity"],
+    "scorers": [
+      "functional_parity",
+      "trace_similarity"
+    ],
     "name": "watch-flow",
     "id": 4,
     "sample": "mamute"
@@ -193,7 +205,9 @@
         "/admin/addCourse"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": [
+      "functional_parity"
+    ],
     "name": "admin-course-flow",
     "id": 5,
     "sample": "online-study-system"
@@ -233,7 +247,9 @@
         "/admin/removeStudent"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": [
+      "functional_parity"
+    ],
     "name": "admin-student-flow",
     "id": 6,
     "sample": "online-study-system"
@@ -274,7 +290,9 @@
         "/student/saveExam"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": [
+      "functional_parity"
+    ],
     "name": "exam-flow",
     "id": 7,
     "sample": "online-study-system"
@@ -312,7 +330,9 @@
         "/student/outCourse"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": [
+      "functional_parity"
+    ],
     "name": "out-course-flow",
     "id": 8,
     "sample": "online-study-system"
@@ -350,7 +370,9 @@
         "/student/updateBalance"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": [
+      "functional_parity"
+    ],
     "name": "recharge-flow",
     "id": 9,
     "sample": "online-study-system"
@@ -390,7 +412,9 @@
         "/student/selectedCourse"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": [
+      "functional_parity"
+    ],
     "name": "select-course-flow",
     "id": 10,
     "sample": "online-study-system"
@@ -431,7 +455,9 @@
         "/student/prePeriod"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": [
+      "functional_parity"
+    ],
     "name": "study-flow",
     "id": 11,
     "sample": "online-study-system"
@@ -471,7 +497,9 @@
         "/teacher/saveMark"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": [
+      "functional_parity"
+    ],
     "name": "teacher-mark-flow",
     "id": 12,
     "sample": "online-study-system"
@@ -509,7 +537,9 @@
         "/AddNewSubject"
       ]
     },
-    "scorers": ["functional_parity"],
+    "scorers": [
+      "functional_parity"
+    ],
     "name": "subject-flow",
     "id": 13,
     "sample": "openclinica"
@@ -557,7 +587,10 @@
         "/question/watched/{question.id}"
       ]
     },
-    "scorers": ["functional_parity", "trace_similarity"],
+    "scorers": [
+      "functional_parity",
+      "trace_similarity"
+    ],
     "name": "whole-app",
     "id": 14,
     "sample": "mamute"
@@ -591,7 +624,9 @@
       ],
       "routes": []
     },
-    "scorers": ["functional_parity"],
+    "scorers": [
+      "functional_parity"
+    ],
     "name": "dummy-file",
     "id": 15,
     "sample": "mamute"
@@ -625,7 +660,9 @@
       ],
       "routes": []
     },
-    "scorers": ["functional_parity"],
+    "scorers": [
+      "functional_parity"
+    ],
     "name": "dummy-file-openclinica",
     "id": 16,
     "sample": "openclinica"
@@ -659,9 +696,55 @@
       ],
       "routes": []
     },
-    "scorers": ["functional_parity"],
+    "scorers": [
+      "functional_parity"
+    ],
     "name": "agent-probe",
     "id": 17,
+    "sample": "mamute"
+  },
+  {
+    "task_type": "decouple_slice",
+    "version": 1,
+    "solve_time_limit_minutes": 120,
+    "score_time_limit_minutes": 60,
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "dialect": "mysql",
+          "service": "db",
+          "user": "root",
+          "password": "",
+          "database": "mamute_development"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "answer-flow__answer-appears"
+      ],
+      "routes": [
+        "/sign-up",
+        "/ask",
+        "/logout",
+        "/login",
+        "/{question.id}-{sluggedTitle}",
+        "/answer/{question.id}"
+      ]
+    },
+    "scorers": [
+      "functional_parity",
+      "trace_similarity"
+    ],
+    "name": "answer-flow-120",
+    "id": 18,
     "sample": "mamute"
   }
 ]

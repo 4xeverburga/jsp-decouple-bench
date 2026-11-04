@@ -136,6 +136,7 @@ def solver_for(
     wire: str,
     version: str,
     cwd: str,
+    compaction: str,
 ) -> Any:
     """Build the agent named ``name``.
 
@@ -144,10 +145,20 @@ def solver_for(
     ``cwd``. A native row asks for nothing — there is no bridge and
     nothing to install — so ``model`` alone is passed, which is what its
     solver takes.
+
+    ``compaction`` is the profile's context-window choice. A CLI manages
+    its own context, so only ``none`` reaches one: anything else is a
+    profile that names a CLI it cannot configure, and is refused here
+    rather than silently ignored.
     """
     agent = AGENTS[name]
     if agent.param is None:
-        return agent.solver(model=model)
+        return agent.solver(model=model, compaction=compaction)
+    if compaction != "none":
+        raise ValueError(
+            f"agent {name!r} is a CLI and manages its own context; "
+            f"compaction must be 'none', not {compaction!r}"
+        )
     return agent.solver(
         cwd=cwd,
         version=version,

@@ -2,6 +2,7 @@
 
 from inspect_ai.agent import Agent, as_solver, react
 from inspect_ai.model import Model
+from inspect_ai.model._compaction import CompactionAuto
 from inspect_ai.solver import Solver
 from inspect_ai.tool import bash, text_editor
 from inspect_ai.util import message_limit
@@ -13,7 +14,7 @@ from inspect_ai.util import message_limit
 MOCK_MESSAGE_LIMIT = 6
 
 
-def solver_for(model: Model) -> Agent:
+def solver_for(model: Model, compaction: str) -> Agent:
     """Build a ReAct agent with shell and text-file editing tools.
 
     No ``prompt``: the task is the work order, which Inspect hands the
@@ -26,10 +27,18 @@ def solver_for(model: Model) -> Agent:
     ``instructions`` slot and keeps the rest, which is what put a second,
     weaker copy of the requirements in front of the model — and made this
     the one backend carrying it, since every CLI brings its own.
+
+    ``compaction`` is the profile's explicit choice, spelled as
+    ``tasks-config.yaml`` spells it: ``none`` keeps react's default of
+    remembering everything, ``CompactionAuto`` asks Inspect to compact
+    the conversation as it nears the model's context window (native
+    first, summary fallback). Without the argument the run ends the
+    moment the window overflows, with the tree as it stood.
     """
     return react(
         model=model,
         tools=[bash(), text_editor()],
+        compaction=None if compaction == "none" else CompactionAuto(),
     )
 
 
@@ -42,6 +51,6 @@ def mock_solver_for(model: Model) -> Solver:
     still captured and scored.
     """
     return as_solver(
-        solver_for(model),
+        solver_for(model, "none"),
         limits=[message_limit(MOCK_MESSAGE_LIMIT)],
     )
