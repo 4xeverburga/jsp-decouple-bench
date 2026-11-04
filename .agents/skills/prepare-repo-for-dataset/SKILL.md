@@ -325,11 +325,11 @@ condenser tells the probe from the app's own work by its user agent.
 The pin and the manifests are the wiring; nothing is registered anywhere
 else. `main.py` is the only command line:
 
-- `task --manifest N --profile NAME --score-profile JUDGE` — cut the pin,
-  let that profile's agent work in its own sandbox, then score the tree it
-  left;
-- `score --manifest N --run ID --score-profile JUDGE` — grade a kept tree
-  again without paying for the agent;
+- `task --manifest N --profile NAME` — cut the pin and let that profile's
+  agent work in its own sandbox; it only solves, and prints the run id;
+- `score --manifest N --run ID --score-profile JUDGE` — grade the tree a
+  solve kept, any time and as often as wanted, without paying for the
+  agent;
 - `capture --manifest N [--case X]` — freeze goldens and trace bases from
   the pin;
 - `manifests` — list the work order.
@@ -339,7 +339,8 @@ After the sample's cases are ready, set `commit_sha` in
 
 ```bash
 export BENCH_CHECKOUT=$PWD/../<sample>    # the repo the pin is cut from
-uv run python main.py task --manifest <n> --profile <name> \
+uv run python main.py task --manifest <n> --profile <name>  # run: <id>
+uv run python main.py score --manifest <n> --run <id> \
     --score-profile <judge>
 ```
 

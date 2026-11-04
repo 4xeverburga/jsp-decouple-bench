@@ -1,6 +1,7 @@
 """Inspect task types: `decouple_slice` and `oneshot_decoupling`.
 
-`python main.py task` runs the solve and score phases of one manifest.
+`python main.py task` runs the solve phase of one manifest;
+`python main.py score` runs the score phase on the tree it kept.
 
 Inspect loads tasks from a *file* and finds them by parsing that file's AST
 for `@task` decorators, so the task definitions live here, at the repository
@@ -15,13 +16,14 @@ cases they are graded on, so one sample per case serves either.
 
     inspect eval main.py@oneshot_decoupling \
         -T manifest_id=14 -T phase=score -T run=<id> \
-        -T profile=opencode-v1-deepseek-flash-medium \
-        -T score_profile=judge-claude-opus-5.5-high --model mockllm/model
+        -T profile=judge-claude-opus-5.5-high --model mockllm/model
 
-`profile` names a `solve_profiles` entry of `tasks-config.yaml`: who solves,
-and the model that answers it; a score only carries it as a label.
-`score_profile` names a `score_profiles` entry: the model that judges the
-spans; a solve does not read it.
+`profile` is the profile of the phase that runs, so neither phase is handed
+a value it does not read. In a solve it names a `solve_profiles` entry of
+`tasks-config.yaml`: who solves, and the model that answers it. In a score
+it names a `score_profiles` entry: the model that judges the spans. A score
+labels itself with the solve profile from the run's own record, so a
+re-score of last week's tree carries the profile that produced it.
 """
 
 import base64
@@ -142,7 +144,6 @@ def _manifest_task(
     phase: str,
     run: str,
     profile: str,
-    score_profile: str,
     expected_type: str,
 ) -> Task:
     chosen = load_manifest(manifest_id)
@@ -183,6 +184,10 @@ def _manifest_task(
         )
 
     if phase == "score":
+        # Which solve produced the tree, from its record: the label every
+        # verdict in this log is read against.
+        metadata["solve_profile"] = solves.read(run)["profile"]
+        metadata["run"] = run
         return Task(
             dataset=samples.for_scoring(manifest_id),
             # The case is played once, here; every scorer judges that run.
@@ -191,7 +196,7 @@ def _manifest_task(
                     chosen["sample"], chosen["bindings"]["db"]["options"]
                 )
             ],
-            scorer=_scorers(chosen, score_profile),
+            scorer=_scorers(chosen, profile),
             description=kind["description"],
             metadata=metadata,
             time_limit=chosen["score_time_limit_minutes"] * 60,
@@ -206,7 +211,6 @@ def decouple_slice(
     phase: str,
     run: str,
     profile: str,
-    score_profile: str,
 ) -> Task:
     """Run the solve or score phase for a decouple_slice manifest."""
     return _manifest_task(
@@ -214,7 +218,6 @@ def decouple_slice(
         phase,
         run,
         profile,
-        score_profile,
         "decouple_slice",
     )
 
@@ -225,7 +228,6 @@ def oneshot_decoupling(
     phase: str,
     run: str,
     profile: str,
-    score_profile: str,
 ) -> Task:
     """Run the solve or score phase for an oneshot_decoupling manifest."""
     return _manifest_task(
@@ -233,7 +235,6 @@ def oneshot_decoupling(
         phase,
         run,
         profile,
-        score_profile,
         "oneshot_decoupling",
     )
 
@@ -244,7 +245,6 @@ def dummy_file(
     phase: str,
     run: str,
     profile: str,
-    score_profile: str,
 ) -> Task:
     """Smoke test only: one new file, no app work.
 
@@ -259,7 +259,6 @@ def dummy_file(
         phase,
         run,
         profile,
-        score_profile,
         "dummy_file",
     )
 
@@ -270,7 +269,6 @@ def agent_probe(
     phase: str,
     run: str,
     profile: str,
-    score_profile: str,
 ) -> Task:
     """Probe only: read a few files, write one, stop. No app work.
 
@@ -285,7 +283,6 @@ def agent_probe(
         phase,
         run,
         profile,
-        score_profile,
         "agent_probe",
     )
 

@@ -4,10 +4,9 @@ Three verbs, all through `main.py`:
 
 ```bash
 uv run python main.py manifests            # list them
-uv run python main.py task  --manifest <id> --profile <solve> \
-    --score-profile <judge>               # solve, then score
+uv run python main.py task  --manifest <id> --profile <solve>  # solve only
 uv run python main.py score --manifest <id> --run <run_id> \
-    --score-profile <judge>               # score a kept tree
+    --score-profile <judge>               # score a kept tree, any time
 uv run python main.py capture --manifest <id> [--case <case>]  # freeze bases
 ```
 
@@ -35,8 +34,10 @@ sample's `env/.env`, which `score` exports.
 The driver is convenience, not a requirement: both phases are ordinary
 Inspect tasks and `main.py` is the file that defines them. What it carries
 between the two runs is a run id and the tree that id names, so a hand-run
-pair has to pass the same `-T` values — seven of them, no defaults — or the
-log stops describing what happened.
+pair has to pass the same `manifest_id` and `run` — four `-T` values each,
+no defaults — or the log stops describing what happened. `profile` is the
+profile of the phase that runs: a solve profile in a solve, a score profile
+in a score.
 
 **Score** is standalone. It starts the stack itself and reads only the tree:
 
@@ -45,14 +46,13 @@ export BENCH_CHECKOUT=$PWD/out/solves/<run_id>/tree
 set -a; . src/samples/mamute/env/.env; set +a   # the sample's credentials
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=score -T run=<run_id> \
-  -T profile=opencode-v1-deepseek-flash-medium \
-  -T score_profile=judge-claude-opus-5.5-high \
+  -T profile=judge-claude-opus-5.5-high \
   --model mockllm/model --max-samples 4 --metadata attempt=$(uuidgen)
 ```
 
 Export the judge's credential too (`ANTHROPIC_API_KEY` for that profile).
-`profile` is a label in this phase (the driver takes it from the run's
-record); `--model` is the model Inspect demands, and `BENCH_SCORE_MODEL` is
+The solve profile is not passed: the task reads it from the run's record
+and labels the log with it; `--model` is the model Inspect demands, and `BENCH_SCORE_MODEL` is
 what the driver passes there. `--max-samples` is how many cases replay at
 once (the driver passes `SCORE_MAX_SAMPLES`); each has its own stack and
 port, and `STACK_MAX_LIVE` caps the stacks on the host whatever it says.
@@ -77,7 +77,6 @@ set -a; . .env; set +a                          # the profile's keys
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=solve -T run=$RUN \
   -T profile=opencode-v1-deepseek-flash-medium \
-  -T score_profile=judge-claude-opus-5.5-high \
   --model openai-api/opencode-go/deepseek-v4.1-flash
 ```
 

@@ -1,8 +1,9 @@
 # Named profiles for the two phases of a run: who solves a manifest, and
 # who judges what it left.
 #
-#   uv run python main.py task --manifest 1 \
-#       --profile <solve profile> --score-profile <score profile>
+#   uv run python main.py task --manifest 1 --profile <solve profile>
+#   uv run python main.py score --manifest 1 --run <id> \
+#       --score-profile <score profile>
 #
 # A profile is not a secret, so it is tracked. The credentials it needs are
 # not: `model_env` names variables, and their values are read from `.env`.

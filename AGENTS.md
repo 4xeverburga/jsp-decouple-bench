@@ -87,7 +87,8 @@ cp .env.example .env        # once per checkout; settings.py reads nothing else
 export BENCH_CHECKOUT=/abs/checkout
 
 uv run python main.py task --manifest 3 \
-    --profile opencode-v1-deepseek-flash-medium \
+    --profile opencode-v1-deepseek-flash-medium      # prints run: <id>
+uv run python main.py score --manifest 3 --run <id> \
     --score-profile judge-claude-opus-5.5-high
 ```
 
@@ -99,15 +100,16 @@ Every key is required. A new run setup is a new profile, not an edit to an
 old one: the record keeps the profile's name and what it resolved to.
 `answer_model` is the only thing a score is attributed to: the agent's
 model name is just the format of its request. `--score-profile` is
-required too, on `task` and on `score`, and names a `score_profiles` entry:
+required on `score`, and names a `score_profiles` entry:
 the model that judges the spans, the variables its provider reads, its
 effort, its args and its output budget. A trace verdict is attributed to
 that judge, so keep it fixed across the runs you compare.
 
-The solve runs one agent in its own workspace, then every scorer
-assigned to the manifest grades the tree it left. `out/solves/<run id>/` keeps the tree,
-the diff and a record of what ran. `python main.py score --manifest N --run ID
---score-profile NAME` grades a kept tree again without paying for the agent.
+`task` only solves: one agent in its own workspace, and
+`out/solves/<run id>/` keeps the tree, the diff and a record of what ran.
+`python main.py score --manifest N --run ID --score-profile NAME` is a
+separate step: every scorer assigned to the manifest grades that kept tree,
+whenever it is run and as often as wanted, without paying for the agent.
 
 `python main.py capture --manifest N [--case ID]` freezes a case's golden
 from the pinned tree: one stack per case, the flow played once, the rows
@@ -142,9 +144,9 @@ a capture can share a host:
   to the log's eval metadata, never by run and phase, which every score of
   one run shares.
 
-Still one at a time: two invocations that pass the same `--run` (each one
-replaces the other's workspace), and a `score` of a run whose solve has
-not finished.
+Still one at a time: a `score` of a run whose solve has not finished.
+`task` always mints a fresh run id, so two solves never share a
+workspace.
 
 ## Traces
 

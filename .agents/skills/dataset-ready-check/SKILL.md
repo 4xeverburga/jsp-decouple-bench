@@ -43,7 +43,8 @@ BENCH_CHECKOUT=$PWD/out/solves/<run>/tree \
   --score-profile <judge>
 
 # 3. a real agent, end to end (optional here; mandatory before quoting a score)
-uv run python main.py task --manifest <n> --profile <name> \
+uv run python main.py task --manifest <n> --profile <name>  # run: <id>
+uv run python main.py score --manifest <n> --run <id> \
   --score-profile <judge>
 ```
 

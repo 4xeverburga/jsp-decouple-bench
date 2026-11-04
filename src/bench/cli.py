@@ -1,10 +1,11 @@
 """The bench's command line: `python main.py <verb>`.
 
-One manifest takes two `inspect eval` runs — the agent in the workspace
-built for it, then the scored tree — because the agent needs an Inspect
-sandbox and the scorer does not: it starts the app's stack itself, from the
-host. What two processes cannot hand each other is ours, and it is all this
-file is:
+One manifest takes two `inspect eval` runs, from two verbs: `task` lets the
+agent work in the workspace built for it, and `score` grades the tree it
+kept, whenever and as often as wanted. They are apart because the agent
+needs an Inspect sandbox and the scorer does not: it starts the app's stack
+itself, from the host. What two processes cannot hand each other is ours,
+and it is all this file is:
 
 - a run id, which names `out/solves/<id>/`;
 - the checkout the scoring phase needs, derived from that id, so a stale
@@ -147,15 +148,12 @@ def _build_toolbox(slug: str, workspace: Path) -> None:
     )
 
 
-def solve(
-    manifest_id: int, profile: str, score_profile: str, run: str, logs: str
-) -> None:
+def solve(manifest_id: int, profile: str, run: str, logs: str) -> None:
     """Let the profile's agent work on a tree cut from the pin.
 
     The task resolves the profile itself, from `tasks-config.yaml`; this
     process resolves it too, because only it can hand the provider's
-    credentials to `inspect eval` and name the model that answers. The
-    score profile is only passed through: every task takes it.
+    credentials to `inspect eval` and name the model that answers.
     """
     resolved = settings.solve_profile(profile)
     chosen = load_manifest(manifest_id)
@@ -173,8 +171,6 @@ def solve(
             f"run={run}",
             "-T",
             f"profile={profile}",
-            "-T",
-            f"score_profile={score_profile}",
         ],
         logs,
         {
@@ -192,7 +188,8 @@ def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
     """Grade the tree a solve kept; the replay starts the stack itself.
 
     The score profile names the judge `trace_similarity` asks; its
-    credentials come from `.env`, like a solve profile's.
+    credentials come from `.env`, like a solve profile's. The task labels
+    the log with the solve profile from the run's record.
     """
     judge = settings.score_profile(score_profile)
     tree = solves.tree(run)
@@ -219,9 +216,7 @@ def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
             "-T",
             f"run={run}",
             "-T",
-            f"profile={record['profile']}",
-            "-T",
-            f"score_profile={score_profile}",
+            f"profile={score_profile}",
             # Cases replay side by side: each stack picks its own port,
             # and `stack.running` bounds how many are up on the host.
             "--max-samples",
@@ -275,10 +270,11 @@ def _capture_verb(args: argparse.Namespace) -> None:
 
 
 def _task(args: argparse.Namespace) -> None:
-    run = args.run or uuid.uuid4().hex
+    # Always a fresh id: a reused one would wipe the earlier run's
+    # workspace and overwrite its kept tree and record.
+    run = uuid.uuid4().hex
     print(f"run: {run}", flush=True)
-    solve(args.manifest, args.profile, args.score_profile, run, args.logs)
-    score(args.manifest, run, args.score_profile, args.logs)
+    solve(args.manifest, args.profile, run, args.logs)
     print(f"tree: {solves.tree(run)}")
 
 
@@ -300,11 +296,13 @@ def _manifests(_args: argparse.Namespace) -> None:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="main.py",
-        description="Run one manifest: solve it, then score what was left.",
+        description="Solve a manifest; score what a solve left, later.",
     )
     verbs = parser.add_subparsers(required=True)
 
-    task = verbs.add_parser("task", help="solve and score one manifest")
+    task = verbs.add_parser(
+        "task", help="solve one manifest; prints the run id to score"
+    )
     task.set_defaults(handler=_task)
     task.add_argument("--manifest", type=int, required=True)
     task.add_argument(
@@ -312,12 +310,6 @@ def _parser() -> argparse.ArgumentParser:
         required=True,
         help="who solves it: a solve_profiles entry of tasks-config.yaml",
     )
-    task.add_argument(
-        "--score-profile",
-        required=True,
-        help="who judges it: a score_profiles entry of tasks-config.yaml",
-    )
-    task.add_argument("--run", help="reuse a run id instead of minting one")
     task.add_argument(
         "--logs", default=str(settings.LOGS), help="Inspect log dir"
     )
