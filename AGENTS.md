@@ -24,7 +24,8 @@ this file is not for you.
 | direction, and what is parked | `ROADMAP.md` |
 
 A manifest carries two budgets: `solve_time_limit_minutes` and
-`score_time_limit_minutes`, required like every other field and seeded at 60.
+`score_time_limit_minutes`, required like every other field and seeded at
+120 for the solve and 60 for the score.
 They are separate because they bound different things — a solve is the
 agent's own working time, a score is stack builds and case replays. They are
 the only place a time limit lives: not the sample's `env/.env`, because one

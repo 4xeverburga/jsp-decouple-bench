@@ -2,7 +2,7 @@
   {
     "task_type": "decouple_slice",
     "version": 5,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -46,7 +46,7 @@
   {
     "task_type": "decouple_slice",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -87,7 +87,7 @@
   {
     "task_type": "decouple_slice",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -133,7 +133,7 @@
   {
     "task_type": "decouple_slice",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -175,7 +175,7 @@
   {
     "task_type": "decouple_slice",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -215,7 +215,7 @@
   {
     "task_type": "decouple_slice",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -257,7 +257,7 @@
   {
     "task_type": "decouple_slice",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -300,7 +300,7 @@
   {
     "task_type": "decouple_slice",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -340,7 +340,7 @@
   {
     "task_type": "decouple_slice",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -380,7 +380,7 @@
   {
     "task_type": "decouple_slice",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -422,7 +422,7 @@
   {
     "task_type": "decouple_slice",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -465,7 +465,7 @@
   {
     "task_type": "decouple_slice",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -507,7 +507,7 @@
   {
     "task_type": "decouple_slice",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -547,7 +547,7 @@
   {
     "task_type": "oneshot_decoupling",
     "version": 3,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -598,7 +598,7 @@
   {
     "task_type": "dummy_file",
     "version": 1,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -634,7 +634,7 @@
   {
     "task_type": "dummy_file",
     "version": 1,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -670,7 +670,7 @@
   {
     "task_type": "agent_probe",
     "version": 1,
-    "solve_time_limit_minutes": 60,
+    "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -701,50 +701,6 @@
     ],
     "name": "agent-probe",
     "id": 17,
-    "sample": "mamute"
-  },
-  {
-    "task_type": "decouple_slice",
-    "version": 1,
-    "solve_time_limit_minutes": 120,
-    "score_time_limit_minutes": 60,
-    "bindings": {
-      "stack": {
-        "adapter": "compose@1"
-      },
-      "browser": {
-        "adapter": "playwright@1"
-      },
-      "db": {
-        "adapter": "mysql@1",
-        "options": {
-          "dialect": "mysql",
-          "service": "db",
-          "user": "root",
-          "password": "",
-          "database": "mamute_development"
-        }
-      }
-    },
-    "scope": {
-      "cases": [
-        "answer-flow__answer-appears"
-      ],
-      "routes": [
-        "/sign-up",
-        "/ask",
-        "/logout",
-        "/login",
-        "/{question.id}-{sluggedTitle}",
-        "/answer/{question.id}"
-      ]
-    },
-    "scorers": [
-      "functional_parity",
-      "trace_similarity"
-    ],
-    "name": "answer-flow-120",
-    "id": 18,
     "sample": "mamute"
   }
 ]
