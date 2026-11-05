@@ -2,7 +2,7 @@
   "sample": "openclinica",
   "case": "subject-flow__subject-creation",
   "sample_commit": "f634c82e5a4a72096ea64354eb1ac59705aac977",
-  "captured_at": "2026-11-05T03:17:04+00:00",
+  "captured_at": "2026-11-05T03:32:18+00:00",
   "db": {
     "tables": {
       "subject": {

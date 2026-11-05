@@ -44,5 +44,13 @@ sed -i \
 # falls back to blog.openclinica.com (CoreResources): a closed local port
 # keeps the run off the internet and its span the same every time.
 
+# A reused keep-alive connection stalls until connectionTimeout (20 s)
+# closes it: a flow sat ~130 s in those waits and timed out a step now and
+# then. One request per connection removes them.
+SERVER_XML="${CATALINA_HOME}/conf/server.xml"
+grep -q 'maxKeepAliveRequests' "${SERVER_XML}" || sed -i \
+  's#<Connector port="8080" protocol="HTTP/1.1"#& maxKeepAliveRequests="1"#' \
+  "${SERVER_XML}"
+
 # 3. Foreground, so the container's lifecycle is the app's.
 exec "${CATALINA_HOME}/bin/catalina.sh" run
