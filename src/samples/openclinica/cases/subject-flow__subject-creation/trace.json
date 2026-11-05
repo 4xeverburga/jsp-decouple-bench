@@ -2,7 +2,7 @@
   "sample": "openclinica",
   "case": "subject-flow__subject-creation",
   "sample_commit": "f634c82e5a4a72096ea64354eb1ac59705aac977",
-  "captured_at": "2026-11-05T03:32:18+00:00",
+  "captured_at": "2026-11-05T05:05:18+00:00",
   "requests": [
     {
       "label": "SERVER GET /OpenClinica/ -> 302",
@@ -365,6 +365,47 @@
         },
         {
           "label": "SQL SELECT USER_ACCOUNT",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /OpenClinica/ListStudySubjects -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT study_subject",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT STUDY",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT subject",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_event",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_group_class",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT STUDY_EVENT_DEFINITION",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_group_class",
           "count": 1,
           "children": []
         }

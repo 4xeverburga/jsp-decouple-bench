@@ -542,7 +542,8 @@
       "routes": [
         "/",
         "/j_spring_security_check",
-        "/AddNewSubject"
+        "/AddNewSubject",
+        "/ListStudySubjects"
       ]
     },
     "scorers": [

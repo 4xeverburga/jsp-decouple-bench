@@ -5,7 +5,8 @@
     "routes": [
       "/",
       "/j_spring_security_check",
-      "/AddNewSubject"
+      "/AddNewSubject",
+      "/ListStudySubjects"
     ],
     "locale": "en-US",
     "timezone_id": "UTC",
@@ -21,8 +22,10 @@
       "subject_url",
       "dom_before",
       "dom_after",
+      "dom_list",
       "subject_label",
-      "subject_visible_after"
+      "subject_visible_after",
+      "subject_listed"
     ]
   },
   "db": {

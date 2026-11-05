@@ -2,11 +2,13 @@
 
 Self-contained: logs in as the seeded admin (credentials from the
 harness-injected environment only — openclinica has no in-flow signup),
-opens the AddNewSubject form and enrolls a subject with fixed data. The
-act under test is the subject creation: submitting the form must land on
-the study-subject list with the new Study Subject ID visible. Returns
-normalized DOM snapshots of the form (before) and the list page (after)
-for parity replay.
+opens the AddNewSubject form and enrolls a subject with fixed data, then
+opens the study-subject list. The acts under test are the work order's
+two: the add, and the list showing the new subject. "Save and Finish"
+forwards to the new subject's own page (View Subject), not to the list,
+so the list is opened as a request of its own. Returns normalized DOM
+snapshots of the form (before), the page the add lands on (after) and the
+list, for parity replay.
 
 Dates are filled explicitly (the form prefills enrollmentDate with
 *today*, which would break determinism otherwise).
@@ -77,19 +79,30 @@ def run(page, base_url):
         page.click("input[name=submitDone]")
     page.wait_for_load_state("domcontentloaded")
 
-    # --- assert: the subject list shows the new subject ------------------
+    # --- assert: the add lands on the new subject's page -----------------
     subject_url = page.url
     subject_visible_after = page.locator(f"text={SUBJECT_LABEL}").count() > 0
     dom_after = _normalize(page.content())
 
     assert subject_visible_after, (
-        "expected %r on the study-subject list after creation" % SUBJECT_LABEL
+        "expected %r on the page the add lands on" % SUBJECT_LABEL
+    )
+
+    # --- assert: the subject list shows the new subject ------------------
+    _goto(page, base_url + "/ListStudySubjects")
+    subject_listed = page.locator(f"text={SUBJECT_LABEL}").count() > 0
+    dom_list = _normalize(page.content())
+
+    assert subject_listed, (
+        "expected %r on the study-subject list" % SUBJECT_LABEL
     )
 
     return {
         "subject_url": subject_url,
         "dom_before": dom_before,
         "dom_after": dom_after,
+        "dom_list": dom_list,
         "subject_label": SUBJECT_LABEL,
         "subject_visible_after": subject_visible_after,
+        "subject_listed": subject_listed,
     }
