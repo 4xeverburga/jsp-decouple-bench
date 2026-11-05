@@ -376,7 +376,7 @@ prompt and the tree are the two channels we control.
 
 ### Refusing a broken setup early
 
-`settings.py` reads `.env` and raises on a missing key, by name — there are
+`settings.py` reads `bench.env` and raises on a missing key, by name — there are
 no defaults, so a half-configured checkout fails on the first command
 instead of producing a quietly different run. Only `BENCH_CHECKOUT`,
 `BENCH_SAMPLE_ENV` and the address a stack publishes change per

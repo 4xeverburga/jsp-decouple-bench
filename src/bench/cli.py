@@ -206,7 +206,7 @@ def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
     """Grade the tree a solve kept; the replay starts the stack itself.
 
     The score profile names the judge `trace_similarity` asks; its
-    credentials come from `.env`, like a solve profile's. The task labels
+    credentials come from `bench.env`, like a solve profile's. The task labels
     the log with the solve profile from the run's record.
     """
     judge = settings.score_profile(score_profile)
@@ -214,7 +214,7 @@ def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
     if not tree.is_dir():
         raise SystemExit(f"no tree for run {run}: {tree} is missing")
     # What produced this tree, from the run's own record: a re-score of last
-    # week's run must not be labelled with today's `.env`.
+    # week's run must not be labelled with today's `bench.env`.
     record = solves.read(run)
     if "profile" not in record:
         raise SystemExit(

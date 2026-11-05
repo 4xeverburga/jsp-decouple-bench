@@ -5,7 +5,7 @@
 ```
 jsp-decouple-bench/
 ├── main.py                  # the @task types AND the command line
-├── settings.py              # EVERY parameter, read from .env; no defaults
+├── settings.py              # EVERY parameter, read from bench.env; no defaults
 ├── pyproject.toml, uv.lock  # dependencies live here and nowhere else
 ├── AGENTS.md                # the supervisor's contract
 ├── ROADMAP.md               # direction
@@ -42,7 +42,7 @@ jsp-decouple-bench/
 
 `settings.py` sits at the repository root, not in `src/bench`, because every
 module imports it and it must not depend on the package it configures. It
-reads `.env` once and exposes the parameters as module values; a missing key
+reads `bench.env` once and exposes the parameters as module values; a missing key
 is an error, never a fallback.
 
 Inspect owns the agent's sandbox, the run lifecycle and the logs. The bench

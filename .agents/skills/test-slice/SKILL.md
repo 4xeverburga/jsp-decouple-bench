@@ -89,7 +89,7 @@ Copy a sibling case of the same sample and adjust. The shape is the
 author declares which tables the behaviour owns and which columns are
 volatile. `locale`, `timezone_id` and `viewport` are the determinism
 contract — never omit them, never take them from the host; the effective
-values come from `settings.py` (`BENCH_*` in `.env`), and the case states
+values come from `settings.py` (`BENCH_*` in `bench.env`), and the case states
 the same ones so a reviewer can see them.
 
 ### 3. Author `flow.py`
@@ -110,7 +110,7 @@ Rules (all hard-won — violating any of these cost a debug cycle):
   JS predicate with `%` formatting, check the braces survive it (a
   missing `}` here once broke every vote wait).
 - **Timed waits are data, not literals**: `CASE_TIMEOUT_MS` comes from
-  `settings` (`.env` → `BENCH_CASE_TIMEOUT_MS`). No `timeout=5000` in a
+  `settings` (`bench.env` → `BENCH_CASE_TIMEOUT_MS`). No `timeout=5000` in a
   flow.
 - **Legacy widgets need UI driving**: select2 v3 inputs are hidden —
   click `.select2-container`, `fill(".select2-input", ...)`,

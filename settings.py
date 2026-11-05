@@ -1,12 +1,12 @@
-"""The bench's whole configuration, in one place, read from `.env`.
+"""The bench's whole configuration, in one place, read from `bench.env`.
 
 Two kinds of value live here, and only one of them is a parameter:
 
-- **Parameters**, from `.env` at the repository root — the browser, the
+- **Parameters**, from `bench.env` at the repository root — the browser, the
   viewport, the locale, the clock, the timeouts, the model names. They are
   required: there are no defaults, so a missing key is a configuration
   error, not a silent fallback. The shell environment is not consulted for
-  them; `.env` is the single source of truth. `.env` also holds the
+  them; `bench.env` is the single source of truth. `bench.env` also holds the
   credentials a profile names, and nothing about the run itself.
 - **Profiles**, from `tasks-config.yaml` — who solves a manifest, with
   which model and effort (`solve_profiles`, chosen with `--profile`), and
@@ -19,7 +19,14 @@ Two kinds of value live here, and only one of them is a parameter:
   address a stack publishes is not one: every stack picks a free host port
   of its own and carries the URL it answers on (`stack.Stack.base_url`).
 
-Copy the template once: `cp .env.example .env`. `.env` is untracked.
+Copy the template once: `cp bench.env.example bench.env`. `bench.env` is
+untracked.
+
+Not `.env`: Inspect loads the first `.env` above its working directory into
+every eval's environment, so a solve or a judge would see every credential
+the file holds, not the ones its profile names. Its Anthropic provider then
+prefers `ANTHROPIC_AUTH_TOKEN` to `ANTHROPIC_API_KEY`: every Claude run of an
+API-key profile went out on the subscription token until this was renamed.
 """
 
 import os
@@ -30,7 +37,12 @@ import yaml
 from dotenv import dotenv_values
 
 ROOT = Path(__file__).resolve().parent
-ENV_FILE = ROOT / ".env"
+ENV_FILE = ROOT / "bench.env"
+if (ROOT / ".env").exists():
+    raise RuntimeError(
+        f"{ROOT / '.env'} exists: Inspect would load it into every eval. "
+        f"The bench reads {ENV_FILE}; rename it (`mv .env bench.env`)"
+    )
 
 _ENV = dotenv_values(ENV_FILE)
 
@@ -40,8 +52,8 @@ def _text(name: str) -> str:
     value = _ENV.get(name)
     if value is None or value == "":
         raise KeyError(
-            f"{name} is missing from {ENV_FILE}: copy .env.example to .env "
-            f"and fill it in"
+            f"{name} is missing from {ENV_FILE}: copy bench.env.example "
+            f"to bench.env and fill it in"
         )
     return value
 
@@ -113,8 +125,9 @@ STACK_TRACES_FILE = "/traces/traces.jsonl"
 TRACE_FLUSH_WAIT_S = 8
 
 # --- who solves a run, and who judges it: named profiles in
-# `tasks-config.yaml`, never `.env`. A profile is a choice, not a secret, so
-# it is tracked; `.env` only holds the credentials its `model_env` names.
+# `tasks-config.yaml`, never `bench.env`. A profile is a choice, not a
+# secret, so it is tracked; `bench.env` only holds the credentials its
+# `model_env` names.
 # `src/agents/` defines the agents a solve profile can name.
 TASKS_CONFIG = ROOT / "tasks-config.yaml"
 SOLVE_PROFILE_KEYS = (
@@ -188,7 +201,7 @@ def solve_profile(name: str) -> dict:
     """Who solves: the agent, its pin, the model that answers, its effort.
 
     Credentials are not part of it: `credentials` resolves `model_env`
-    against `.env`.
+    against `bench.env`.
     """
     chosen = _profile("solve_profiles", SOLVE_PROFILE_KEYS, name)
     if chosen["compaction"] not in COMPACTIONS:
@@ -234,7 +247,8 @@ def score_profile(name: str) -> dict:
 
 
 def credentials(chosen: dict) -> dict[str, str]:
-    """The values of the variables a profile's provider reads, from `.env`.
+    """The values of the variables a profile's provider reads, from
+    `bench.env`.
 
     Either kind of profile: both name their provider's variables in
     `model_env`.

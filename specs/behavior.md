@@ -13,10 +13,10 @@ uv run python main.py capture --manifest <id> [--case <case>]  # freeze bases
 `main.py` is also the file Inspect loads (`inspect eval main.py@<task type>`),
 so the same work can be driven by hand with two `inspect eval` calls.
 
-Parameters (all required, no defaults) come from `.env` at the repository
+Parameters (all required, no defaults) come from `bench.env` at the repository
 root, which `settings.py` reads and nothing else does: the browser, the
 viewport, the locale, the clock, the timeouts and the model names. Copy
-`.env.example` to `.env` once per checkout.
+`bench.env.example` to `bench.env` once per checkout.
 
 Run inputs come from the process environment, because they change per
 invocation: `BENCH_CHECKOUT` (the tree under test) and `BENCH_SAMPLE_ENV`
@@ -72,7 +72,7 @@ export BENCH_CHECKOUT=$(uv run python -c "from pathlib import Path; import setti
 from src.bench import solves; from src.bench.seeds import pin; \
 print(solves.materialise(Path(settings.checkout()), pin('mamute')))")
 export BENCH_SAMPLE_ENV=$PWD/src/samples/mamute/env SOLVE_ROOT=/workspace
-set -a; . .env; set +a                          # the profile's keys
+set -a; . bench.env; set +a                          # the profile's keys
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=solve -T run=$RUN \
   -T profile=opencode-v1-deepseek-flash-medium \

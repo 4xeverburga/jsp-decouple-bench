@@ -12,11 +12,11 @@ this file is not for you.
 | the graded cases and the run's budget | `seeds/manifests.json` |
 | the work order: task-type contracts and each manifest's ask | `seeds/prompts/{task_types,manifests}/<name>.md` |
 | every parameter: timeouts, viewport, locale, models, paths | `settings.py` |
-| the values of those parameters | `.env` (untracked, from `.env.example`) |
+| the values of those parameters | `bench.env` (untracked, from `bench.env.example`) |
 | agents the solve can run | `src/agents/` |
 | who solves a run: agent, its pin, the model that answers, its effort | a `solve_profiles` entry in `tasks-config.yaml` |
 | who judges the spans: the model `trace_similarity` asks, its effort | a `score_profiles` entry in `tasks-config.yaml` |
-| the credentials a profile names | `.env` |
+| the credentials a profile names | `bench.env` |
 | the answer key: flows and goldens | `src/samples/<sample>/cases/` |
 | the stack, Containerfile, .env, OpenTelemetry collector | `src/samples/<sample>/env/` |
 | starting and removing a case's stack | `src/bench/stack.py` |
@@ -29,8 +29,8 @@ A manifest carries two budgets: `solve_time_limit_minutes` and
 They are separate because they bound different things — a solve is the
 agent's own working time, a score is stack builds and case replays. They are
 the only place a time limit lives: not the sample's `env/.env`, because one
-sample is graded by tasks of very different length, and not `.env`, because a
-run either fits the manifest it was asked for or is not a measurement.
+sample is graded by tasks of very different length, and not `bench.env`,
+because a run either fits the manifest it was asked for or is not a measurement.
 `main.py` hands each to its own phase as Inspect's `time_limit`; exceeding it
 ends the sample, it does not fail it.
 
@@ -71,7 +71,7 @@ modules and the lifecycle.
     A function takes every value it needs as a required argument: no `= x`
     in a signature, no `None` that quietly means "use the usual", no
     `os.environ.get(name, fallback)`. Configuration lives in `settings.py`
-    at the repository root and nowhere else; it reads `.env`, which is the
+    at the repository root and nowhere else; it reads `bench.env`, which is the
     only source of parameters. A missing key is an error with the key's
     name, never a fallback that hides a broken setup.
     Only the per-run inputs (`BENCH_CHECKOUT`, `BENCH_SAMPLE_ENV`) come
@@ -84,7 +84,7 @@ modules and the lifecycle.
 ## Running one
 
 ```bash
-cp .env.example .env        # once per checkout; settings.py reads nothing else
+cp bench.env.example bench.env  # once per checkout; settings.py reads only it
 export BENCH_CHECKOUT=/abs/checkout
 
 uv run python main.py task --manifest 3 \
