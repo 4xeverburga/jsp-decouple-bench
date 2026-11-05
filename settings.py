@@ -212,8 +212,8 @@ def credentials(chosen: dict) -> dict[str, str]:
     return {name: _text(name) for name in chosen["model_env"]}
 
 
-# --- the model the score phase is labelled with. It answers nothing, but
-# Inspect requires one; `mockllm/model` makes that explicit in the log. ----
+# --- the model `inspect eval` is given for a score. Inspect requires one;
+# the score task replaces it with the solve's `answer_model`. -------------
 SCORE_MODEL = _text("BENCH_SCORE_MODEL")
 
 

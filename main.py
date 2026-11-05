@@ -43,6 +43,7 @@ import settings  # noqa: E402
 from src import agents  # noqa: E402
 from src.bench import samples, solves  # noqa: E402
 from src.bench.compose import solve_compose  # noqa: E402
+from src.bench.label import solved_by  # noqa: E402
 from src.bench.replay import replayed_case  # noqa: E402
 from src.bench.scorers import parity, trace_similarity  # noqa: E402
 from src.bench.seeds import manifest as load_manifest  # noqa: E402
@@ -189,7 +190,8 @@ def _manifest_task(
     if phase == "score":
         # Which solve produced the tree, from its record: the label every
         # verdict in this log is read against.
-        metadata["solve_profile"] = solves.read(run)["profile"]
+        record = solves.read(run)
+        metadata["solve_profile"] = record["profile"]
         metadata["run"] = run
         return Task(
             dataset=samples.for_scoring(manifest_id),
@@ -202,6 +204,7 @@ def _manifest_task(
             scorer=_scorers(chosen, profile),
             description=kind["description"],
             metadata=metadata,
+            model=solved_by(record["model"]),
             time_limit=chosen["score_time_limit_minutes"] * 60,
         )
 
