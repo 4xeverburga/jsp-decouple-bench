@@ -55,6 +55,7 @@ def _scorers(chosen: dict, score_profile: str) -> list:
         "functional_parity": lambda: parity(chosen["sample"]),
         "trace_similarity": lambda: trace_similarity(
             chosen["sample"],
+            chosen["scope"]["trace"],
             score_profile,
             settings.score_profile(score_profile),
         ),

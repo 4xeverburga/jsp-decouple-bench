@@ -11,8 +11,9 @@ Two steps, cheapest first:
    the app's own server over HTTP has no boundary at all — that is what a
    no-op looks like — and fails without asking anyone.
 2. **The judge** (`judge.py`), with the score profile's model, for the
-   rest: which requests the work order puts in scope, whether their work
-   now runs behind the hop, and whether their writes still happen.
+   rest: whether the work of the requests the manifest puts in scope
+   (`scope.trace`) now runs behind the hop, and whether their writes still
+   happen.
 
 A case with no spans, or no trace base, or a judge that answers no verdict,
 raises: it was not measured, and the run must say so instead of passing.
@@ -27,13 +28,41 @@ from ..metrics import all_must_pass
 from ..observation import observation
 from . import base, judge, spans
 
+MOVES = ("all", "writes")
+
+
+def _scope(case: str, entries: list[dict], before: list[dict]) -> str:
+    """The case's scope as the judge reads it, checked against its base.
+
+    A line the base does not have is a stale scope, from before a
+    recapture or a flow change: it fails here, by name, rather than leave
+    the judge a request it cannot find.
+    """
+    labels = {request["label"] for request in before}
+    lines = []
+    for entry in entries:
+        if entry["request"] not in labels:
+            raise KeyError(
+                f"{case}: scope names {entry['request']!r}, which its trace "
+                f"base has no request for"
+            )
+        if entry["move"] not in MOVES:
+            raise ValueError(
+                f"{case}: scope move {entry['move']!r} is not one of {MOVES}"
+            )
+        lines.append(f"- {entry['request']}    move: {entry['move']}")
+    return "\n".join(lines)
+
 
 @scorer(metrics=[all_must_pass()])
-def trace_similarity(slug: str, profile_name: str, profile: dict) -> scorer:
+def trace_similarity(
+    slug: str, scope: dict, profile_name: str, profile: dict
+) -> scorer:
     """Judge the case's spans against its base, with the profile's judge.
 
-    The profile is passed as data, its name beside it, so the run's log
-    records which model ruled and how.
+    `scope` is the manifest's `scope.trace`: per case, the requests whose
+    work must move. The profile is passed as data, its name beside it, so
+    the run's log records which model ruled and how.
     """
 
     async def score(state: TaskState, target_state: Target) -> Score:
@@ -64,8 +93,16 @@ def trace_similarity(slug: str, profile_name: str, profile: dict) -> scorer:
                 metadata=facts,
             )
 
+        if case not in scope:
+            raise KeyError(
+                f"{case}: the manifest's scope.trace declares no requests "
+                f"for it, so there is nothing to judge"
+            )
         text = judge.prompt(
-            state.input_text, spans.render(before), spans.render(after)
+            state.input_text,
+            _scope(case, scope[case], before),
+            spans.render(before),
+            spans.render(after),
         )
         verdict, model = await judge.rule(profile, text)
         failed = [

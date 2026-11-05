@@ -1,11 +1,15 @@
 """The judge: a model reads both span trees and rules on the boundary.
 
 Whether a tree shows a decoupling is not a diff: the per-request SQL a
-framework runs stays where it was, a backend may read more rows than the
-page did, and which requests are in scope is written in prose in the work
-order. So a model reads the base, the submission and that work order, and
-answers four yes/no criteria in a fixed schema; the verdict is their
-conjunction, computed here, never the model's own summary.
+framework runs stays where it was, and a backend may read more rows than
+the page did. So a model reads the base, the submission, the work order
+and the manifest's scope for the case, and answers four yes/no criteria
+in a fixed schema; the verdict is their conjunction, computed here, never
+the model's own summary.
+
+The scope is the manifest's, not the model's to infer: left to read it
+from the work order, judges picked different requests on the same trees
+and failed runs for reads the order never asked for.
 
 The prompt is `judge.md` beside this file. It is the bench's, not the
 agent's: the agent never sees it, so it may say what is being checked.
@@ -20,7 +24,7 @@ from inspect_ai.util import json_schema
 from pydantic import BaseModel
 
 PROMPT = Path(__file__).with_name("judge.md")
-SLOTS = re.compile(r"\{(work_order|before|after)\}")
+SLOTS = re.compile(r"\{(work_order|scope|before|after)\}")
 CRITERIA = (
     "browser_contract_kept",
     "boundary_crossed",
@@ -30,7 +34,6 @@ CRITERIA = (
 
 
 class Verdict(BaseModel):
-    in_scope_requests: list[str]
     browser_contract_kept: bool
     boundary_crossed: bool
     page_side_clean: bool
@@ -38,13 +41,18 @@ class Verdict(BaseModel):
     explanation: str
 
 
-def prompt(work_order: str, before: str, after: str) -> str:
+def prompt(work_order: str, scope: str, before: str, after: str) -> str:
     """The judge's prompt, filled in one pass.
 
     Not `str.format`: the prompt spells `{n}` and `{slug}` as the trees do,
     and a tree must never be read as a slot.
     """
-    values = {"work_order": work_order, "before": before, "after": after}
+    values = {
+        "work_order": work_order,
+        "scope": scope,
+        "before": before,
+        "after": after,
+    }
     return SLOTS.sub(lambda found: values[found.group(1)], PROMPT.read_text())
 
 

@@ -33,7 +33,19 @@
         "/login",
         "/{question.id}-{sluggedTitle}",
         "/answer/{question.id}"
-      ]
+      ],
+      "trace": {
+        "answer-flow__answer-appears": [
+          {
+            "request": "SERVER POST /answer/{n} -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
@@ -74,7 +86,19 @@
         "/sign-up",
         "/ask",
         "/{question.id}-{sluggedTitle}"
-      ]
+      ],
+      "trace": {
+        "ask-flow__question-creation": [
+          {
+            "request": "SERVER POST /ask -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
@@ -120,7 +144,21 @@
         "/{question.id}-{sluggedTitle}",
         "/question/{question.id}/voto/negativo",
         "/question/{question.id}/voto/positivo"
-      ]
+      ],
+      "trace": {
+        "vote-flow__downvote-decrements-count": [
+          {
+            "request": "SERVER POST /Question/{n}/voto/negativo -> 200",
+            "move": "all"
+          }
+        ],
+        "vote-flow__upvote-increments-count": [
+          {
+            "request": "SERVER POST /Question/{n}/voto/positivo -> 200",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
@@ -162,7 +200,15 @@
         "/ask",
         "/{question.id}-{sluggedTitle}",
         "/question/watched/{question.id}"
-      ]
+      ],
+      "trace": {
+        "watch-flow__watch-adds-watcher": [
+          {
+            "request": "SERVER POST /question/watched/{n} -> 200",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
@@ -203,7 +249,19 @@
         "/login",
         "/admin/showCourse",
         "/admin/addCourse"
-      ]
+      ],
+      "trace": {
+        "admin-course-flow__add-course-creates-course": [
+          {
+            "request": "SERVER POST /Examination_System/admin/addCourse -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/admin/showCourse -> 200",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
@@ -246,7 +304,29 @@
         "/admin/showStudent",
         "/admin/addStudent",
         "/admin/removeStudent"
-      ]
+      ],
+      "trace": {
+        "admin-student-flow__add-student-creates-user": [
+          {
+            "request": "SERVER POST /Examination_System/admin/addStudent -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/admin/showStudent -> 200",
+            "move": "all"
+          }
+        ],
+        "admin-student-flow__remove-student-cascades": [
+          {
+            "request": "SERVER GET /Examination_System/admin/removeStudent -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/admin/showStudent -> 200",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
@@ -290,7 +370,19 @@
         "/student/backPeriod",
         "/student/startExam",
         "/student/saveExam"
-      ]
+      ],
+      "trace": {
+        "exam-flow__save-exam-marks-has-exam": [
+          {
+            "request": "SERVER GET /Examination_System/student/startExam -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/student/saveExam -> 200",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
@@ -331,7 +423,19 @@
         "/login",
         "/student/selectedCourse",
         "/student/outCourse"
-      ]
+      ],
+      "trace": {
+        "out-course-flow__out-course-deletes-enrollment": [
+          {
+            "request": "SERVER GET /Examination_System/student/outCourse -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/student/selectedCourse -> 200",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
@@ -372,7 +476,19 @@
         "/login",
         "/student/recharge",
         "/student/updateBalance"
-      ]
+      ],
+      "trace": {
+        "recharge-flow__recharge-increments-balance": [
+          {
+            "request": "SERVER GET /Examination_System/student/recharge -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER POST /Examination_System/student/updateBalance -> 200",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
@@ -415,7 +531,25 @@
         "/student/showCourse",
         "/student/stuSelectedCourse",
         "/student/selectedCourse"
-      ]
+      ],
+      "trace": {
+        "select-course-flow__insufficient-balance-blocks-selection": [
+          {
+            "request": "SERVER GET /Examination_System/student/stuSelectedCourse -> 200",
+            "move": "all"
+          }
+        ],
+        "select-course-flow__select-course-deducts-balance": [
+          {
+            "request": "SERVER GET /Examination_System/student/stuSelectedCourse -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/student/selectedCourse -> 200",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
@@ -459,7 +593,33 @@
         "/student/startStudy",
         "/student/backPeriod",
         "/student/prePeriod"
-      ]
+      ],
+      "trace": {
+        "study-flow__next-period-increments-progress": [
+          {
+            "request": "SERVER GET /Examination_System/student/startStudy -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/student/backPeriod -> 200",
+            "move": "all"
+          }
+        ],
+        "study-flow__prev-period-decrements-progress": [
+          {
+            "request": "SERVER GET /Examination_System/student/startStudy -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/student/backPeriod -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/student/prePeriod -> 200",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
@@ -502,7 +662,19 @@
         "/teacher/gradeCourse",
         "/teacher/mark",
         "/teacher/saveMark"
-      ]
+      ],
+      "trace": {
+        "teacher-mark-flow__save-mark-sets-grade": [
+          {
+            "request": "SERVER POST /Examination_System/teacher/saveMark -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/teacher/gradeCourse -> 200",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
@@ -544,7 +716,19 @@
         "/j_spring_security_check",
         "/AddNewSubject",
         "/ListStudySubjects"
-      ]
+      ],
+      "trace": {
+        "subject-flow__subject-creation": [
+          {
+            "request": "SERVER POST /OpenClinica/AddNewSubject -> 200",
+            "move": "writes"
+          },
+          {
+            "request": "SERVER GET /OpenClinica/ListStudySubjects -> 200",
+            "move": "all"
+          }
+        ]
+      }
     },
     "scorers": [
       "functional_parity",
