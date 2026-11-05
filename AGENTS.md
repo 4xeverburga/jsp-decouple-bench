@@ -143,6 +143,25 @@ line (`task`, `score`, `capture`, `manifests`) and also the file Inspect
 loads (`inspect eval main.py@<task type>`). Scoring prints its progress as
 `[stack]` lines; a first build of a sample is minutes long.
 
+## Reading a run
+
+Inspect writes every phase to `settings.LOGS` (`out/evals/`), so its
+viewer has to be pointed there — the default `./logs` holds nothing and
+shows an empty list:
+
+```bash
+uv run inspect view --log-dir out/evals        # UI, one row per phase
+uv run inspect log out/evals/<file>.eval       # one log, to the terminal
+```
+
+One log is one phase, so a run is two rows: the solve, then the score.
+Their task args carry `manifest_id`, `phase`, `run` and `profile`; the
+eval metadata carries the manifest's `name`, `sample` and `version`, plus
+`run` and `solve_profile` on a score — and `attempt`, the id that tells
+two scores of one run apart. The viewer is read-only over the log: the
+score it shows is the one written last, so re-run `score` rather than
+expect the number to refresh.
+
 ## Running side by side
 
 Two solves of one sample, two scores of one kept tree, or a score next to
