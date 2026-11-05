@@ -126,6 +126,8 @@ SOLVE_PROFILE_KEYS = (
     "reasoning_effort",
     "model_args",
     "compaction",
+    "context_window",
+    "compaction_threshold",
 )
 SCORE_PROFILE_KEYS = (
     "judge_model",
@@ -142,6 +144,11 @@ EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
 # native-first, summary-fallback strategy, and only the native agent can
 # carry it.
 COMPACTIONS = ("none", "CompactionAuto")
+# `context_window` is the answerer's window in tokens, as the provider
+# enforces it, and `compaction_threshold` the fraction of it at which
+# `CompactionAuto` compacts. Both are `none` for a CLI, which keeps its own
+# context. Declared, because Inspect would otherwise guess the window from
+# its model table and fall back to 128,000 for a model it does not know.
 
 
 def _profile(section: str, keys: tuple[str, ...], name: str) -> dict:
@@ -188,6 +195,35 @@ def solve_profile(name: str) -> dict:
         raise ValueError(
             f"solve_profiles {name!r}: compaction must be one of "
             f"{COMPACTIONS}"
+        )
+    window = chosen["context_window"]
+    if window != "none" and not (
+        isinstance(window, int)
+        and not isinstance(window, bool)
+        and window > 0
+    ):
+        raise ValueError(
+            f"solve_profiles {name!r}: context_window must be 'none' or "
+            f"a positive token count, not {window!r}"
+        )
+    threshold = chosen["compaction_threshold"]
+    if threshold != "none" and not (
+        isinstance(threshold, float) and 0 < threshold < 1
+    ):
+        raise ValueError(
+            f"solve_profiles {name!r}: compaction_threshold must be 'none' "
+            f"or a fraction between 0 and 1, not {threshold!r}"
+        )
+    compacts = chosen["compaction"] != "none"
+    if compacts and (window == "none" or threshold == "none"):
+        raise ValueError(
+            f"solve_profiles {name!r}: compaction {chosen['compaction']!r} "
+            f"needs a context_window and a compaction_threshold"
+        )
+    if not compacts and threshold != "none":
+        raise ValueError(
+            f"solve_profiles {name!r}: compaction_threshold must be 'none' "
+            f"when compaction is 'none'"
         )
     return chosen
 

@@ -179,6 +179,8 @@ def _manifest_task(
                 resolved["agent_version"],
                 settings.SOLVE_ROOT,
                 resolved["compaction"],
+                resolved["context_window"],
+                resolved["compaction_threshold"],
             ),
             cleanup=capture_solution,
             description=kind["description"],

@@ -1,7 +1,7 @@
 """Inspect-native ReAct agent for repository coding tasks."""
 
 from inspect_ai.agent import Agent, as_solver, react
-from inspect_ai.model import Model
+from inspect_ai.model import ChatMessage, Model
 from inspect_ai.model._compaction import CompactionAuto
 from inspect_ai.solver import Solver
 from inspect_ai.tool import bash, text_editor
@@ -14,7 +14,30 @@ from inspect_ai.util import message_limit
 MOCK_MESSAGE_LIMIT = 6
 
 
-def solver_for(model: Model, compaction: str) -> Agent:
+class ContextOverflowError(RuntimeError):
+    """The conversation outgrew the answerer's window and was not saved."""
+
+
+async def _refuse_overflow(messages: list[ChatMessage]) -> list[ChatMessage]:
+    """Fail the sample where react would otherwise end it quietly.
+
+    react calls its truncation filter on `model_length` when there is no
+    compaction, and when a forced compaction failed. Its own default for
+    both is to log an `info` and return, so the solve ends as if finished
+    and a half-done tree is scored. Raising here makes it an `error`.
+    """
+    raise ContextOverflowError(
+        f"context window exceeded at {len(messages)} messages and not "
+        f"compacted: the solve did not finish, its tree is not a result"
+    )
+
+
+def solver_for(
+    model: Model,
+    compaction: str,
+    context_window: int,
+    compaction_threshold: float | str,
+) -> Agent:
     """Build a ReAct agent with shell and text-file editing tools.
 
     No ``prompt``: the task is the work order, which Inspect hands the
@@ -28,21 +51,31 @@ def solver_for(model: Model, compaction: str) -> Agent:
     weaker copy of the requirements in front of the model — and made this
     the one backend carrying it, since every CLI brings its own.
 
-    ``compaction`` is the profile's explicit choice, spelled as
-    ``tasks-config.yaml`` spells it: ``none`` keeps react's default of
-    remembering everything, ``CompactionAuto`` asks Inspect to compact
-    the conversation as it nears the model's context window (native
-    first, summary fallback). Without the argument the run ends the
-    moment the window overflows, with the tree as it stood.
+    ``compaction`` is the profile's explicit choice: ``none`` keeps
+    react's default of remembering everything, ``CompactionAuto`` compacts
+    once the input passes ``compaction_threshold`` of ``context_window``.
+    The threshold is handed over in tokens, so Inspect never looks the
+    window up itself. An overflow that is not compacted fails the sample.
     """
+    strategy = None
+    if compaction != "none":
+        strategy = CompactionAuto(
+            threshold=int(compaction_threshold * context_window)
+        )
     return react(
         model=model,
         tools=[bash(), text_editor()],
-        compaction=None if compaction == "none" else CompactionAuto(),
+        compaction=strategy,
+        truncation=_refuse_overflow,
     )
 
 
-def mock_solver_for(model: Model) -> Solver:
+def mock_solver_for(
+    model: Model,
+    compaction: str,
+    context_window: int,
+    compaction_threshold: float | str,
+) -> Solver:
     """The same agent, capped: the smoke run of the whole pipeline.
 
     The cap belongs to this agent, not to a profile: it exists because
@@ -51,6 +84,6 @@ def mock_solver_for(model: Model) -> Solver:
     still captured and scored.
     """
     return as_solver(
-        solver_for(model, "none"),
+        solver_for(model, compaction, context_window, compaction_threshold),
         limits=[message_limit(MOCK_MESSAGE_LIMIT)],
     )

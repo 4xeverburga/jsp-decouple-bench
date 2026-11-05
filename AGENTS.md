@@ -97,10 +97,15 @@ uv run python main.py score --manifest 3 --run <id> \
 `tasks-config.yaml`: the agent, its
 version, the wire model it asks for, the `answer_model` that answers, the
 variables that provider reads, the reasoning effort, the model args and
-the `compaction` the native agent may carry (`none`, or `CompactionAuto`
-— a CLI manages its own context, so a CLI profile must ask for `none`).
-Every key is required. A new run setup is a new profile, not an edit to an
-old one: the record keeps the profile's name and what it resolved to.
+the `compaction` the native agent may carry (`none`, or `CompactionAuto`),
+the answerer's `context_window` in tokens and the `compaction_threshold`
+fraction of it at which it compacts. A CLI manages its own context, so a
+CLI profile says `none` to all three; react must declare its window,
+because Inspect would otherwise guess it and fall back to 128,000. An
+overflow react does not compact fails the solve as an `error`, never a
+quiet end that scores a half-done tree. Every key is required. A new run
+setup is a new profile, not an edit to an old one: the record keeps the
+profile's name and what it resolved to.
 `answer_model` is the only thing a score is attributed to: the agent's
 model name is just the format of its request. `--score-profile` is
 required on `score`, and names a `score_profiles` entry:

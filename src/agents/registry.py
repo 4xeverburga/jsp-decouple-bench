@@ -137,6 +137,8 @@ def solver_for(
     version: str,
     cwd: str,
     compaction: str,
+    context_window: int | str,
+    compaction_threshold: float | str,
 ) -> Any:
     """Build the agent named ``name``.
 
@@ -146,18 +148,35 @@ def solver_for(
     nothing to install — so ``model`` alone is passed, which is what its
     solver takes.
 
-    ``compaction`` is the profile's context-window choice. A CLI manages
-    its own context, so only ``none`` reaches one: anything else is a
-    profile that names a CLI it cannot configure, and is refused here
-    rather than silently ignored.
+    ``compaction``, ``context_window`` and ``compaction_threshold`` are
+    the profile's context-window choice. A CLI manages its own context, so
+    only ``none`` reaches one: anything else is a profile that names a CLI
+    it cannot configure, and is refused here rather than silently ignored.
+    A native agent needs the window, so ``none`` is refused for it.
     """
     agent = AGENTS[name]
     if agent.param is None:
-        return agent.solver(model=model, compaction=compaction)
-    if compaction != "none":
+        if context_window == "none":
+            raise ValueError(
+                f"agent {name!r} is native; context_window must be the "
+                f"answerer's window in tokens, not 'none'"
+            )
+        return agent.solver(
+            model=model,
+            compaction=compaction,
+            context_window=context_window,
+            compaction_threshold=compaction_threshold,
+        )
+    chosen = {
+        "compaction": compaction,
+        "context_window": context_window,
+        "compaction_threshold": compaction_threshold,
+    }
+    configured = {key: v for key, v in chosen.items() if v != "none"}
+    if configured:
         raise ValueError(
             f"agent {name!r} is a CLI and manages its own context; "
-            f"compaction must be 'none', not {compaction!r}"
+            f"{sorted(configured)} must be 'none', not {configured!r}"
         )
     return agent.solver(
         cwd=cwd,

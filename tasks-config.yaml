@@ -27,6 +27,12 @@
 #   reasoning_effort none | minimal | low | medium | high | xhigh | max, set
 #                    on the answering model itself
 #   model_args       provider arguments for `answer_model` (Inspect's -M)
+#   compaction       none | CompactionAuto; a CLI must say none
+#   context_window   the answerer's window in tokens, as its provider
+#                    enforces it; none for a CLI, required for react
+#   compaction_threshold
+#                    the fraction of `context_window` at which
+#                    CompactionAuto compacts; none unless it compacts
 solve_profiles:
   opencode-v1-deepseek-flash-medium:
     agent: opencode
@@ -37,6 +43,8 @@ solve_profiles:
     reasoning_effort: medium
     model_args: {}
     compaction: none
+    context_window: none
+    compaction_threshold: none
 
   # A different family on the same agent and gateway. `glm-5.3-flash` is
   # the id `opencode-go` lists (verified against models.opencode.ai); the
@@ -51,6 +59,8 @@ solve_profiles:
     reasoning_effort: high
     model_args: {}
     compaction: none
+    context_window: none
+    compaction_threshold: none
 
   claude-code-sonnet-5.5-medium:
     agent: claude
@@ -61,6 +71,8 @@ solve_profiles:
     reasoning_effort: medium
     model_args: {}
     compaction: none
+    context_window: none
+    compaction_threshold: none
 
   # Not reliable since it has the sub usage limits
   claude-code-sonnet-5.5-medium-subscription:
@@ -72,6 +84,8 @@ solve_profiles:
     reasoning_effort: medium
     model_args: {}
     compaction: none
+    context_window: none
+    compaction_threshold: none
 
   # The native agent on the same answerer and provider as
   # `opencode-v1-deepseek-flash-medium`, at `high` effort: the two profiles
@@ -88,6 +102,8 @@ solve_profiles:
     reasoning_effort: high
     model_args: {}
     compaction: none
+    context_window: 1000000
+    compaction_threshold: none
 
   # The same native agent on GLM: no CLI bridge, the eval's own model
   # answers. Same gateway as the opencode profiles, so a verdict from one
@@ -102,13 +118,15 @@ solve_profiles:
     reasoning_effort: high
     model_args: {}
     compaction: none
+    context_window: 1000000
+    compaction_threshold: none
 
-  # The same again, with Inspect's automatic compaction: as the
-  # conversation nears the model's context window it is compacted
-  # (provider-native first, summary fallback) instead of ending the run
-  # on overflow. A different agent behaviour, so its runs are not
-  # comparable with `react-glm53-flash`'s — that is why it is a new
-  # profile and not an edit to the old one.
+  # The same again, with Inspect's automatic compaction: past 90 % of the
+  # declared 1M window the conversation is compacted (provider-native
+  # first; `openai-api` has none, so a summary by the same model) instead
+  # of failing the run on overflow. A different agent behaviour, so its
+  # runs are not comparable with `react-glm53-flash`'s — that is why it is
+  # a new profile and not an edit to the old one.
   react-glm53-flash-auto:
     agent: react
     agent_model: none
@@ -118,11 +136,14 @@ solve_profiles:
     reasoning_effort: high
     model_args: {}
     compaction: CompactionAuto
+    context_window: 1000000
+    compaction_threshold: 0.9
 
   # The zero-cost smoke profile: the whole pipeline with an answerer that
   # never reaches a provider. Kept beside the real one so neither name lies
   # about which one it is. Its agent is the capped `react-mock` row: the
-  # mock never calls submit(), so the cap is what ends the solve.
+  # mock never calls submit(), so the cap is what ends the solve. The
+  # mock has no window; 128,000 is the one Inspect assumes for it.
   react-mock:
     agent: react-mock
     agent_model: none
@@ -132,6 +153,8 @@ solve_profiles:
     reasoning_effort: none
     model_args: {}
     compaction: none
+    context_window: 128000
+    compaction_threshold: none
 
 # --- score_profiles: who judges a tree -----------------------------------
 #
