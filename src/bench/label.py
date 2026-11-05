@@ -23,9 +23,12 @@ def solved_by(answer_model: str) -> Model:
     """A model named exactly `answer_model` that cannot be called.
 
     A run nothing answered (a no-op, a hand-made tree) records a bare name;
-    Inspect needs a provider, so it is listed under `none`, as Inspect's
-    own `none/none` is.
+    Inspect needs a provider, so it is listed under `none`. A no-op's
+    `none` becomes `none/no-op`: the viewer shows `none/none` as no model
+    at all, a blank cell.
     """
+    if answer_model == "none":
+        answer_model = "no-op"
     if "/" not in answer_model:
         answer_model = f"none/{answer_model}"
     provider, name = answer_model.split("/", 1)
