@@ -55,6 +55,7 @@ def _attributes(span: dict) -> dict:
 
 def _path(text: str) -> str:
     """A path with its numbers and slugs erased, so two runs compare."""
+    text = re.sub(r";jsessionid=[^/?]*", "", text, flags=re.IGNORECASE)
     text = re.sub(r"/\d+-[^/?]+", "/{n}-{slug}", text)
     return re.sub(r"\d+", "{n}", text)
 

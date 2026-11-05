@@ -546,7 +546,8 @@
       ]
     },
     "scorers": [
-      "functional_parity"
+      "functional_parity",
+      "trace_similarity"
     ],
     "name": "subject-flow",
     "id": 13,

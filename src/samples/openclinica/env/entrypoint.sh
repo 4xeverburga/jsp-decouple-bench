@@ -38,7 +38,11 @@ sed -i \
   -e "s#^dbUser=.*#dbUser=${OPENCLINICA_DB_USER}#" \
   -e "s#^dbPass=.*#dbPass=${OPENCLINICA_DB_PASSWORD}#" \
   -e "s#^sysURL=.*#sysURL=${OPENCLINICA_PUBLIC_URL}/OpenClinica/MainMenu#" \
+  -e "s#^rssUrl=.*#rssUrl=http://127.0.0.1:9/feed#" \
   "${PROPS}"
+# The login page's RssReader fetches rssUrl on every load, and an empty one
+# falls back to blog.openclinica.com (CoreResources): a closed local port
+# keeps the run off the internet and its span the same every time.
 
 # 3. Foreground, so the container's lifecycle is the app's.
 exec "${CATALINA_HOME}/bin/catalina.sh" run

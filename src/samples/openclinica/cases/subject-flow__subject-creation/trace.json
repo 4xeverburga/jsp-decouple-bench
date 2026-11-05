@@ -1,0 +1,374 @@
+{
+  "sample": "openclinica",
+  "case": "subject-flow__subject-creation",
+  "sample_commit": "f634c82e5a4a72096ea64354eb1ac59705aac977",
+  "captured_at": "2026-11-05T03:17:04+00:00",
+  "requests": [
+    {
+      "label": "SERVER GET /OpenClinica/ -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "OnCommittedResponseWrapper.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /OpenClinica/pages/login/login -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER GET /OpenClinica/RssReader -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "HTTP CLIENT GET /feed -> None",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER POST /OpenClinica/j_spring_security_check -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT user_account",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT USER_ACCOUNT",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_user_role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT USER_ACCOUNT",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_user_role",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT user_account",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT authorities",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT audit_user_login",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE user_account",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "OnCommittedResponseWrapper.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /OpenClinica/ -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER GET /OpenClinica/MainMenu -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT STUDY",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_parameter",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_parameter_value",
+          "count": 18,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT USER_ACCOUNT",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_user_role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT USER_ACCOUNT",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_user_role",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE user_account",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT STUDY_EVENT_DEFINITION",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_group_class",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_subject",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_parameter_value",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT STUDY",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_event",
+          "count": 14,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_subject",
+          "count": 5,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /OpenClinica/AddNewSubject -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT STUDY",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_parameter",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_parameter_value",
+          "count": 18,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_group_class",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_parameter_value",
+          "count": 3,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER POST /OpenClinica/AddNewSubject -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT study_group_class",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_parameter_value",
+          "count": 3,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT subject",
+          "count": 5,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_subject",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT subject",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT STUDY_SUBJECT",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT study_subject",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_subject",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT STUDY",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT discrepancy_note",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT subject",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_parameter_value",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT subject",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_event",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_event_definition",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT STUDY",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT event_definition_crf",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT event_crf",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_event",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT item_data",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT crf_version",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT crf",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT SUBJECT_GROUP_MAP",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT audit_event",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT USER_ACCOUNT",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_user_role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT USER_ACCOUNT",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT study_user_role",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT USER_ACCOUNT",
+          "count": 1,
+          "children": []
+        }
+      ]
+    }
+  ]
+}
