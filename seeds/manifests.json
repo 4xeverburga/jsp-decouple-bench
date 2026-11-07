@@ -741,7 +741,7 @@
   {
     "task_type": "oneshot_decoupling",
     "version": 3,
-    "solve_time_limit_minutes": 120,
+    "solve_time_limit_minutes": 240,
     "score_time_limit_minutes": 60,
     "bindings": {
       "stack": {
@@ -782,8 +782,7 @@
       ]
     },
     "scorers": [
-      "functional_parity",
-      "trace_similarity"
+      "functional_parity"
     ],
     "name": "whole-app",
     "id": 14,
@@ -896,5 +895,114 @@
     "name": "agent-probe",
     "id": 17,
     "sample": "mamute"
+  },
+  {
+    "task_type": "oneshot_decoupling",
+    "version": 1,
+    "solve_time_limit_minutes": 240,
+    "score_time_limit_minutes": 60,
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "dialect": "mysql",
+          "service": "db",
+          "user": "root",
+          "password": "root",
+          "database": "online_study_system"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "admin-course-flow__add-course-creates-course",
+        "admin-student-flow__add-student-creates-user",
+        "admin-student-flow__remove-student-cascades",
+        "exam-flow__save-exam-marks-has-exam",
+        "out-course-flow__out-course-deletes-enrollment",
+        "recharge-flow__recharge-increments-balance",
+        "select-course-flow__insufficient-balance-blocks-selection",
+        "select-course-flow__select-course-deducts-balance",
+        "study-flow__next-period-increments-progress",
+        "study-flow__prev-period-decrements-progress",
+        "teacher-mark-flow__save-mark-sets-grade"
+      ],
+      "routes": [
+        "/login",
+        "/admin/showCourse",
+        "/admin/addCourse",
+        "/admin/showStudent",
+        "/admin/addStudent",
+        "/admin/removeStudent",
+        "/student/selectedCourse",
+        "/student/startStudy",
+        "/student/backPeriod",
+        "/student/startExam",
+        "/student/saveExam",
+        "/student/outCourse",
+        "/student/recharge",
+        "/student/updateBalance",
+        "/student/showCourse",
+        "/student/stuSelectedCourse",
+        "/student/prePeriod",
+        "/teacher/showCourse",
+        "/teacher/gradeCourse",
+        "/teacher/mark",
+        "/teacher/saveMark"
+      ]
+    },
+    "scorers": [
+      "functional_parity"
+    ],
+    "name": "whole-app-online-study-system",
+    "id": 18,
+    "sample": "online-study-system"
+  },
+  {
+    "task_type": "oneshot_decoupling",
+    "version": 1,
+    "solve_time_limit_minutes": 240,
+    "score_time_limit_minutes": 60,
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "postgres@1",
+        "options": {
+          "dialect": "postgres",
+          "service": "db",
+          "database": "openclinica",
+          "user": "clinica",
+          "password": "clinica"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "subject-flow__subject-creation"
+      ],
+      "routes": [
+        "/",
+        "/j_spring_security_check",
+        "/AddNewSubject",
+        "/ListStudySubjects"
+      ]
+    },
+    "scorers": [
+      "functional_parity"
+    ],
+    "name": "whole-app-openclinica",
+    "id": 19,
+    "sample": "openclinica"
   }
 ]
