@@ -107,7 +107,7 @@ solve_profiles:
   # with that in mind. `agent_model` and `agent_version` stay `none` because
   # the native agent asks no bridge for a name and installs no CLI; they are
   # recorded labels, not selectors.
-  react-deepseek-flash-high:
+  react-deepseek-flash-41-high:
     agent: react
     agent_model: none
     agent_version: none
@@ -117,7 +117,7 @@ solve_profiles:
     model_args: {}
     compaction: none
     context_window: 1000000
-    compaction_threshold: none
+    compaction_threshold: 0.9
 
   # The same native agent on GLM: no CLI bridge, the eval's own model
   # answers. Same gateway as the opencode profiles, so a verdict from one
