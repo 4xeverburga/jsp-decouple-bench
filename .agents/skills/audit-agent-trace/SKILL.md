@@ -30,9 +30,8 @@ compared to another model's.
 
 | artifact | holds | read it for |
 |---|---|---|
-| `out/solves/<run>/record.json` | agent, agent_model, agent_version, model, manifest_id, diff_bytes | what ran, and what answered |
-| `out/solves/<run>/diff.patch` | what the tree gained, from `git diff --binary` | the static evidence (§5) |
-| `out/solves/<run>/tree/` | the workspace the agent left | what will be scored |
+| `out/solves/<run>/record.json` | agent, agent_model, agent_version, model, manifest_id, commit_sha, tree_sha256, diff_bytes | what ran, what answered, and which commit the diff applies to |
+| `out/solves/<run>/diff.patch` | what git would commit against the pin, from `git diff --binary`; build output excluded | the static evidence (§5), and with the pin, what will be scored (`solves.rebuild`) |
 | `out/solves/<run>/agent/session.tar` | the CLI agent's **own** state directory, copied before its sandbox is destroyed (`solves.keep_agent`) | CLI tool calls (§1) |
 | `out/evals/*.eval` | Inspect's log: the work order, the scores, and the tool calls of a native ReAct run — plus whatever the bridge converted for a CLI | that the sample completed, and how the agent got there |
 | temporary checkout | the pre-agent tree, materialised from the pin | a blank to compare the diff against while the solve is running |
@@ -229,7 +228,7 @@ Write `out/audits/<run_id>.md` (`out/` is gitignored):
 
 verdict: clean | tainted | unauditable
 trace: out/solves/<run_id>/agent/session.tar — <n> lines of transcript
-tree: out/solves/<run_id>/tree (diff <bytes> bytes)
+diff: out/solves/<run_id>/diff.patch (<bytes> bytes, on <commit_sha>)
 
 ## Findings
 - <transcript line>: `<what was read>` — <finding class, or "allowed">

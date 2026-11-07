@@ -6,7 +6,7 @@ Three verbs, all through `main.py`:
 uv run python main.py manifests            # list them
 uv run python main.py task  --manifest <id> --profile <solve>  # solve only
 uv run python main.py score --manifest <id> --run <run_id> \
-    --score-profile <judge>               # score a kept tree, any time
+    --score-profile <judge>               # score a kept run, any time
 uv run python main.py capture --manifest <id> [--case <case>]  # freeze bases
 ```
 
@@ -33,16 +33,20 @@ sample's `env/.env`, which `score` exports.
 
 The driver is convenience, not a requirement: both phases are ordinary
 Inspect tasks and `main.py` is the file that defines them. What it carries
-between the two runs is a run id and the tree that id names, so a hand-run
+between the two runs is a run id and the diff that id names, so a hand-run
 pair has to pass the same `manifest_id` and `run` — four `-T` values each,
 no defaults — or the log stops describing what happened. `profile` is the
 profile of the phase that runs: a solve profile in a solve, a score profile
 in a score.
 
-**Score** is standalone. It starts the stack itself and reads only the tree:
+**Score** is standalone. It starts the stack itself and reads only the tree,
+which `solves.rebuild` cuts from the record's commit and the run's diff (the
+driver does this, and removes it after):
 
 ```bash
-export BENCH_CHECKOUT=$PWD/out/solves/<run_id>/tree
+export BENCH_CHECKOUT=$(uv run python -c "from pathlib import Path; \
+from src.bench import solves; \
+print(solves.rebuild('<run_id>', Path('../mamute').resolve()))")
 set -a; . src/samples/mamute/env/.env; set +a   # the sample's credentials
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=score -T run=<run_id> \
@@ -79,7 +83,7 @@ uv run inspect eval main.py@decouple_slice \
   --model openai-api/opencode-go/deepseek-v4.1-flash
 ```
 
-A solve keeps its own tree under `out/solves/<run_id>/` — the task's cleanup
+A solve keeps its own diff under `out/solves/<run_id>/` — the task's cleanup
 hook writes it, not the driver — so the score command above can follow it
 with nothing in between. Run side by side, this is also the only place a
 stale `BENCH_CHECKOUT` shows: the score phase trusts it.
@@ -105,8 +109,13 @@ task type.
 3. The agent runs inside it with `work_order(manifest)` as its prompt:
    the profile's `agent`, one entry of `src/agents/`, with the answerer model
    passed directly to native `react` or bridged to a CLI agent.
-4. On cleanup, `solves.capture` writes `out/solves/<run_id>/`: `record.json`,
-   `diff.patch` (new files included) and `tree/`.
+4. On cleanup, `solves.capture` writes `out/solves/<run_id>/`: `diff.patch`,
+   what git would commit against the pin (deletions, new files, and edits
+   to files the pin tracks though its `.gitignore` names them; no build
+   output), and `record.json`, with the pin's `commit_sha` and the
+   `tree_sha256` of that tree. It then rebuilds the tree from both and
+   compares the digest; a run that does not rebuild keeps `tree/` for a
+   person to read, raises, and cannot be scored.
 
 The agent never has the docker socket, this repository or the supervisor's
 home. A non-zero agent exit is recorded, not raised.

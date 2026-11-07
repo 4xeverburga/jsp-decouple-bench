@@ -97,9 +97,9 @@ uv run python main.py score --manifest 3 --run <id> \
 uv run inspect view --log-dir out/evals                  # read it
 ```
 
-`task` only solves and keeps the tree in `out/solves/<run>/`; `score`
-grades that kept tree as often as wanted without paying for the agent
-again. Solve and judge setups are named profiles in `tasks-config.yaml`.
+`task` only solves and keeps its diff, on the pinned commit, in
+`out/solves/<run>/`; `score` rebuilds the tree from the two and grades it
+as often as wanted without paying for the agent again. Solve and judge setups are named profiles in `tasks-config.yaml`.
 Docker and a few GB of disk are required; a sample's first build takes
 minutes.
 

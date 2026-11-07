@@ -125,10 +125,18 @@ judge call answers `400 MissingSessionID`, after the stack is up and as
 an `error` — not a `fail`, and never a pass.
 
 `task` only solves: one agent in its own workspace, and
-`out/solves/<run id>/` keeps the tree, the diff and a record of what ran.
+`out/solves/<run id>/` keeps the diff and a record of what ran, the
+pinned commit and a digest of the tree included — never the tree.
 `python main.py score --manifest N --run ID --score-profile NAME` is a
-separate step: every scorer assigned to the manifest grades that kept tree,
-whenever it is run and as often as wanted, without paying for the agent.
+separate step: it cuts the record's commit from `BENCH_CHECKOUT` (the
+sample's repository, as for `task`), applies the diff, refuses a tree
+whose digest is not the record's, and every scorer assigned to the
+manifest grades that tree, whenever it is run and as often as wanted,
+without paying for the agent. The diff is what git would commit: build
+output the agent left in its checkout is not part of the run, and never
+reaches the image a score builds. A pin carries no `.dockerignore`
+either: with nothing generated in the context there is nothing for one
+to keep out, and in a legacy project it reads as somebody's container.
 
 `python main.py capture --manifest N [--case ID]` freezes a case's golden
 from the pinned tree: one stack per case, the flow played once, the rows
@@ -164,7 +172,7 @@ expect the number to refresh.
 
 ## Running side by side
 
-Two solves of one sample, two scores of one kept tree, or a score next to
+Two solves of one sample, two scores of one run, or a score next to
 a capture can share a host:
 
 - a solve sandbox is its own compose project, with its own database; its

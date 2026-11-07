@@ -105,14 +105,18 @@ the pristine upstream state. A rewritten history destroys that.
   (`solves.materialise`) rather than quietly grading a leaked sample.
   ```bash
   git ls-tree -r --name-only HEAD | grep -Ei \
-    '(^|/)(.*ockerfile|(docker-)?compose([.-].*)?|entrypoint\.sh|\
-  bootstrap\.sh|\.env)$'
+    '(^|/)(.*ockerfile|(docker-)?compose([.-].*)?|\.dockerignore|\
+  entrypoint\.sh|bootstrap\.sh|\.env)$'
   ```
-  must be empty. Three files are **not** stack files and stay:
-  `.dockerignore` (the build context *is* this tree, so it is what keeps
-  `target/` and `node_modules/` out of the image), `.env.example`, and the
-  app's own `*.properties.example` templates — setup documentation with no
-  secrets, which the runbook depends on.
+  must be empty. **`.dockerignore` is a stack file too**, and the solve
+  refuses a pin that carries one. A score builds from the pinned commit
+  plus the run's diff (`solves.rebuild`), which holds no build output, so
+  there is nothing left for it to keep out — and a legacy project that
+  ships one tells the agent somebody builds it in a container. Two files
+  are **not** stack files and stay: `.env.example`, and the app's own
+  `*.properties.example` templates — setup documentation with no secrets,
+  which the runbook depends on. Generated output belongs in the app's
+  `.gitignore`: that is what keeps it out of a run's diff.
 - **Nothing in the tree may name the bench.** Provenance is one kind of
   tell; vocabulary is the other. The checkout is read by an agent that
   must not know it is being measured, so any phrase that describes the
@@ -153,7 +157,7 @@ the pristine upstream state. A rewritten history destroys that.
   exist in the repository `BENCH_CHECKOUT` names, at any commit — it does
   not have to be the tip of a branch.
   ```bash
-  # run on a materialised temporary tree or out/solves/*/tree
+  # run on a materialised temporary tree
   git rev-list --count HEAD     # 1
   git remote -v                 # empty
   git rev-parse HEAD^           # fails: unknown revision
@@ -352,7 +356,8 @@ effort. No agent parameter is passed on the command line, so a new run
 setup is a new profile rather than a longer command.
 
 `task` prints the run id and keeps `out/solves/<run>/` (`record.json`,
-`diff.patch`, `tree/`). The solve phase runs one agent inside the sample's
+with the pin and the tree's digest, and `diff.patch`); `score` rebuilds
+the tree from the two. The solve phase runs one agent inside the sample's
 `env/solve.yaml` sandbox: the checkout at `settings.SOLVE_ROOT`, the
 database as a sidecar, and **no runtime socket** — so the agent cannot
 reach the host through the daemon, and its `$HOME` is the sandbox's own.
@@ -411,7 +416,10 @@ run has to be remembered and exported by hand.
 - [ ] No dependency versions changed (`git diff` on build manifests is
       empty apart from intentional, documented changes).
 - [ ] `compose.yaml` follows the check in §1: the pin carries no stack
-      file, and the scoring stack is the bench's (`src/samples/<slug>/env/`).
+      file — `.dockerignore` included — and the scoring stack is the
+      bench's (`src/samples/<slug>/env/`).
+- [ ] The new pin is on `main`, merged through a PR: `git branch -r
+      --contains <pin>` lists `origin/main`.
 - [ ] On the pristine pin `functional_parity` **passes** (the app still
       behaves as its goldens say). The gate scores the tree the run left,
       on the stack the bench starts.

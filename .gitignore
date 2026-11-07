@@ -1,5 +1,7 @@
 # generated output — never a source of truth
 out/
+# a hand-made backup of out/, kept beside it
+out-old/
 
 # secrets. The root bench.env is never tracked (nor a stray root .env). A
 # sample's env/.env is tracked because its values are synthetic (see

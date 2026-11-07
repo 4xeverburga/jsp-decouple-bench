@@ -13,7 +13,7 @@ jsp-decouple-bench/
 ├── seeds/                   # samples.json, task_types.json, manifests.json
 │   └── prompts/             # task_types/<name>.md, manifests/<name>.md
 ├── out/                     # gitignored; ALL output
-│   ├── solves/<run_id>/     # record.json, diff.patch, tree/
+│   ├── solves/<run_id>/     # record.json, diff.patch, agent/
 │   ├── evals/               # Inspect logs
 │   ├── traces/<slug>/       # a case's spans, taken before `down -v`
 │   └── evidence/<slug>/     # a failing case's screenshot
@@ -35,7 +35,7 @@ jsp-decouple-bench/
 | `samples.py` | `(source, case)` pairs as Inspect `Sample`s |
 | `compose.py` | where a sample's scoring stack and solve workspace are |
 | `stack.py` | starts and removes a case's compose project from the host |
-| `solves.py` | a run id, its tree and its diff |
+| `solves.py` | a run id, its diff, and the tree rebuilt from them |
 | `replay.py` | the score phase's solver: plays a case once, keeps what it saw |
 | `capture.py` | freezes a case's golden and trace base from the pin |
 | `scorers/` | one package per gate, `metrics.all_must_pass`, and `observation` — where the replay leaves what it saw |

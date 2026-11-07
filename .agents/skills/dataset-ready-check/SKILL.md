@@ -37,8 +37,8 @@ cd jsp-decouple-bench
 # 1. the stack builds and the app boots from the pin, then a golden is frozen
 BENCH_CHECKOUT=$PWD/../<sample> uv run python main.py capture --manifest <n>
 
-# 2. an untouched tree replays green (see §3 for the tree + run id)
-BENCH_CHECKOUT=$PWD/out/solves/<run>/tree \
+# 2. an untouched tree replays green (see §3 for the run id)
+BENCH_CHECKOUT=$PWD/../<sample> \
   uv run python main.py score --manifest <n> --run <run> \
   --score-profile <judge>
 
@@ -89,7 +89,7 @@ stderr. A first build of a sample is minutes long.
 
 ## 3. An untouched tree reproduces the goldens
 
-The scored artifact is a kept tree, so the no-op check needs one. Cut the
+The scored artifact is a kept run, so the no-op check needs one. Cut the
 pin, keep it as a run, keep its diff empty:
 
 ```bash
@@ -111,18 +111,19 @@ try:
     })
 finally:
     shutil.rmtree(workspace.parent)
-print(solves.location(run) / "tree")
+print(solves.location(run) / "diff.patch")
 PY
 
-BENCH_CHECKOUT=$PWD/out/solves/noop-mamute/tree \
+BENCH_CHECKOUT=$PWD/../mamute \
   uv run python main.py score --manifest <n> --run noop-mamute \
   --score-profile <judge>
 ```
-`materialise` cuts the tree; `capture` writes `tree/`, `diff.patch` and
-`record.json` together — do not hand-roll the copy. `score` reads all
-three (the record is what labels the score), requires a `profile` key in
-it, and a hand-built tree with a missing `record.json` fails on
-`solves.read` rather than scoring.
+`materialise` cuts the tree; `capture` writes `diff.patch` and
+`record.json` together, with the pin and the tree's digest — do not
+hand-roll them. `score` rebuilds the tree from both (`solves.rebuild`,
+which refuses a digest that does not match), requires a `profile` key in
+the record, and a run with a missing `record.json` fails on `solves.read`
+rather than scoring.
 
 Every case must come back `correct`. If it is red, the pin or the stack is
 wrong — no score taken on this sample means anything, and a real agent's

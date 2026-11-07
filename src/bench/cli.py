@@ -8,8 +8,8 @@ itself, from the host. What two processes cannot hand each other is ours,
 and it is all this file is:
 
 - a run id, which names `out/solves/<id>/`;
-- the checkout the scoring phase needs, derived from that id, so a stale
-  one cannot quietly grade the previous run's tree;
+- the checkout the scoring phase needs, rebuilt from that id's commit and
+  patch, so a stale one cannot quietly grade the previous run's tree;
 - the solve workspace, cut from the pin, which must carry no stack file.
 
 Everything else is Inspect's own CLI (`inspect view`, `inspect log`) or
@@ -191,8 +191,8 @@ def _discard(path: Path) -> None:
     """Remove a run's temporary directory, best effort.
 
     The sandbox writes as root over the bind mount (logs/, target/), so
-    the removal can hit files this user cannot unlink. The kept tree,
-    the diff and the record are already written when this runs, so a
+    the removal can hit files this user cannot unlink. The diff and the
+    record are already written when this runs, so a
     leftover directory is residue, not a lost run — say so and move on
     instead of failing a run that succeeded.
     """
@@ -203,16 +203,15 @@ def _discard(path: Path) -> None:
 
 
 def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
-    """Grade the tree a solve kept; the replay starts the stack itself.
+    """Grade a run on its tree, cut again from the sample repo.
 
     The score profile names the judge `trace_similarity` asks; its
     credentials come from `bench.env`, like a solve profile's. The task labels
     the log with the solve profile from the run's record.
     """
     judge = settings.score_profile(score_profile)
-    tree = solves.tree(run)
-    if not tree.is_dir():
-        raise SystemExit(f"no tree for run {run}: {tree} is missing")
+    if not solves.location(run).is_dir():
+        raise SystemExit(f"no run {run}: {solves.location(run)} is missing")
     # What produced this tree, from the run's own record: a re-score of last
     # week's run must not be labelled with today's `bench.env`.
     record = solves.read(run)
@@ -224,6 +223,25 @@ def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
     slug = load_manifest(manifest_id)["sample"]
     env_dir = sample_env(slug)
     credentials = dotenv_values(env_dir / ".env")
+    try:
+        tree = solves.rebuild(run, Path(settings.checkout()))
+    except RuntimeError as error:
+        raise SystemExit(str(error)) from error
+    try:
+        _grade(manifest_id, run, score_profile, logs, judge, credentials, tree)
+    finally:
+        _discard(tree.parent)
+
+
+def _grade(
+    manifest_id: int,
+    run: str,
+    score_profile: str,
+    logs: str,
+    judge: dict,
+    credentials: dict,
+    tree: Path,
+) -> None:
     attempt = _eval(
         _spec(manifest_id),
         [
@@ -268,6 +286,9 @@ def capture(manifest_id: int, cases: list[str]) -> None:
         raise SystemExit(f"manifest {manifest_id} has no case(s): {unknown}")
     commit = pin(slug)
     tree = solves.materialise(Path(settings.checkout()), commit)
+    # A score builds a tree with no `.git` (`solves.rebuild`); so must the
+    # golden, or the two stacks build different contexts.
+    shutil.rmtree(tree / ".git")
     previous_checkout = os.environ.get("BENCH_CHECKOUT")
     try:
         # From here the stack must build the pinned tree, not the worktree
@@ -297,7 +318,7 @@ def _task(args: argparse.Namespace) -> None:
     run = uuid.uuid4().hex
     print(f"run: {run}", flush=True)
     solve(args.manifest, args.profile, run, args.logs)
-    print(f"tree: {solves.tree(run)}")
+    print(f"diff: {solves.location(run) / 'diff.patch'}")
 
 
 def _score_verb(args: argparse.Namespace) -> None:

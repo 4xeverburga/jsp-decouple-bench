@@ -1,19 +1,29 @@
-"""A solve is the tree an agent left behind, addressed by an id.
+"""A solve is the change an agent made to a pin, addressed by an id.
 
 Scoring is separate from solving on purpose: a solve is expensive and a
-score is cheap, so a tree can be graded against a manifest more than once —
+score is cheap, so a run can be graded against a manifest more than once —
 after a golden is corrected, say — without paying for the agent again.
 
     out/solves/<run_id>/
-        record.json   what ran, how it exited, when
-        diff.patch    what the agent changed, read from git
-        tree/         the checkout it left, for the stack to build
+        record.json   what ran, on which commit, how it exited
+        diff.patch    what the agent changed, as git would commit it
+        agent/        the CLI's own session record, when it keeps one
+
+The tree is not kept. `rebuild` cuts the record's commit again, applies
+the patch and refuses a result whose digest is not the record's, so the
+patch is the whole run. What it holds is what git would commit: every file
+the pin tracks, even one its `.gitignore` names, plus the new files no
+`.gitignore` names, minus the ones the agent deleted. The build output an
+agent leaves in its checkout is not part of the run, and so never reaches
+the image a score builds.
 """
 
+import hashlib
 import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import tempfile
 from pathlib import Path
@@ -23,15 +33,25 @@ import settings
 # The stack is the bench's, not the tree's, so a pin carries no stack file:
 # deleting one here would keep a list of names to maintain and hide a sample
 # that was pinned wrong. Preparing the sample is what keeps them out (see
-# `prepare-repo-for-dataset`). `.dockerignore` is deliberately not a stack
-# file: the build context is this very tree, so that file is what keeps
-# `target/` and `node_modules/` out of it.
+# `prepare-repo-for-dataset`). `.dockerignore` is one too: a score builds
+# from `rebuild`, which carries no build output to keep out, and a legacy
+# project that ships one reads as a project somebody containerised.
 STACK_FILE = re.compile(
     r"^(?:(?:docker|container)file(?:\..*)?"
     r"|(?:docker-)?compose(?:[-.].*)?"
+    r"|\.dockerignore"
     r"|entrypoint\.sh|bootstrap\.sh|\.env)$",
     re.IGNORECASE,
 )
+
+_GIT_OPTIONS = [
+    "-c",
+    "core.fsmonitor=false",
+    "-c",
+    "core.hooksPath=/dev/null",
+    "-c",
+    "core.autocrlf=false",
+]
 
 
 def _git_environment() -> dict[str, str]:
@@ -44,6 +64,26 @@ def _git_environment() -> dict[str, str]:
     env["GIT_CONFIG_GLOBAL"] = os.devnull
     env["GIT_CONFIG_NOSYSTEM"] = "1"
     return env
+
+
+def _git(repo: Path, args: list[str], stdin: bytes) -> bytes:
+    return subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repo),
+            *_GIT_OPTIONS,
+            "-c",
+            "user.name=Developer",
+            "-c",
+            f"user.email={settings.GIT_AUTHOR_EMAIL}",
+            *args,
+        ],
+        env=_git_environment(),
+        input=stdin,
+        capture_output=True,
+        check=True,
+    ).stdout
 
 
 # Where the CLI keeps its session database and log is the agent's own
@@ -81,8 +121,29 @@ def keep_agent(run_id: str, archive: bytes) -> Path:
     return path
 
 
+def _unpack(repo: Path, rev: str, dest: Path) -> None:
+    archive = _git(repo, ["archive", rev], b"")
+    subprocess.run(["tar", "-x", "-C", str(dest)], input=archive, check=True)
+
+
+def _commit_all(repo: Path, message: str, force: bool) -> None:
+    """One commit of the whole tree; `force` tracks ignored files too.
+
+    The baseline forces, because a pin may track a file its own
+    `.gitignore` names (openclinica's `datainfo.properties`): left out of
+    the index, the agent's edits to it would be left out of the patch.
+    """
+    _git(repo, ["init", "-q"], b"")
+    _git(repo, ["add", "-Af" if force else "-A"], b"")
+    _git(repo, ["commit", "-q", "--allow-empty", "-m", message], b"")
+
+
 def materialise(repo: Path, pin: str) -> Path:
-    """Make an isolated, temporary checkout without benchmark identifiers."""
+    """Make an isolated, temporary checkout without benchmark identifiers.
+
+    Beside it, `baseline/` is the pin as one commit whose message is the
+    pin itself, so `capture` knows which commit its patch applies to.
+    """
     root = Path(tempfile.mkdtemp(prefix="application-"))
     root.chmod(0o755)
     tree = root / "workspace"
@@ -91,46 +152,9 @@ def materialise(repo: Path, pin: str) -> Path:
     baseline.mkdir()
     complete = False
     try:
-        archive = subprocess.run(
-            ["git", "-C", str(repo), "archive", pin],
-            capture_output=True,
-            check=True,
-        ).stdout
-        subprocess.run(
-            ["tar", "-x", "-C", str(baseline)],
-            input=archive,
-            check=True,
-        )
+        _unpack(repo, pin, baseline)
         _refuse_stack_files(baseline)
-        git_env = _git_environment()
-        git = ["git", "-C", str(baseline), "-c", "user.name=Developer"]
-        git += ["-c", f"user.email={settings.GIT_AUTHOR_EMAIL}"]
-        subprocess.run([*git, "init", "-q"], env=git_env, check=True)
-        subprocess.run(
-            [
-                *git,
-                "-c",
-                "core.fsmonitor=false",
-                "-c",
-                "core.hooksPath=/dev/null",
-                "add",
-                "-A",
-            ],
-            env=git_env,
-            check=True,
-        )
-        subprocess.run(
-            [
-                *git,
-                "-c",
-                "core.hooksPath=/dev/null",
-                "commit",
-                "-qm",
-                "Import project source",
-            ],
-            env=git_env,
-            check=True,
-        )
+        _commit_all(baseline, pin, True)
         shutil.copytree(
             baseline,
             tree,
@@ -138,34 +162,7 @@ def materialise(repo: Path, pin: str) -> Path:
             dirs_exist_ok=True,
             ignore=shutil.ignore_patterns(".git"),
         )
-        git = ["git", "-C", str(tree), "-c", "user.name=Developer"]
-        git += ["-c", f"user.email={settings.GIT_AUTHOR_EMAIL}"]
-        subprocess.run([*git, "init", "-q"], env=git_env, check=True)
-        subprocess.run(
-            [
-                *git,
-                "-c",
-                "core.fsmonitor=false",
-                "-c",
-                "core.hooksPath=/dev/null",
-                "add",
-                "-A",
-            ],
-            env=git_env,
-            check=True,
-        )
-        subprocess.run(
-            [
-                *git,
-                "-c",
-                "core.hooksPath=/dev/null",
-                "commit",
-                "-qm",
-                "Import project source",
-            ],
-            env=git_env,
-            check=True,
-        )
+        _commit_all(tree, "Import project source", False)
         complete = True
         return tree
     finally:
@@ -177,21 +174,62 @@ def location(run_id: str) -> Path:
     return settings.SOLVES / run_id
 
 
+def _files(root: Path) -> list[str]:
+    """Every file under `root`, `.git` aside, relative and sorted."""
+    found = []
+    for dirpath, dirs, names in os.walk(root):
+        base = Path(dirpath)
+        if base == root and ".git" in dirs:
+            dirs.remove(".git")
+        links = [name for name in dirs if (base / name).is_symlink()]
+        for name in names + links:
+            found.append(str((base / name).relative_to(root)))
+    return sorted(found)
+
+
+def _digest(root: Path, paths: list[str]) -> str:
+    """One hash over each path's kind, executable bit and content."""
+    whole = hashlib.sha256()
+    for rel in sorted(paths):
+        path = root / rel
+        if path.is_symlink():
+            kind, body = "l", os.readlink(path).encode()
+        elif path.is_dir():
+            # An embedded repository: git records its commit, not files.
+            kind, body = "g", b""
+        else:
+            # The owner's bit, as git reads it for 100755.
+            executable = path.stat().st_mode & stat.S_IXUSR
+            kind = "x" if executable else "f"
+            body = path.read_bytes()
+        whole.update(rel.encode() + b"\0" + kind.encode() + b"\0")
+        whole.update(hashlib.sha256(body).digest())
+    return whole.hexdigest()
+
+
+def _reconstruct(repo: Path, rev: str, patch: bytes, dest: Path) -> None:
+    """`rev` of `repo`, with `patch` applied, at `dest`, without a `.git`.
+
+    `git apply` runs inside a repository on purpose: outside one it
+    resolves paths against whatever repository encloses `dest`, and
+    rejects a patch that applies cleanly here.
+    """
+    dest.mkdir(parents=True)
+    _unpack(repo, rev, dest)
+    if not patch:
+        return
+    _commit_all(dest, "base", True)
+    _git(dest, ["apply", "--binary", "--whitespace=nowarn", "-"], patch)
+    shutil.rmtree(dest / ".git")
+
+
 def capture(
     run_id: str, checkout: Path, baseline: Path, record: dict
 ) -> Path:
-    """Copy the tree aside and record what produced it."""
+    """Record what the agent changed, and prove the record rebuilds it."""
     target = location(run_id)
-    tree = target / "tree"
     target.mkdir(parents=True, exist_ok=True)
-    if tree.exists():
-        shutil.rmtree(tree)
-    shutil.copytree(
-        checkout,
-        tree,
-        symlinks=True,
-        ignore=shutil.ignore_patterns(".git"),
-    )
+    pin = _git(baseline, ["log", "-1", "--format=%s"], b"").decode().strip()
     for path in baseline.iterdir():
         if path.name == ".git":
             continue
@@ -206,50 +244,89 @@ def capture(
         dirs_exist_ok=True,
         ignore=shutil.ignore_patterns(".git"),
     )
-    git_env = _git_environment()
-    git = ["git", "-C", str(baseline)]
-    subprocess.run(
+    _git(baseline, ["add", "-A"], b"")
+    diff = _git(
+        baseline,
         [
-            *git,
-            "-c",
-            "core.fsmonitor=false",
-            "-c",
-            "core.hooksPath=/dev/null",
-            "add",
-            "-N",
-            ".",
-        ],
-        env=git_env,
-        check=True,
-    )
-    diff = subprocess.run(
-        [
-            *git,
-            "-c",
-            "core.fsmonitor=false",
-            "-c",
-            "core.hooksPath=/dev/null",
             "diff",
+            "--cached",
             "--binary",
+            "--full-index",
             "--no-ext-diff",
             "--no-textconv",
+            "HEAD",
         ],
-        env=git_env,
-        capture_output=True,
-        check=True,
-    ).stdout
+        b"",
+    )
+    paths = _git(baseline, ["ls-files", "-z"], b"").decode()
+    digest = _digest(baseline, [p for p in paths.split("\0") if p])
     (target / "diff.patch").write_bytes(diff)
-    record = dict(record, run_id=run_id, diff_bytes=len(diff))
+    record = dict(
+        record,
+        run_id=run_id,
+        commit_sha=pin,
+        tree_sha256=digest,
+        diff_bytes=len(diff),
+    )
     (target / "record.json").write_text(json.dumps(record, indent=2) + "\n")
+    scratch = Path(tempfile.mkdtemp(prefix="rebuild-"))
+    try:
+        _reconstruct(baseline, "HEAD", diff, scratch / "tree")
+        again = _digest(scratch / "tree", _files(scratch / "tree"))
+    except subprocess.CalledProcessError:
+        again = None
+    finally:
+        shutil.rmtree(scratch)
+    if again != digest:
+        # Nothing may be lost to a patch git cannot replay (an embedded
+        # repository, say): keep what the agent left for a person to read.
+        shutil.copytree(
+            checkout,
+            target / "tree",
+            symlinks=True,
+            ignore=shutil.ignore_patterns(".git"),
+        )
+        raise RuntimeError(
+            f"run {run_id}: diff.patch does not rebuild the tree the agent "
+            f"left; it is kept at {target / 'tree'}, unscorable"
+        )
     return target
+
+
+def rebuild(run_id: str, repo: Path) -> Path:
+    """The run's tree, cut again from `repo`, in a directory of its own.
+
+    The caller removes the returned directory's parent.
+    """
+    record = read(run_id)
+    if "tree_sha256" not in record:
+        raise RuntimeError(
+            f"run {run_id} predates rebuildable records: it names no "
+            "commit and no digest, so its tree cannot be cut again"
+        )
+    root = Path(tempfile.mkdtemp(prefix="application-"))
+    root.chmod(0o755)
+    tree = root / "workspace"
+    try:
+        _reconstruct(
+            repo,
+            record["commit_sha"],
+            (location(run_id) / "diff.patch").read_bytes(),
+            tree,
+        )
+        if _digest(tree, _files(tree)) != record["tree_sha256"]:
+            raise RuntimeError(
+                f"run {run_id}: {record['commit_sha']} plus diff.patch is "
+                "not the tree the record describes"
+            )
+    except BaseException:
+        shutil.rmtree(root)
+        raise
+    return tree
 
 
 def read(run_id: str) -> dict:
     return json.loads((location(run_id) / "record.json").read_text())
-
-
-def tree(run_id: str) -> Path:
-    return location(run_id) / "tree"
 
 
 def head(checkout: Path) -> str:

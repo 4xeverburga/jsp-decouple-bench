@@ -1,7 +1,7 @@
 [
   {
     "task_type": "decouple_slice",
-    "version": 5,
+    "version": 6,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -57,7 +57,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -110,7 +110,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -170,7 +170,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -220,7 +220,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -273,7 +273,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -338,7 +338,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -394,7 +394,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -447,7 +447,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -500,7 +500,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -561,7 +561,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -631,7 +631,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -686,7 +686,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -740,7 +740,7 @@
   },
   {
     "task_type": "oneshot_decoupling",
-    "version": 3,
+    "version": 4,
     "solve_time_limit_minutes": 240,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -790,7 +790,7 @@
   },
   {
     "task_type": "dummy_file",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -826,7 +826,7 @@
   },
   {
     "task_type": "dummy_file",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -862,7 +862,7 @@
   },
   {
     "task_type": "agent_probe",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -898,7 +898,7 @@
   },
   {
     "task_type": "oneshot_decoupling",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 240,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -966,7 +966,7 @@
   },
   {
     "task_type": "oneshot_decoupling",
-    "version": 1,
+    "version": 2,
     "solve_time_limit_minutes": 240,
     "score_time_limit_minutes": 60,
     "bindings": {
