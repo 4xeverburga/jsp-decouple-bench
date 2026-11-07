@@ -1,24 +1,32 @@
-# Online Study System image — JDK 8 + Maven + Tomcat 9, DB = MySQL 5.7 (the
-# compose `db` service). Build context is the sample tree; this file lives in
-# the bench, not in the tree the agent gets.
+# Online Study System — JDK 8 + Maven + Tomcat 9. One file, two images:
 #
-# The WAR is built here with the tree's own datasource settings. Everything
+#   app      the scoring image, DB = MySQL 5.7 (the compose `db` service).
+#            Built by compose.yaml.
+#   toolbox  the agent's sandbox: the same toolchain, a mysql client, and a
+#            warm `~/.m2`. Built by solve.yaml. No container runtime in it:
+#            the database is a sidecar; inspect_swe copies the agent CLI in
+#            at run time.
+#
+# Either way the build context is the tree, and `Containerfile.dockerignore`
+# beside this file is what of it never reaches an image.
+#
+# The WAR is built with the tree's own datasource settings. Everything
 # environment-specific — host, database, user, password — is written at run
 # time by entrypoint.sh from compose's environment, which comes from this
 # folder's `.env`. Credentials must not be baked into an image that may be
 # rebuilt for another run.
-FROM maven:3.8.6-openjdk-8
+FROM maven:3.8.6-openjdk-8 AS base
 
 ARG TOMCAT_VERSION=9.0.98
 RUN wget -qO- https://archive.apache.org/dist/tomcat/tomcat-9/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz \
       | tar -xz -C /opt \
-    && ln -s /opt/apache-tomcat-${TOMCAT_VERSION} /opt/tomcat \
-    && rm -rf /opt/tomcat/webapps/*
+    && ln -s /opt/apache-tomcat-${TOMCAT_VERSION} /opt/tomcat
 ENV CATALINA_HOME=/opt/tomcat
 ENV JAVA_HOME=/usr/local/openjdk-8
 
 # The agent's shell is given PATH=/usr/local/bin:/usr/bin:/bin, which this
-# image's ENV does not reach: symlink the JDK tools it leaves out.
+# image's ENV does not reach: symlink the JDK tools it leaves out. (`mvn`
+# resolves either way, and the WAR will not build without `java`/`javac`.)
 RUN for tool in java javac jar jarsigner javadoc javap jcmd jdb jps \
       jrunscript jstack keytool; do \
       ln -sf "/usr/local/openjdk-8/bin/$tool" "/usr/local/bin/$tool"; \
@@ -26,16 +34,43 @@ RUN for tool in java javac jar jarsigner javadoc javap jcmd jdb jps \
 
 WORKDIR /workspace
 
-# Dependency-cache layer: the pom alone, so a source edit does not re-pay the
-# download. Best effort — the build below finishes the job.
+# Dependency cache, from the pin's own pom. In the toolbox nothing copied
+# here is what the agent reads — the checkout is bind-mounted over
+# /workspace, so only `~/.m2` survives into the solve.
+#
+# This project is one module with a dozen dependencies, so `go-offline` is
+# the cheap warm: it resolves the build's plugins as well, which is what the
+# `package` below needs from the cache and never from the network. `|| true`
+# because the warm is best effort — the build that has to succeed is the one
+# over the real sources.
 COPY pom.xml ./
 RUN mvn -B -q -DskipTests dependency:go-offline || true
 
 COPY . .
+# The pom pins its finalName, so the context path is /Examination_System;
+# entrypoint.sh deploys that name deliberately.
+RUN mvn -B -q -DskipTests package
 
-# Build the WAR. The pom pins its finalName, so the context path is
-# /Examination_System; entrypoint.sh deploys that name deliberately.
-RUN mvn -B -q -DskipTests package \
+
+FROM base AS toolbox
+
+# A MySQL client. The app's database is a sidecar on this network, and reading
+# its rows is part of understanding what a flow persists.
+#
+# Two traps, both fixed here: the image ships stale package lists (so it asks
+# for versions that are gone), and bullseye-security indexes versions the
+# mirror no longer carries (404). The client is only ever a client.
+RUN rm -rf /var/lib/apt/lists/* \
+ && sed -i '/debian-security/d' /etc/apt/sources.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends default-mysql-client \
+ && rm -rf /var/lib/apt/lists/*
+RUN ln -sf /usr/bin/mysql /usr/local/bin/mysql
+
+
+FROM base AS app
+
+RUN rm -rf /opt/tomcat/webapps/* \
  && mkdir -p /opt/app \
  && cp target/Examination_System.war /opt/app/Examination_System.war
 

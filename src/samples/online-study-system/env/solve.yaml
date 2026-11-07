@@ -2,7 +2,7 @@
 # its app uses.
 #
 # The agent runs inside this, so it never has the docker socket and never
-# sees the supervisor's home. The image is built from toolbox/Containerfile;
+# sees the supervisor's home. The image is the `toolbox` target of Containerfile;
 # the sandbox only guarantees where it may write.
 #
 # Writable host binds are refused by Inspect unless the project opts in:
@@ -23,7 +23,8 @@ services:
       # agent reads. Built once per pin; `docker compose up` reuses the image
       # and does not rebuild it.
       context: ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}
-      dockerfile: ${BENCH_SAMPLE_ENV:?set by the bench}/toolbox/Containerfile
+      dockerfile: ${BENCH_SAMPLE_ENV:?set by the bench}/Containerfile
+      target: toolbox
     image: bench-solve-online-study-system:local
     init: true
     command: tail -f /dev/null

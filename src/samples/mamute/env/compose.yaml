@@ -55,6 +55,7 @@ services:
     build:
       context: ${BENCH_CHECKOUT:?set BENCH_CHECKOUT to the tree to score}
       dockerfile: ${BENCH_SAMPLE_ENV:?set by the bench}/Containerfile
+      target: app
     networks:
       - api
       - data

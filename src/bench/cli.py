@@ -125,7 +125,8 @@ def _build_toolbox(slug: str, workspace: Path) -> None:
     already exists, and the first build of a toolbox downloads that whole
     cache: minutes, inside an eval whose sandbox startup has a timeout of its
     own. Building it here streams the download where it can be watched, and
-    leaves the run with the image its `toolbox/Containerfile` describes.
+    leaves the run with the image the `toolbox` target of its Containerfile
+    describes.
     """
     subprocess.run(
         [

@@ -22,8 +22,8 @@ jsp-decouple-bench/
     ├── bench/               # the harness
     └── samples/<slug>/      # one folder per sample; there will be many
         ├── cases/<case>/    # the answer key: case.json, flow.py, expect.json
-        └── env/             # compose.yaml, Containerfile, .env, solve.yaml,
-                             # otel-collector.yaml, toolbox/
+        └── env/             # compose.yaml, Containerfile (+ .dockerignore),
+                             # .env, solve.yaml, otel-collector.yaml
 ```
 
 ## `src/bench`
@@ -136,14 +136,16 @@ that does, because a sample pinned with one is prepared wrong, not scrubbed
 
 | file | role |
 |---|---|
-| `compose.yaml`, `Containerfile` | the scoring stack, built from the tree under test |
+| `compose.yaml` | the scoring stack: the `app` target of `Containerfile`, built from the tree under test |
+| `Containerfile`, `Containerfile.dockerignore` | one file, two targets: `app` for the scoring stack, `toolbox` for the solve sandbox; the ignore beside it is what of the tree never reaches either image |
 | `.env` | synthetic, deterministic credentials and `OTEL_*`; tracked on purpose |
 | `otel-collector.yaml` | receives spans, writes `/traces/traces.jsonl` |
-| `solve.yaml`, `toolbox/` | the agent's workspace: toolchain, a writable checkout, a database |
+| `solve.yaml` | the agent's workspace: the `toolbox` target, a writable checkout, a database |
 
 ### The solve workspace contract
 
-What a new sample's `env/solve.yaml` and `env/toolbox/Containerfile` have
+What a new sample's `env/solve.yaml` and the `toolbox` target of its
+`env/Containerfile` have
 to honour, so that nothing has to be special-cased per sample:
 
 - **Mount the checkout at `settings.SOLVE_ROOT`** (`/workspace`), never at
@@ -166,7 +168,7 @@ to honour, so that nothing has to be special-cased per sample:
   pays the whole Maven download before the agent can compile anything
   (minutes); with it, a full recompile is seconds. The build context is
   therefore the sample tree — the same context the scoring image builds
-  from — so `toolbox/Containerfile` can `COPY` the pom(s) and run the build
+  from — so the `toolbox` target can `COPY` the pom(s) and run the build
   the agent will run (`mvn -B -q compile`, or `package` for a WAR sample)
   before the sources are copied in, then again after: the second run is what
   proves the cache complete, and it must be the layer that can fail. Nothing
@@ -175,7 +177,8 @@ to honour, so that nothing has to be special-cased per sample:
   ```yaml
   build:
     context: ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}
-    dockerfile: ${BENCH_SAMPLE_ENV:?set by the bench}/toolbox/Containerfile
+    dockerfile: ${BENCH_SAMPLE_ENV:?set by the bench}/Containerfile
+    target: toolbox
   ```
   Not `dependency:go-offline`: it asks every repository the poms declare —
   the pins carry snapshot and Restlet repositories — for every artifact of

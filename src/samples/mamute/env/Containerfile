@@ -1,20 +1,88 @@
-# Mamute image — JDK 8 + Maven, run via embedded Jetty 8
-# (br.com.caelum.vraptor.server.Main), DB = MySQL 5.7 (compose `db` service).
+# Mamute — JDK 8 + Maven + Node 16. One file, two images:
 #
-# Build context is the sample tree (see compose.yaml in this folder).
+#   app      the scoring image: embedded Jetty 8
+#            (br.com.caelum.vraptor.server.Main), DB = MySQL 5.7 (compose
+#            `db` service). Built by compose.yaml.
+#   toolbox  the agent's sandbox: the same toolchain, a mysql client, and a
+#            warm `~/.m2`. Built by solve.yaml. No Docker in it: the app runs
+#            natively there and its database is a sidecar; inspect_swe copies
+#            the agent CLI in at run time.
 #
-# NOTE: NO `apt-get install` here — the base (Debian bullseye) is EOL and its
-# security pool 404s. Node for the grunt build comes from the official
-# tarball; curl/wget are already in the base image; the mysql client lives in
-# the one-shot `bootstrap` compose service (mysql:5.7 image) instead.
-FROM maven:3.8.6-openjdk-8
+# Either way the build context is the tree, and `Containerfile.dockerignore`
+# beside this file is what of it never reaches an image.
+#
+# NOTE: the base (Debian bullseye) is EOL and its security pool 404s; the
+# toolbox's one `apt-get` works around it (see there). Node comes from the
+# official tarball; curl/wget are already in the base image.
+FROM maven:3.8.6-openjdk-8 AS base
 
-# Node 16: grunt 0.4-era toolchain.  Static tarball from nodejs.org.
+# Node 16: grunt 0.4-era toolchain. Static tarball from nodejs.org.
 RUN wget -qO- https://nodejs.org/dist/v16.20.2/node-v16.20.2-linux-x64.tar.gz \
       | tar -xz -C /opt
 ENV PATH=/opt/node-v16.20.2-linux-x64/bin:${PATH}
 
 WORKDIR /workspace
+
+
+FROM base AS toolbox
+
+# The JDK's own bin dir first, and — because the agent's shell is given a
+# PATH of /usr/local/bin:/usr/bin:/bin, which this ENV does not reach —
+# symlinks for the JDK tools the base image leaves out of /usr/local/bin.
+#
+# `java` and `javac` are the ones that bite. A login shell (`bash -lc`)
+# rebuilds PATH from /etc/profile, dropping the openjdk bin dir this ENV
+# prepends, so a tool reached that way sees `mvn`, `jar`, `javap` and
+# `node` all working while `java` reports "command not found" — which
+# reads as "the JDK is not installed" and sends an agent hunting for one.
+ENV JAVA_HOME=/usr/local/openjdk-8
+ENV PATH=/usr/local/openjdk-8/bin:${PATH}
+RUN for tool in java javac keytool jar jarsigner javap jcmd jdb jps jrunscript jstack; do \
+      ln -sf "/usr/local/openjdk-8/bin/$tool" "/usr/local/bin/$tool"; \
+    done
+
+# A mysql client. The app's database is a sidecar on this network, and
+# reading its schema is part of understanding what a flow persists.
+#
+# Two traps, both fixed here: the image ships stale package lists (so it
+# asks for versions that are gone), and bullseye-security indexes versions
+# the mirror no longer carries (404). The client comes from the main repo,
+# which still has it, and it is only ever a client.
+RUN rm -rf /var/lib/apt/lists/* \
+ && sed -i '/debian-security/d' /etc/apt/sources.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends mariadb-client \
+ && rm -rf /var/lib/apt/lists/*
+RUN for tool in mysql mysqldump; do \
+      ln -sf "/usr/bin/$tool" "/usr/local/bin/$tool"; \
+    done
+RUN for tool in node npm npx; do \
+      ln -sf "/opt/node-v16.20.2-linux-x64/bin/$tool" "/usr/local/bin/$tool"; \
+    done
+
+# Dependency-cache and compile state, from the pin's own pom. Nothing copied
+# here is what the agent reads: at run time the checkout is bind-mounted over
+# /workspace, so only `~/.m2` survives into the solve. Without it every solve
+# paid a cold Maven build — ~430 s against a ~4 s recompile.
+#
+# Not `dependency:go-offline`: it asks every repository the pom declares —
+# the pin's snapshot and Restlet ones included — for every artifact of every
+# plugin, and had not finished after thirteen minutes here. The pass before
+# the sources are copied warms the plugins, and the one after is what fills
+# the cache (the compiler skips a project with no sources before it resolves
+# a classpath). The `exec` goal is the plugin the app is booted with
+# (`entrypoint.sh`), warmed without booting it; `clean` is the usual first
+# word of the build an agent runs, and a different plugin from the compiler.
+COPY pom.xml ./
+COPY local-repo ./local-repo
+RUN mvn -B -q compile \
+ && mvn -B -q exec:exec -Dexec.executable=/bin/true || true
+
+COPY src ./src
+RUN mvn -B -q clean compile
+
+
+FROM base AS app
 
 # Dependency-cache layer (local-repo holds vendored jars referenced by the pom)
 COPY pom.xml ./

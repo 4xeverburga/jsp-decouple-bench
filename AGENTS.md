@@ -140,10 +140,13 @@ temporary directory, and removed after the score.
 
 A pin carries no `.dockerignore`: in a legacy project it reads as
 somebody's container. The bench keeps it instead, as
-`Containerfile.dockerignore` beside each `Containerfile` in
-`src/samples/<sample>/env/` (and `env/toolbox/`); BuildKit reads it in
-place of the context's own, so what reaches an image is the bench's
-choice, not the agent's.
+`Containerfile.dockerignore` beside the sample's one `Containerfile` in
+`src/samples/<sample>/env/`; BuildKit reads it in place of the context's
+own, so what reaches an image is the bench's choice, not the agent's.
+That one Containerfile builds both images, as targets of one multi-stage
+file: `app` for the scoring stack (`compose.yaml`) and `toolbox` for the
+solve sandbox (`solve.yaml`), so they share one ignore and every layer
+they have in common.
 
 `python main.py capture --manifest N [--case ID]` freezes a case's golden
 from the pinned tree: one stack per case, the flow played once, the rows

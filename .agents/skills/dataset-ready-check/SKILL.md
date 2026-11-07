@@ -61,8 +61,9 @@ stderr. A first build of a sample is minutes long.
 ## 1. It boots from the pin, on the bench's stack
 
 - `src/samples/<slug>/env/` holds `compose.yaml`, `Containerfile`,
-  `entrypoint.sh`, `.env`, `.env.example`, `otel-collector.yaml`,
-  `solve.yaml` and `toolbox/`. Nothing of it is in the sample tree.
+  `Containerfile.dockerignore`, `entrypoint.sh`, `.env`, `.env.example`,
+  `otel-collector.yaml` and `solve.yaml`. Nothing of it is in the sample
+  tree.
 - The pin carries **no stack file**: `main.py capture` and the solve phase
   both cut the tree with `solves.materialise`, which raises and lists the
   offending paths if one is there.

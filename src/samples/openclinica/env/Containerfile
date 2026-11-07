@@ -1,34 +1,38 @@
-# OpenClinica image — JDK 8 + Maven + Tomcat 9, DB = PostgreSQL 9.6 (the
-# compose `db` service). Build context is the sample tree; this file lives in
-# the bench, not in the tree the agent gets.
+# OpenClinica — JDK 8 + Maven + Tomcat 9 + psql. One file, two images:
 #
-# The WAR is built here with PLACEHOLDER database settings. Everything
+#   app      the scoring image, DB = PostgreSQL 9.6 (the compose `db`
+#            service). Built by compose.yaml.
+#   toolbox  the agent's sandbox: the same toolchain and a warm `~/.m2`.
+#            Built by solve.yaml. No container runtime in it: the database
+#            is a sidecar; inspect_swe copies the agent CLI in at run time.
+#
+# Either way the build context is the tree, and `Containerfile.dockerignore`
+# beside this file is what of it never reaches an image.
+#
+# The WAR is built with PLACEHOLDER database settings. Everything
 # environment-specific — host, database, user, password, the URL the host
 # actually reaches — is written at run time by entrypoint.sh from compose's
 # environment, which comes from this folder's `.env`. Credentials must not be
 # baked into an image that may be rebuilt for another run.
-FROM maven:3.8.6-openjdk-8
+FROM maven:3.8.6-openjdk-8 AS base
 
 ARG TOMCAT_VERSION=9.0.98
 RUN wget -qO- https://archive.apache.org/dist/tomcat/tomcat-9/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz \
       | tar -xz -C /opt \
-    && ln -s /opt/apache-tomcat-${TOMCAT_VERSION} /opt/tomcat \
-    && rm -rf /opt/tomcat/webapps/*
+    && ln -s /opt/apache-tomcat-${TOMCAT_VERSION} /opt/tomcat
 ENV CATALINA_HOME=/opt/tomcat
 ENV JAVA_HOME=/usr/local/openjdk-8
 
 # The agent's shell is given PATH=/usr/local/bin:/usr/bin:/bin, which this
-# image's ENV does not reach: symlink the JDK tools it leaves out (the same
-# reason the solve toolbox does it), plus a postgres client so the schema can
-# be read from inside the service.
+# image's ENV does not reach: symlink the JDK tools it leaves out, plus a
+# postgres client so the schema can be read from inside either image.
 RUN for tool in java javac jar jarsigner javadoc javap jcmd jdb jps \
       jrunscript jstack keytool; do \
       ln -sf "/usr/local/openjdk-8/bin/$tool" "/usr/local/bin/$tool"; \
     done
 
-# Debian bullseye traps (same as the mamute image): stale package lists ask
-# for versions that are gone, and the security index advertises packages the
-# mirror no longer carries.
+# Debian bullseye traps: stale package lists ask for versions that are gone,
+# and the security index advertises packages the mirror no longer carries.
 RUN rm -rf /var/lib/apt/lists/* \
  && sed -i '/debian-security/d' /etc/apt/sources.list \
  && apt-get update \
@@ -38,13 +42,48 @@ RUN ln -sf /usr/bin/psql /usr/local/bin/psql
 
 WORKDIR /workspace
 
-# Dependency-cache layer: the poms alone, so a source edit does not re-pay
-# the download. Best effort — a reactor with unbuilt sibling modules cannot
-# resolve everything yet, and the build below finishes the job.
+# The poms alone first, so a source edit does not re-pay the download.
 COPY pom.xml ./
 COPY core/pom.xml core/
 COPY web/pom.xml web/
 COPY ws/pom.xml ws/
+
+
+FROM base AS toolbox
+
+# Nothing copied here is what the agent reads: at run time the checkout is
+# bind-mounted over /workspace, so only `~/.m2` survives into the solve.
+#
+# Not `dependency:go-offline`: it asks every repository the poms declare for
+# every artifact of every plugin — far more work than the build it warms. The
+# `package` below is the build the agent has to run anyway, so it resolves
+# exactly that set. The pass before the sources are copied only warms the
+# plugins, and on this reactor it stops at the JAXB plugin, which needs
+# `ws/src/main/webapp/WEB-INF/schemas` — hence `|| true`: the `package` below
+# is the one that has to succeed.
+RUN mvn -B -q -DskipTests compile || true
+
+COPY . .
+RUN mvn -B -q -DskipTests \
+      -Dmaven.buildNumber.allowNullScm=true \
+      -DdbType=postgres \
+      -DdbUser=clinica \
+      -DdbPass=clinica \
+      -Ddb=openclinica \
+      -DdbPort=5432 \
+      -DdbHost=db \
+      -DWEBAPP=OpenClinica \
+      -DWEBAPP.lower=openclinica \
+      -Dcatalina.home=/opt/tomcat \
+      clean package
+
+
+FROM base AS app
+
+RUN rm -rf /opt/tomcat/webapps/*
+
+# Best effort — a reactor with unbuilt sibling modules cannot resolve
+# everything yet, and the build below finishes the job.
 RUN mvn -B -q -DskipTests dependency:go-offline || true
 
 COPY . .
@@ -56,7 +95,8 @@ COPY . .
 #
 # The context carries no `.git` (see `Containerfile.dockerignore` beside
 # this file), so the buildnumber plugin is told a missing SCM is
-# acceptable; otherwise it fails the build. Its stamp is provenance and is normalized out of the goldens.
+# acceptable; otherwise it fails the build. Its stamp is provenance and is
+# normalized out of the goldens.
 RUN mvn -B -q -DskipTests \
       -Dmaven.buildNumber.allowNullScm=true \
       -DdbType=postgres \

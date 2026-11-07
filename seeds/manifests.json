@@ -1004,5 +1004,41 @@
     "name": "whole-app-openclinica",
     "id": 19,
     "sample": "openclinica"
+  },
+  {
+    "task_type": "dummy_file",
+    "version": 1,
+    "solve_time_limit_minutes": 120,
+    "score_time_limit_minutes": 60,
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "dialect": "mysql",
+          "service": "db",
+          "user": "root",
+          "password": "root",
+          "database": "online_study_system"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "admin-course-flow__add-course-creates-course"
+      ],
+      "routes": []
+    },
+    "scorers": [
+      "functional_parity"
+    ],
+    "name": "dummy-file-online-study-system",
+    "id": 20,
+    "sample": "online-study-system"
   }
 ]

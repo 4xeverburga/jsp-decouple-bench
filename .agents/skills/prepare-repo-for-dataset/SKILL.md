@@ -112,14 +112,14 @@ the pristine upstream state. A rewritten history destroys that.
   refuses a pin that carries one: a legacy project that ships one tells
   the agent somebody builds it in a container. Move it to the bench
   instead, as `Containerfile.dockerignore` beside
-  `src/samples/<slug>/env/Containerfile` and beside
-  `env/toolbox/Containerfile` — BuildKit reads a Dockerfile's own ignore
-  file in place of the context's, even when the Dockerfile lives outside
-  the context (a symlinked one is not read: each is a file of its own).
-  The two differ on purpose: the scoring one keeps `.git`, build output
-  and local secrets out; the toolbox one only needs `.git`, because its
-  context is a workspace cut fresh from the pin, whose `.git` is new on
-  every solve and would rebuild the warmed cache. Two files
+  `src/samples/<slug>/env/Containerfile` — BuildKit reads a Dockerfile's
+  own ignore file in place of the context's, even when the Dockerfile
+  lives outside the context (a symlinked one is not read). There is one
+  Containerfile, so there is one ignore: the scoring image and the
+  sandbox are two targets of it (§"The stack is the bench's"). Keep
+  `.git` in it — the solve workspace carries a fresh one per run, and a
+  `COPY . .` would otherwise rebuild the warmed cache on every solve — and
+  build output and local secrets. Two files
   are **not** stack files and stay: `.env.example`, and the app's own
   `*.properties.example` templates — setup documentation with no secrets,
   which the runbook depends on. Generated output belongs in the app's
@@ -202,7 +202,7 @@ agent eval depend on the environment behaving identically.
   "command not found", which reads as "the JDK is not installed" and
   sends an agent hunting for one. A toolbox that symlinks `jar`/`javap`
   but not `java`/`javac` produces exactly that confusion; copy the symlink
-  loop from any sample under `src/samples/*/env/toolbox/`.
+  loop from the `toolbox` stage of any `src/samples/*/env/Containerfile`.
   ```bash
   docker run --rm <toolbox image> bash -lc \
     'for t in java javac mvn node mysql; do
@@ -211,8 +211,8 @@ agent eval depend on the environment behaving identically.
 - **Warm the dependency cache in the toolbox**, or every solve pays the
   cold download before the agent can compile anything (minutes, against
   seconds with a warm `~/.m2`). Point the sandbox's `build.context` at the
-  tree (`${BENCH_CHECKOUT}`) and `dockerfile` at the bench's
-  `toolbox/Containerfile`, then `COPY` the pom(s) + any vendored repo and
+  tree (`${BENCH_CHECKOUT}`), `dockerfile` at the bench's `Containerfile`
+  and `target: toolbox`, then `COPY` the pom(s) + any vendored repo and
   run the build the agent will run (`mvn -B -q compile`, `package` for a
   WAR) before copying the sources in, then again after — the second run
   proves the cache complete. The bind mount shadows all of it at run time,
@@ -244,16 +244,15 @@ PostgreSQL — and together they are the inventory a new sample needs:
 
 | file | what it is for |
 |---|---|
-| `compose.yaml` | `front` (built from the tree under test), `db` (sidecar, healthchecked), `collector`, and any one-shot `bootstrap` |
-| `Containerfile` | builds the app from the pin; placeholders only, never a credential; OTel jar last |
-| `Containerfile.dockerignore` | what of the tree never reaches the image: `.git`, build output, local secrets; beside `toolbox/Containerfile`, just `.git` |
+| `compose.yaml` | `front` (the `app` target, built from the tree under test), `db` (sidecar, healthchecked), `collector`, and any one-shot `bootstrap` |
+| `Containerfile` | one multi-stage file, two targets. `base`: what both images share (JDK, Tomcat/Node, the symlinks). `toolbox`: the agent's toolchain, tools symlinked into `/usr/local/bin` (the agent's shell is given `PATH=/usr/local/bin:/usr/bin:/bin`), the build tool's cache warmed from the pin. `app`: the app built from the pin; placeholders only, never a credential; OTel jar last |
+| `Containerfile.dockerignore` | what of the tree never reaches either image: `.git`, build output, local secrets |
 | `entrypoint.sh` | writes the run-time config (database, public URL) before the app starts |
 | `bootstrap.sh` | one-shot: rotates the seeded account to this sample's credential |
 | `.env` | the sample's synthetic credentials and `OTEL_*` — tracked, deterministic |
 | `.env.example` | the same keys with `CHANGE_ME` for a fresh setup |
 | `otel-collector.yaml` | file exporter into the `traces` volume |
-| `solve.yaml` | the agent's sandbox: checkout at `settings.SOLVE_ROOT`, database sidecar |
-| `toolbox/Containerfile` | the agent's toolchain, with tools symlinked into `/usr/local/bin` (the agent's shell is given `PATH=/usr/local/bin:/usr/bin:/bin`) and the build tool's cache warmed from the pin |
+| `solve.yaml` | the agent's sandbox: the `toolbox` target, checkout at `settings.SOLVE_ROOT`, database sidecar |
 
 Published port: `${APP_HTTP_PORT:-<unused default>}` on the host, always to
 `8080` inside. The bench sets `APP_HTTP_PORT` to a free port per stack, so
