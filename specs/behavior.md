@@ -112,8 +112,9 @@ task type.
 4. On cleanup, `solves.capture` writes `out/solves/<run_id>/`: `diff.patch`,
    what git would commit against the pin (deletions, new files, and edits
    to files the pin tracks though its `.gitignore` names them; no build
-   output), and `record.json`, with the pin's `commit_sha` and the
-   `tree_sha256` of that tree. It then rebuilds the tree from both and
+   output), and `record.json`, with the pin's `commit_sha`, the
+   `tree_sha256` of that tree, and the `sample` and `manifest_name` it was
+   solved for — `score` refuses a manifest whose sample or name differ. It then rebuilds the tree from both and
    compares the digest; a run that does not rebuild keeps `tree/` for a
    person to read, raises, and cannot be scored.
 

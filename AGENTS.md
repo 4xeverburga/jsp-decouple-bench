@@ -132,7 +132,11 @@ separate step: it cuts the record's commit from `BENCH_CHECKOUT` (the
 sample's repository, as for `task`), applies the diff, refuses a tree
 whose digest is not the record's, and every scorer assigned to the
 manifest grades that tree, whenever it is run and as often as wanted,
-without paying for the agent. The diff is what git would commit: build
+without paying for the agent. The record keeps the sample and the name of
+the manifest it was solved for, and `score` refuses a manifest whose
+sample or name differ: an id can be retired and reused, a name is the
+task. A record with no manifest (a no-op or broken fixture) is graded by
+any manifest of its sample. The diff is what git would commit: build
 output the agent left in its checkout is not part of the run, and never
 reaches the image a score builds. The tree is rebuilt under
 `out/scratch/<run>-*/` (`settings.SCRATCH`), never the system's

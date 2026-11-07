@@ -221,7 +221,9 @@ def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
             f"run {run} predates run profiles: its record names no profile, "
             f"so its score cannot be labelled with one; solve it again"
         )
-    slug = load_manifest(manifest_id)["sample"]
+    chosen = load_manifest(manifest_id)
+    _match(run, record, manifest_id, chosen)
+    slug = chosen["sample"]
     env_dir = sample_env(slug)
     credentials = dotenv_values(env_dir / ".env")
     try:
@@ -232,6 +234,26 @@ def score(manifest_id: int, run: str, score_profile: str, logs: str) -> None:
         _grade(manifest_id, run, score_profile, logs, judge, credentials, tree)
     finally:
         _discard(tree.parent)
+
+
+def _match(run: str, record: dict, manifest_id: int, chosen: dict) -> None:
+    """Refuse a manifest that is not the task this run was solved for.
+
+    A record without a manifest is a fixture (a no-op or a known-broken
+    tree): it belongs to its sample, and any manifest of that sample may
+    grade it. A different manifest version is allowed and is in the log.
+    """
+    if record["sample"] != chosen["sample"]:
+        raise SystemExit(
+            f"run {run} was solved on {record['sample']}; manifest "
+            f"{manifest_id} ({chosen['name']}) grades {chosen['sample']}"
+        )
+    if "manifest_id" in record and record["manifest_name"] != chosen["name"]:
+        raise SystemExit(
+            f"run {run} was solved for {record['manifest_name']} (then "
+            f"manifest {record['manifest_id']}); manifest {manifest_id} is "
+            f"{chosen['name']}"
+        )
 
 
 def _grade(

@@ -81,6 +81,10 @@ async def capture_solution(state: TaskState) -> None:
             # The CLI's name is only the wire format; this is what answered.
             "model": resolved["answer_model"],
             "manifest_id": state.metadata["manifest_id"],
+            # What the id meant when this ran, so a score can refuse a
+            # manifest that has since come to mean another task.
+            "manifest_name": state.metadata["manifest"],
+            "sample": state.metadata["slug"],
             # A manifest's prompt is versioned, so a tree from one version
             # cannot be compared with another: say which one produced it.
             "manifest_version": state.metadata["manifest_version"],
