@@ -74,6 +74,10 @@ EVIDENCE = OUT / "evidence"
 TRACES = OUT / "traces"
 SOLVES = OUT / "solves"
 LOGS = OUT / "evals"
+# The trees a score builds from, rebuilt per run and removed after it. Not
+# the system's temporary directory: a hardened host may mount it noexec or
+# small, and a build context there is the whole tree.
+SCRATCH = OUT / "scratch"
 GIT_AUTHOR_EMAIL = _text("GIT_AUTHOR_EMAIL")
 # One lock file per stack slot: how many stacks this host runs at once,
 # across every bench process on it (`stack.running`).

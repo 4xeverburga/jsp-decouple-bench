@@ -286,9 +286,6 @@ def capture(manifest_id: int, cases: list[str]) -> None:
         raise SystemExit(f"manifest {manifest_id} has no case(s): {unknown}")
     commit = pin(slug)
     tree = solves.materialise(Path(settings.checkout()), commit)
-    # A score builds a tree with no `.git` (`solves.rebuild`); so must the
-    # golden, or the two stacks build different contexts.
-    shutil.rmtree(tree / ".git")
     previous_checkout = os.environ.get("BENCH_CHECKOUT")
     try:
         # From here the stack must build the pinned tree, not the worktree

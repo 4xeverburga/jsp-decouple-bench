@@ -109,10 +109,17 @@ the pristine upstream state. A rewritten history destroys that.
   entrypoint\.sh|bootstrap\.sh|\.env)$'
   ```
   must be empty. **`.dockerignore` is a stack file too**, and the solve
-  refuses a pin that carries one. A score builds from the pinned commit
-  plus the run's diff (`solves.rebuild`), which holds no build output, so
-  there is nothing left for it to keep out — and a legacy project that
-  ships one tells the agent somebody builds it in a container. Two files
+  refuses a pin that carries one: a legacy project that ships one tells
+  the agent somebody builds it in a container. Move it to the bench
+  instead, as `Containerfile.dockerignore` beside
+  `src/samples/<slug>/env/Containerfile` and beside
+  `env/toolbox/Containerfile` — BuildKit reads a Dockerfile's own ignore
+  file in place of the context's, even when the Dockerfile lives outside
+  the context (a symlinked one is not read: each is a file of its own).
+  The two differ on purpose: the scoring one keeps `.git`, build output
+  and local secrets out; the toolbox one only needs `.git`, because its
+  context is a workspace cut fresh from the pin, whose `.git` is new on
+  every solve and would rebuild the warmed cache. Two files
   are **not** stack files and stay: `.env.example`, and the app's own
   `*.properties.example` templates — setup documentation with no secrets,
   which the runbook depends on. Generated output belongs in the app's
@@ -239,6 +246,7 @@ PostgreSQL — and together they are the inventory a new sample needs:
 |---|---|
 | `compose.yaml` | `front` (built from the tree under test), `db` (sidecar, healthchecked), `collector`, and any one-shot `bootstrap` |
 | `Containerfile` | builds the app from the pin; placeholders only, never a credential; OTel jar last |
+| `Containerfile.dockerignore` | what of the tree never reaches the image: `.git`, build output, local secrets; beside `toolbox/Containerfile`, just `.git` |
 | `entrypoint.sh` | writes the run-time config (database, public URL) before the app starts |
 | `bootstrap.sh` | one-shot: rotates the seeded account to this sample's credential |
 | `.env` | the sample's synthetic credentials and `OTEL_*` — tracked, deterministic |

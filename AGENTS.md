@@ -18,7 +18,7 @@ this file is not for you.
 | who judges the spans: the model `trace_similarity` asks, its effort | a `score_profiles` entry in `tasks-config.yaml` |
 | the credentials a profile names | `bench.env` |
 | the answer key: flows and goldens | `src/samples/<sample>/cases/` |
-| the stack, Containerfile, .env, OpenTelemetry collector | `src/samples/<sample>/env/` |
+| the stack, Containerfile, its .dockerignore, .env, OpenTelemetry collector | `src/samples/<sample>/env/` |
 | starting and removing a case's stack | `src/bench/stack.py` |
 | the verdicts | `src/bench/scorers/` |
 | direction, and what is parked | `ROADMAP.md` |
@@ -134,9 +134,16 @@ whose digest is not the record's, and every scorer assigned to the
 manifest grades that tree, whenever it is run and as often as wanted,
 without paying for the agent. The diff is what git would commit: build
 output the agent left in its checkout is not part of the run, and never
-reaches the image a score builds. A pin carries no `.dockerignore`
-either: with nothing generated in the context there is nothing for one
-to keep out, and in a legacy project it reads as somebody's container.
+reaches the image a score builds. The tree is rebuilt under
+`out/scratch/<run>-*/` (`settings.SCRATCH`), never the system's
+temporary directory, and removed after the score.
+
+A pin carries no `.dockerignore`: in a legacy project it reads as
+somebody's container. The bench keeps it instead, as
+`Containerfile.dockerignore` beside each `Containerfile` in
+`src/samples/<sample>/env/` (and `env/toolbox/`); BuildKit reads it in
+place of the context's own, so what reaches an image is the bench's
+choice, not the agent's.
 
 `python main.py capture --manifest N [--case ID]` freezes a case's golden
 from the pinned tree: one stack per case, the flow played once, the rows

@@ -33,9 +33,9 @@ import settings
 # The stack is the bench's, not the tree's, so a pin carries no stack file:
 # deleting one here would keep a list of names to maintain and hide a sample
 # that was pinned wrong. Preparing the sample is what keeps them out (see
-# `prepare-repo-for-dataset`). `.dockerignore` is one too: a score builds
-# from `rebuild`, which carries no build output to keep out, and a legacy
-# project that ships one reads as a project somebody containerised.
+# `prepare-repo-for-dataset`). `.dockerignore` is one too: a legacy project
+# that ships one reads as a project somebody containerised. The bench keeps
+# its own, as `Containerfile.dockerignore` beside each Containerfile.
 STACK_FILE = re.compile(
     r"^(?:(?:docker|container)file(?:\..*)?"
     r"|(?:docker-)?compose(?:[-.].*)?"
@@ -269,7 +269,8 @@ def capture(
         diff_bytes=len(diff),
     )
     (target / "record.json").write_text(json.dumps(record, indent=2) + "\n")
-    scratch = Path(tempfile.mkdtemp(prefix="rebuild-"))
+    settings.SCRATCH.mkdir(parents=True, exist_ok=True)
+    scratch = Path(tempfile.mkdtemp(prefix="rebuild-", dir=settings.SCRATCH))
     try:
         _reconstruct(baseline, "HEAD", diff, scratch / "tree")
         again = _digest(scratch / "tree", _files(scratch / "tree"))
@@ -294,7 +295,7 @@ def capture(
 
 
 def rebuild(run_id: str, repo: Path) -> Path:
-    """The run's tree, cut again from `repo`, in a directory of its own.
+    """The run's tree, cut again from `repo`, under `settings.SCRATCH`.
 
     The caller removes the returned directory's parent.
     """
@@ -304,7 +305,8 @@ def rebuild(run_id: str, repo: Path) -> Path:
             f"run {run_id} predates rebuildable records: it names no "
             "commit and no digest, so its tree cannot be cut again"
         )
-    root = Path(tempfile.mkdtemp(prefix="application-"))
+    settings.SCRATCH.mkdir(parents=True, exist_ok=True)
+    root = Path(tempfile.mkdtemp(prefix=f"{run_id}-", dir=settings.SCRATCH))
     root.chmod(0o755)
     tree = root / "workspace"
     try:
