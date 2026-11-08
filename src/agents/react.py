@@ -14,6 +14,9 @@ from inspect_ai.util import message_limit
 MOCK_MESSAGE_LIMIT = 6
 
 
+COMPACTIONS = frozenset({"none", "CompactionAuto"})
+
+
 class ContextOverflowError(RuntimeError):
     """The conversation outgrew the answerer's window and was not saved."""
 
@@ -57,8 +60,13 @@ def solver_for(
     The threshold is handed over in tokens, so Inspect never looks the
     window up itself. An overflow that is not compacted fails the sample.
     """
+    if compaction not in COMPACTIONS:
+        raise ValueError(
+            f"unknown compaction {compaction!r}: "
+            f"expected one of {sorted(COMPACTIONS)}"
+        )
     strategy = None
-    if compaction != "none":
+    if compaction == "CompactionAuto":
         strategy = CompactionAuto(
             threshold=int(compaction_threshold * context_window)
         )
