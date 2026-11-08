@@ -115,7 +115,19 @@ solve_profiles:
     model_env: [OPENCODE_GO_API_KEY, OPENCODE_GO_BASE_URL]
     reasoning_effort: high
     model_args: {}
-    compaction: none
+    compaction: CompactionAuto
+    context_window: 1000000
+    compaction_threshold: 0.9
+
+  react-claude-sonnet-55-medium:
+    agent: react
+    agent_model: none
+    agent_version: none
+    answer_model: anthropic/claude-sonnet-5-5
+    model_env: [ANTHROPIC_AUTH_TOKEN]
+    reasoning_effort: medium
+    model_args: {}
+    compaction: CompactionAuto
     context_window: 1000000
     compaction_threshold: 0.9
 
