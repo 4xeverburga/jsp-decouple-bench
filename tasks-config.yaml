@@ -48,6 +48,19 @@ solve_profiles:
     context_window: none
     compaction_threshold: none
 
+
+  opencode-v1-deepseek-flash-high:
+    agent: opencode
+    agent_model: opencode-go/deepseek-v4.1-flash
+    agent_version: 1.19.5
+    answer_model: openai-api/opencode-go/deepseek-v4.1-flash
+    model_env: [OPENCODE_GO_API_KEY, OPENCODE_GO_BASE_URL]
+    reasoning_effort: high
+    model_args: {}
+    compaction: none
+    context_window: none
+    compaction_threshold: none
+
   # A different family on the same agent and gateway. `glm-5.3-flash` is
   # the id `opencode-go` lists (verified against models.opencode.ai); the
   # name carries the version, so a later GLM is a new profile rather than
@@ -101,6 +114,18 @@ solve_profiles:
     context_window: none
     compaction_threshold: none
 
+  claude-code-opus-5.5-high-subscription:
+    agent: claude
+    agent_model: claude-sonnet-5-5
+    agent_version: 2.1.311
+    answer_model: anthropic/claude-opus-5-5
+    model_env: [ANTHROPIC_AUTH_TOKEN]
+    reasoning_effort: high
+    model_args: {}
+    compaction: none
+    context_window: none
+    compaction_threshold: none
+
   # The native agent on the same answerer and provider as
   # `opencode-v1-deepseek-flash-medium`, at `high` effort: the two profiles
   # differ in the agent and in the effort, so read a comparison between them
@@ -126,6 +151,18 @@ solve_profiles:
     answer_model: anthropic/claude-sonnet-5-5
     model_env: [ANTHROPIC_AUTH_TOKEN]
     reasoning_effort: medium
+    model_args: {}
+    compaction: CompactionAuto
+    context_window: 1000000
+    compaction_threshold: 0.9
+
+  react-claude-haiku-55-high:
+    agent: react
+    agent_model: none
+    agent_version: none
+    answer_model: anthropic/claude-haiku-5-5
+    model_env: [ANTHROPIC_AUTH_TOKEN]
+    reasoning_effort: high
     model_args: {}
     compaction: CompactionAuto
     context_window: 1000000
