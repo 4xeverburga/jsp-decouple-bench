@@ -90,6 +90,9 @@ services:
       BSW_DB_NAME: ${BSW_DB_NAME:?set .env (cp from .env.example)}
       BSW_DB_USER: ${BSW_DB_USER:?set .env (cp from .env.example)}
       BSW_DB_PASSWORD: ${BSW_DB_PASSWORD:?set .env (cp from .env.example)}
+      # Tomcat's own JVM is the one that hosts the app; entrypoint.sh adds
+      # the connection properties to this.
+      CATALINA_OPTS: -javaagent:/opt/otel/javaagent.jar
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:?set .env (cp from .env.example)}
       OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:?set .env (cp from .env.example)}
       OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:?set .env (cp from .env.example)}

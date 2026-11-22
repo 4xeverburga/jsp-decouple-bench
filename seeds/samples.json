@@ -23,6 +23,9 @@
       "mysql",
       "vraptor",
       "tomcat"
+    ],
+    "code_packages": [
+      "org.mamute"
     ]
   },
   {
@@ -46,6 +49,9 @@
       "spring-mvc",
       "shiro",
       "tomcat"
+    ],
+    "code_packages": [
+      "com.wxs"
     ]
   },
   {
@@ -69,6 +75,9 @@
       "spring-mvc",
       "liquibase",
       "tomcat"
+    ],
+    "code_packages": [
+      "org.akaza.openclinica"
     ]
   },
   {
@@ -92,6 +101,9 @@
       "servlet",
       "jdbi",
       "tomcat"
+    ],
+    "code_packages": [
+      "com.bookshopweb"
     ]
   },
   {
@@ -115,6 +127,9 @@
       "struts2",
       "jpa",
       "tomcat"
+    ],
+    "code_packages": [
+      "org.apache.roller"
     ]
   }
 ]

@@ -70,7 +70,7 @@ def replayed_case(slug: str, options: dict) -> Solver:
         specs = golden(slug, case)["db"]["tables"]
         failure = None
         artifacts = None
-        async with running(slug) as stack:
+        async with running(slug, ()) as stack:
             before = await db.snapshot(stack, target, list(specs))
             try:
                 artifacts = await asyncio.to_thread(

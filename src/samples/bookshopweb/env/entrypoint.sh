@@ -5,12 +5,12 @@
 # The app reads its connection settings from JVM system properties
 # (bookshop.db.*), so every environment-specific value is passed here, from
 # compose's environment (which comes from this folder's `.env`), and no
-# credential lives in the image. The OpenTelemetry agent rides on the same
-# CATALINA_OPTS.
+# credential lives in the image. They are added to the CATALINA_OPTS compose
+# gives, which already loads the OpenTelemetry agent.
 set -euo pipefail
 
 : "${BSW_DB_HOST:?}" "${BSW_DB_NAME:?}" "${BSW_DB_USER:?}" \
-  "${BSW_DB_PASSWORD:?}" "${CATALINA_HOME:?}"
+  "${BSW_DB_PASSWORD:?}" "${CATALINA_HOME:?}" "${CATALINA_OPTS:?}"
 
 # 1. Wait for the database. Its seed is loaded before it reports healthy, but
 #    the port is cheap to confirm and makes a startup failure readable.
@@ -25,7 +25,7 @@ rm -rf "${CATALINA_HOME}/webapps/BookShopWeb" \
   "${CATALINA_HOME}/webapps/BookShopWeb.war"
 cp /opt/app/BookShopWeb.war "${CATALINA_HOME}/webapps/BookShopWeb.war"
 
-export CATALINA_OPTS="-javaagent:/opt/otel/javaagent.jar \
+export CATALINA_OPTS="${CATALINA_OPTS} \
  -Dbookshop.db.host=${BSW_DB_HOST} -Dbookshop.db.port=3306 \
  -Dbookshop.db.name=${BSW_DB_NAME} -Dbookshop.db.user=${BSW_DB_USER} \
  -Dbookshop.db.password=${BSW_DB_PASSWORD} \

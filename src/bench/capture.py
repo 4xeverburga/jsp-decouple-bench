@@ -45,7 +45,7 @@ async def one(slug: str, case: str, commit: str, target: db.Target) -> Path:
     tables = {spec["name"]: spec for spec in declared}
     names = list(tables)
     _say(f"{case}: starting a stack")
-    async with running(slug) as stack:
+    async with running(slug, ()) as stack:
         before = await db.snapshot(stack, target, names)
         artifacts, shot = await asyncio.to_thread(
             drive, slug, case, stack.base_url

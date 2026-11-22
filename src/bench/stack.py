@@ -67,10 +67,13 @@ def _at_port(url: str, port: int) -> str:
 
 
 class Stack:
-    def __init__(self, slug: str) -> None:
+    def __init__(self, slug: str, overrides: tuple[Path, ...]) -> None:
         prefix = settings.STACK_PROJECT_PREFIX
         self.project = f"{prefix}{slug}-{uuid.uuid4().hex[:8]}"
         self._compose = scoring_compose(slug)
+        # Compose files layered over the sample's own, in order. Scoring
+        # and capture pass none; only out-of-band measurements add one.
+        self._overrides = overrides
         self._target = sample(slug)["target_url"]
         self._env = {
             **os.environ,
@@ -99,6 +102,7 @@ class Stack:
             self.project,
             "-f",
             str(self._compose),
+            *(arg for extra in self._overrides for arg in ("-f", str(extra))),
             *args,
         ]
 
@@ -308,11 +312,11 @@ def _await_build() -> IO:
 
 
 @asynccontextmanager
-async def running(slug: str):
+async def running(slug: str, overrides: tuple[Path, ...]):
     """The case's stack, built from the tree under test, removed after."""
     slot = await _slot()
     try:
-        stack = Stack(slug)
+        stack = Stack(slug, overrides)
         try:
             await asyncio.to_thread(stack.up)
             yield stack

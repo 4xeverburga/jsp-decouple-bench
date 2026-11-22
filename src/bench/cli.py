@@ -24,12 +24,14 @@ import shutil
 import subprocess
 import sys
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 from dotenv import dotenv_values
 from inspect_ai.log import list_eval_logs, read_eval_log
 
 import settings
+from src.bench_controls import coverage as measuring
 
 from . import capture as freezing
 from . import solves
@@ -292,34 +294,24 @@ def _grade(
     _require_success(logs, attempt, run, "score")
 
 
-def capture(manifest_id: int, cases: list[str]) -> None:
-    """Freeze a manifest's goldens from its pinned tree.
+@contextmanager
+def _pinned(slug: str):
+    """The sample's pin cut into a tree, with the stack's env pointed at it.
 
-    `BENCH_CHECKOUT` names the sample's repository here, as it does for
-    `task`: the pin is cut from it and only then becomes the tree the
-    stack builds. Each case's stack picks its own port, as in scoring; the
-    golden does not record it, because parity normalizes the base URL out
-    and the span condenser erases hosts.
+    `BENCH_CHECKOUT` names the sample's repository on the way in, as it
+    does for `task`: the pin is cut from it and only then becomes the tree
+    the stack builds — the same env the scorer is given. The sample's
+    synthetic credentials are loaded for the flows.
     """
-    chosen = load_manifest(manifest_id)
-    slug = chosen["sample"]
-    wanted = cases or list(chosen["scope"]["cases"])
-    unknown = sorted(set(wanted) - set(chosen["scope"]["cases"]))
-    if unknown:
-        raise SystemExit(f"manifest {manifest_id} has no case(s): {unknown}")
-    commit = pin(slug)
-    tree = solves.materialise(Path(settings.checkout()), commit)
+    tree = solves.materialise(Path(settings.checkout()), pin(slug))
     previous_checkout = os.environ.get("BENCH_CHECKOUT")
     try:
-        # From here the stack must build the pinned tree, not the worktree
-        # the pin came from — same env the scorer is given. The address is
-        # each stack's own, as in scoring.
         os.environ["BENCH_CHECKOUT"] = str(tree)
         credentials = dotenv_values(sample_env(slug) / ".env")
         for key, value in credentials.items():
             if value is not None:
                 os.environ[key] = value
-        freezing.run(slug, wanted, commit, chosen["bindings"]["db"]["options"])
+        yield tree
     finally:
         if previous_checkout is None:
             os.environ.pop("BENCH_CHECKOUT", None)
@@ -328,8 +320,48 @@ def capture(manifest_id: int, cases: list[str]) -> None:
         _discard(tree.parent)
 
 
+def _chosen_cases(manifest_id: int, cases: list[str]) -> tuple[dict, list]:
+    chosen = load_manifest(manifest_id)
+    wanted = cases or list(chosen["scope"]["cases"])
+    unknown = sorted(set(wanted) - set(chosen["scope"]["cases"]))
+    if unknown:
+        raise SystemExit(f"manifest {manifest_id} has no case(s): {unknown}")
+    return chosen, wanted
+
+
+def capture(manifest_id: int, cases: list[str]) -> None:
+    """Freeze a manifest's goldens from its pinned tree.
+
+    Each case's stack picks its own port, as in scoring; the golden does
+    not record it, because parity normalizes the base URL out and the span
+    condenser erases hosts.
+    """
+    chosen, wanted = _chosen_cases(manifest_id, cases)
+    slug = chosen["sample"]
+    with _pinned(slug):
+        freezing.run(
+            slug, wanted, pin(slug), chosen["bindings"]["db"]["options"]
+        )
+
+
+def coverage(manifest_id: int, cases: list[str]) -> None:
+    """Measure how much of its controller a manifest's cases reach.
+
+    Out of band: the pinned tree, one stack per case with a coverage agent
+    attached (`src/bench_controls/coverage.py`). Nothing it writes is read
+    by a score.
+    """
+    chosen, wanted = _chosen_cases(manifest_id, cases)
+    with _pinned(chosen["sample"]) as tree:
+        measuring.run(chosen, wanted, tree)
+
+
 def _capture_verb(args: argparse.Namespace) -> None:
     capture(args.manifest, args.case)
+
+
+def _coverage_verb(args: argparse.Namespace) -> None:
+    coverage(args.manifest, args.case)
 
 
 def _task(args: argparse.Namespace) -> None:
@@ -396,6 +428,19 @@ def _parser() -> argparse.ArgumentParser:
     frozen.set_defaults(handler=_capture_verb)
     frozen.add_argument("--manifest", type=int, required=True)
     frozen.add_argument(
+        "--case",
+        action="append",
+        default=[],
+        help="case id; repeatable, default is every case of the manifest",
+    )
+
+    measured = verbs.add_parser(
+        "coverage",
+        help="measure a manifest's handler and line coverage (out of band)",
+    )
+    measured.set_defaults(handler=_coverage_verb)
+    measured.add_argument("--manifest", type=int, required=True)
+    measured.add_argument(
         "--case",
         action="append",
         default=[],

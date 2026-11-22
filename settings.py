@@ -128,6 +128,29 @@ STACK_TRACES_SERVICE = "collector"
 STACK_TRACES_FILE = "/traces/traces.jsonl"
 TRACE_FLUSH_WAIT_S = 8
 
+# --- code coverage of the cases, measured out of band (`coverage.py`). ---
+# The agent is attached only to the stacks `main.py coverage` starts,
+# through a compose override written per stack; the scoring stacks never
+# carry it. It listens on loopback inside the app's container and is
+# dumped from there, so nothing is published.
+COVERAGE = OUT / "coverage"
+TOOLS = OUT / "tools"
+JACOCO_VERSION = _text("JACOCO_VERSION")
+JACOCO_AGENT_SHA256 = _text("JACOCO_AGENT_SHA256")
+JACOCO_CLI_SHA256 = _text("JACOCO_CLI_SHA256")
+JACOCO_REPOSITORY = "https://repo1.maven.org/maven2/org/jacoco"
+JACOCO_ADDRESS = "127.0.0.1"
+JACOCO_PORT = 6300
+JACOCO_MOUNT = "/opt/jacoco"
+# Where the dump and its report are written inside the app's container.
+JACOCO_DUMP_DIR = "/tmp/jacoco"
+# Every sample's Containerfile builds the app here, so its compiled classes
+# are under this root in the image the stack runs.
+IMAGE_WORKDIR = "/workspace"
+# How every sample's compose loads the tracing agent into the app's JVM;
+# the coverage agent is appended to the variable that carries it.
+OTEL_AGENT_FLAG = "-javaagent:/opt/otel/javaagent.jar"
+
 # --- who solves a run, and who judges it: named profiles in
 # `tasks-config.yaml`, never `bench.env`. A profile is a choice, not a
 # secret, so it is tracked; `bench.env` only holds the credentials its
@@ -210,14 +233,11 @@ def solve_profile(name: str) -> dict:
     chosen = _profile("solve_profiles", SOLVE_PROFILE_KEYS, name)
     if chosen["compaction"] not in COMPACTIONS:
         raise ValueError(
-            f"solve_profiles {name!r}: compaction must be one of "
-            f"{COMPACTIONS}"
+            f"solve_profiles {name!r}: compaction must be one of {COMPACTIONS}"
         )
     window = chosen["context_window"]
     if window != "none" and not (
-        isinstance(window, int)
-        and not isinstance(window, bool)
-        and window > 0
+        isinstance(window, int) and not isinstance(window, bool) and window > 0
     ):
         raise ValueError(
             f"solve_profiles {name!r}: context_window must be 'none' or "

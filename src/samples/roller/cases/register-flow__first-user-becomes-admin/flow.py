@@ -25,7 +25,9 @@ def _type(page, selector, value):
 
 
 def _heading(page):
-    return re.sub(r"\s+", " ", page.locator("h1, h2").first.inner_text()).strip()
+    return re.sub(
+        r"\s+", " ", page.locator("h1, h2").first.inner_text()
+    ).strip()
 
 
 def run(page, base_url):
@@ -44,7 +46,9 @@ def run(page, base_url):
     with page.expect_navigation(wait_until="load"):
         link.click()
     page.wait_for_load_state("networkidle")
-    assert "register" in page.url, "expected the register form, got %s" % page.url
+    assert "register" in page.url, (
+        "expected the register form, got %s" % page.url
+    )
     register_heading = _heading(page)
 
     _type(page, "input[name='bean.userName']", user)
@@ -63,8 +67,9 @@ def run(page, base_url):
     page.wait_for_load_state("networkidle")
 
     errors = page.locator(".errors")
-    assert errors.count() == 0, (
-        "registration refused at %s: %s" % (page.url, errors.first.inner_text())
+    assert errors.count() == 0, "registration refused at %s: %s" % (
+        page.url,
+        errors.first.inner_text(),
     )
     login_link = page.locator("a#a_clickHere")
     assert login_link.count() == 1, (

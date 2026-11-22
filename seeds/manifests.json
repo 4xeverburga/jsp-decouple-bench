@@ -158,6 +158,14 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controller": "org.mamute.controllers.VoteController",
+        "handlers": {
+          "voteUp": "vote-flow__upvote-increments-count",
+          "voteDown": "vote-flow__downvote-decrements-count"
+        },
+        "not_driven": {}
       }
     },
     "scorers": [
@@ -1068,7 +1076,15 @@
       "cases": [
         "category-flow__create-category-inserts-row"
       ],
-      "routes": []
+      "routes": [],
+      "covers": {
+        "controller": "com.bookshopweb.servlet.admin.category.CreateCategoryServlet",
+        "handlers": {
+          "doGet": "category-flow__create-category-inserts-row",
+          "doPost": "category-flow__create-category-inserts-row"
+        },
+        "not_driven": {}
+      }
     },
     "scorers": [
       "functional_parity"
@@ -1104,7 +1120,17 @@
       "cases": [
         "register-flow__first-user-becomes-admin"
       ],
-      "routes": []
+      "routes": [],
+      "covers": {
+        "controller": "org.apache.roller.weblogger.ui.struts2.core.Register",
+        "handlers": {
+          "execute": "register-flow__first-user-becomes-admin",
+          "save": "register-flow__first-user-becomes-admin"
+        },
+        "not_driven": {
+          "activate": "reached only from the e-mail activation link; user.account.email.activation is false and the stack has no mail server"
+        }
+      }
     },
     "scorers": [
       "functional_parity"
