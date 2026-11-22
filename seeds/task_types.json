@@ -1,18 +1,22 @@
 [
   {
     "name": "decouple_slice",
-    "description": "Decouple one feature boundary inside the app: its work moves behind JSON backend controllers, and the page-side controllers reach them over loopback HTTP and render the same JSP; behaviour parity."
+    "description": "Decouple one feature boundary inside the app: its work moves behind JSON backend controllers, and the page-side controllers reach them over loopback HTTP and render the same JSP; behaviour parity.",
+    "solve_max_retries": null
   },
   {
     "name": "oneshot_decoupling",
-    "description": "Decouple the whole sample in one run (every case): every page-side controller reaches the backend over loopback HTTP and holds no service or data access; JSP stays."
+    "description": "Decouple the whole sample in one run (every case): every page-side controller reaches the backend over loopback HTTP and holds no service or data access; JSP stays.",
+    "solve_max_retries": null
   },
   {
     "name": "dummy_file",
-    "description": "Smoke test: write one file and stop. Proves an agent acts on the checkout at all, without any app work."
+    "description": "Smoke test: write one file and stop. Proves an agent acts on the checkout at all, without any app work.",
+    "solve_max_retries": 3
   },
   {
     "name": "agent_probe",
-    "description": "Probe: read the files it names, derive the values they hold, write one\nfile, stop. Tests whether an agent converts research into an edit instead\nof reading indefinitely."
+    "description": "Probe: read the files it names, derive the values they hold, write one\nfile, stop. Tests whether an agent converts research into an edit instead\nof reading indefinitely.",
+    "solve_max_retries": 3
   }
 ]

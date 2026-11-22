@@ -126,7 +126,7 @@ async def _keep_agent(run: str, agent: str) -> None:
 SESSION_HEADER = "x-opencode-session"
 
 
-def _answer_model(resolved: dict) -> Model:
+def _answer_model(resolved: dict, max_retries: int | None) -> Model:
     """The model that answers the agent's calls, whatever they were named.
 
     A Model instance, not a name: resolving a bare string builds a model
@@ -135,13 +135,22 @@ def _answer_model(resolved: dict) -> Model:
     active model, and Inspect merges the eval's `--reasoning-effort` and
     `-M` only into that one — so the profile's effort and arguments are
     set on this model directly, or they would never reach a request.
+
+    `max_retries` is the task type's `solve_max_retries`. A provider at its
+    usage limit answers 429 for as long as it is at it, and Inspect's own
+    retry is unbounded, so a smoke test would wait out its whole budget
+    without the agent ever acting; a bound makes it an `error` instead.
+    `None` is a real answer there: the decoupling types keep retrying.
     """
     session = os.environ.get("OPENCODE_SESSION_ID")
     if session is None:
         session = uuid.uuid4().hex
     return get_model(
         resolved["answer_model"],
-        config=GenerateConfig(reasoning_effort=resolved["reasoning_effort"]),
+        config=GenerateConfig(
+            reasoning_effort=resolved["reasoning_effort"],
+            max_retries=max_retries,
+        ),
         default_headers={SESSION_HEADER: session},
         **resolved["model_args"],
     )
@@ -179,7 +188,7 @@ def _manifest_task(
             dataset=samples.for_solving(manifest_id, run, profile, resolved),
             solver=agents.solver_for(
                 resolved["agent"],
-                _answer_model(resolved),
+                _answer_model(resolved, kind["solve_max_retries"]),
                 resolved["agent_model"],
                 resolved["agent_version"],
                 settings.SOLVE_ROOT,
