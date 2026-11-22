@@ -1,0 +1,108 @@
+# Roller — JDK 8 + Maven + Tomcat 9. One file, two images:
+#
+#   app      the scoring image, DB = MySQL 5.7 (the compose `db` service).
+#            Built by compose.yaml.
+#   toolbox  the agent's sandbox: the same toolchain, a mysql client, and a
+#            warm `~/.m2`. Built by solve.yaml. No container runtime in it:
+#            the database is a sidecar; inspect_swe copies the agent CLI in
+#            at run time.
+#
+# Either way the build context is the tree, and `Containerfile.dockerignore`
+# beside this file is what of it never reaches an image.
+#
+# Roller's config (database, directories) is written at run time by
+# entrypoint.sh from compose's environment, which comes from this folder's
+# `.env`. Credentials must not be baked into an image that may be rebuilt for
+# another run.
+FROM maven:3.8.6-openjdk-8 AS base
+
+# A MySQL client, in both images: the agent reads the sidecar's rows with it,
+# and the app's entrypoint loads the schema with it.
+#
+# Two traps, both fixed here: the image ships stale package lists (so it asks
+# for versions that are gone), and bullseye-security indexes versions the
+# mirror no longer carries (404).
+RUN rm -rf /var/lib/apt/lists/* \
+ && sed -i '/debian-security/d' /etc/apt/sources.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends default-mysql-client \
+ && rm -rf /var/lib/apt/lists/* \
+ && ln -sf /usr/bin/mysql /usr/local/bin/mysql
+
+ARG TOMCAT_VERSION=9.0.98
+RUN wget -qO- https://archive.apache.org/dist/tomcat/tomcat-9/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz \
+      | tar -xz -C /opt \
+    && ln -s /opt/apache-tomcat-${TOMCAT_VERSION} /opt/tomcat
+ENV CATALINA_HOME=/opt/tomcat
+ENV JAVA_HOME=/usr/local/openjdk-8
+
+# Server-side jars the WAR expects Tomcat to provide: the JDBC driver and
+# JavaMail (+ JAF, which JavaMail 1.4 needs on Java 8). Pinned and checked.
+RUN set -e; cd /opt/tomcat/lib; M=https://repo1.maven.org/maven2; \
+    for spec in \
+      "mysql/mysql-connector-java/5.1.49/mysql-connector-java-5.1.49.jar 5bba9ff50e5e637a0996a730619dee19ccae274883a4d28c890d945252bb0e12" \
+      "javax/mail/mail/1.4.7/mail-1.4.7.jar 78c33b4f7c7b60f4b680f2d2405b1f063d71929cf1a4fbc328888379f365fcfb" \
+      "javax/activation/activation/1.1.1/activation-1.1.1.jar ae475120e9fcd99b4b00b38329bd61cdc5eb754eee03fe66c01f50e137724f99"; do \
+      set -- $spec; f=$(basename "$1"); wget -qO "$f" "$M/$1"; \
+      echo "$2  $f" | sha256sum -c -; \
+    done \
+ && mkdir -p /var/lib/roller
+
+# The agent's shell is given PATH=/usr/local/bin:/usr/bin:/bin, which this
+# image's ENV does not reach: symlink the JDK tools it leaves out. (`mvn`
+# resolves either way, and the WAR will not build without `java`/`javac`.)
+RUN for tool in java javac jar jarsigner javadoc javap jcmd jdb jps \
+      jrunscript jstack keytool; do \
+      ln -sf "/usr/local/openjdk-8/bin/$tool" "/usr/local/bin/$tool"; \
+    done
+
+WORKDIR /workspace
+
+# Dependency cache, from the pin's own poms. In the toolbox nothing copied
+# here is what the agent reads — the checkout is bind-mounted over
+# /workspace, so only `~/.m2` survives into the solve.
+#
+# The same `package` the agent runs, over the poms alone: it fails at the
+# WAR step (no web.xml yet), after every dependency and almost every plugin
+# is in the cache — hence `|| true`. Not `go-offline`, which would walk the
+# plugins of every profile. The build that has to succeed is the one over the
+# real sources, and it fills in whatever the first left out.
+COPY pom.xml ./
+COPY app/pom.xml app/
+RUN mvn -B -q -DskipTests package || true
+
+COPY . .
+RUN mvn -B -q -DskipTests package
+
+
+FROM base AS toolbox
+
+
+FROM base AS app
+
+# Exploded, with the build stamp fixed: roller-version.properties carries the
+# build time, which the footer and every feed render, so two builds of one
+# tree would otherwise differ. UNKNOWN is the app's own fallback for a
+# missing stamp (WebloggerImpl).
+RUN mkdir -p /opt/app/roller \
+ && cd /opt/app/roller && jar xf /workspace/app/target/roller.war \
+ && sed -i -e 's/^ro\.buildTime=.*/ro.buildTime=UNKNOWN/' \
+      -e 's/^ro\.buildUser=.*/ro.buildUser=UNKNOWN/' \
+      WEB-INF/classes/roller-version.properties \
+ && cp /workspace/app/target/dbscripts/mysql/createdb.sql /opt/app/createdb.sql \
+ && rm -rf /opt/tomcat/webapps/*
+
+# OpenTelemetry Java agent, pinned and checked. Last on purpose: a layer above
+# the Maven ones would invalidate their (slow) cache. Only the jar lives here;
+# it is attached at run time (CATALINA_OPTS in compose.yaml), never to the
+# build.
+ARG OTEL_AGENT_VERSION=2.33.1
+ARG OTEL_AGENT_SHA256=e43a270df53c6f423e0ab157be9c27ccc01d5dc3232e162fe54777573db2f149
+RUN mkdir -p /opt/otel \
+ && wget -qO /opt/otel/javaagent.jar \
+      https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${OTEL_AGENT_VERSION}/opentelemetry-javaagent.jar \
+ && echo "${OTEL_AGENT_SHA256}  /opt/otel/javaagent.jar" | sha256sum -c -
+
+# entrypoint.sh is bind-mounted read-only at run time by compose.yaml — it is
+# bench infra and must not be baked into (or drift inside) the image.
+ENTRYPOINT ["bash", "./entrypoint.sh"]

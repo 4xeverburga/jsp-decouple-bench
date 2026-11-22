@@ -69,6 +69,8 @@ judged by behaviour and traces rather than by a build.
 | `mamute` | [caelum/mamute](https://github.com/caelum/mamute) | VRaptor 4, MySQL, 49 JSPs, 78 tag files | Apache-2.0 |
 | `online-study-system` | [jitwxs/Online_Study_System](https://github.com/jitwxs/Online_Study_System) | Spring MVC 4.3, Shiro, MySQL | Apache-2.0 |
 | `openclinica` | [OpenClinica/OpenClinica](https://github.com/OpenClinica/OpenClinica) | Spring MVC 3.2, Liquibase, PostgreSQL, 807 JSPs | LGPL |
+| `bookshopweb` | [daphdev/BookShopWeb](https://github.com/daphdev/BookShopWeb) | Servlets + JDBI 3, MySQL 8.0, 40 JSPs — *prepared, no cases yet* | Apache-2.0 |
+| `roller` | [apache/roller](https://github.com/apache/roller) @ 5.2.2 | Struts 2.5, JPA, MySQL 5.7, 96 JSPs — *prepared, no cases yet* | Apache-2.0 |
 
 Each is pinned to a commit in `seeds/samples.json`. The stack that runs
 it — Containerfile, compose, `.env`, OpenTelemetry collector — lives in

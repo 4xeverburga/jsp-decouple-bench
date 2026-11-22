@@ -1,0 +1,22 @@
+# Receives the app's spans and appends them to /traces/traces.jsonl, one
+# OTLP/JSON batch per line. The trace_similarity scorer reads that file.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+
+exporters:
+  file:
+    path: /traces/traces.jsonl
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [file]

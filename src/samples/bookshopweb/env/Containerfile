@@ -1,0 +1,90 @@
+# BookShopWeb — JDK 8 + Maven + Tomcat 9. One file, two images:
+#
+#   app      the scoring image, DB = MySQL 8.0 (the compose `db` service).
+#            Built by compose.yaml.
+#   toolbox  the agent's sandbox: the same toolchain, a mysql client, and a
+#            warm `~/.m2`. Built by solve.yaml. No container runtime in it:
+#            the database is a sidecar; inspect_swe copies the agent CLI in
+#            at run time.
+#
+# Either way the build context is the tree, and `Containerfile.dockerignore`
+# beside this file is what of it never reaches an image.
+#
+# The connection settings are JVM system properties the app reads at start;
+# entrypoint.sh passes them from compose's environment, which comes from this
+# folder's `.env`. Credentials must not be baked into an image that may be
+# rebuilt for another run.
+FROM maven:3.8.6-openjdk-8 AS base
+
+ARG TOMCAT_VERSION=9.0.98
+RUN wget -qO- https://archive.apache.org/dist/tomcat/tomcat-9/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz \
+      | tar -xz -C /opt \
+    && ln -s /opt/apache-tomcat-${TOMCAT_VERSION} /opt/tomcat
+ENV CATALINA_HOME=/opt/tomcat
+ENV JAVA_HOME=/usr/local/openjdk-8
+
+# The agent's shell is given PATH=/usr/local/bin:/usr/bin:/bin, which this
+# image's ENV does not reach: symlink the JDK tools it leaves out. (`mvn`
+# resolves either way, and the WAR will not build without `java`/`javac`.)
+RUN for tool in java javac jar jarsigner javadoc javap jcmd jdb jps \
+      jrunscript jstack keytool; do \
+      ln -sf "/usr/local/openjdk-8/bin/$tool" "/usr/local/bin/$tool"; \
+    done
+
+WORKDIR /workspace
+
+# Dependency cache, from the pin's own pom. In the toolbox nothing copied
+# here is what the agent reads — the checkout is bind-mounted over
+# /workspace, so only `~/.m2` survives into the solve.
+#
+# One module, a dozen dependencies: `go-offline` is the cheap warm and also
+# resolves the plugins the `package` below needs. `|| true` because the warm
+# is best effort — the build that has to succeed is the one over the sources.
+COPY pom.xml ./
+RUN mvn -B -q -DskipTests dependency:go-offline || true
+
+COPY . .
+RUN mvn -B -q -DskipTests package
+
+# The seed images are files, not rows: the app serves them from this
+# directory, and the tree ships them zipped.
+RUN mkdir -p /var/webapp/images \
+ && unzip -qo init/var-webapp-images.zip -d /var/webapp/images
+
+
+FROM base AS toolbox
+
+# A MySQL client. The app's database is a sidecar on this network, and reading
+# its rows is part of understanding what a flow persists.
+#
+# Two traps, both fixed here: the image ships stale package lists (so it asks
+# for versions that are gone), and bullseye-security indexes versions the
+# mirror no longer carries (404). The client is only ever a client.
+RUN rm -rf /var/lib/apt/lists/* \
+ && sed -i '/debian-security/d' /etc/apt/sources.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends default-mysql-client \
+ && rm -rf /var/lib/apt/lists/*
+RUN ln -sf /usr/bin/mysql /usr/local/bin/mysql
+
+
+FROM base AS app
+
+RUN rm -rf /opt/tomcat/webapps/* \
+ && mkdir -p /opt/app \
+ && cp target/BookShopWeb-1.0-SNAPSHOT.war /opt/app/BookShopWeb.war
+
+# OpenTelemetry Java agent, pinned and checked. Last on purpose: a layer above
+# the Maven ones would invalidate their (slow) cache. Only the jar lives here;
+# it is attached at run time (CATALINA_OPTS in entrypoint.sh), never to the
+# build.
+ARG OTEL_AGENT_VERSION=2.33.1
+ARG OTEL_AGENT_SHA256=e43a270df53c6f423e0ab157be9c27ccc01d5dc3232e162fe54777573db2f149
+RUN mkdir -p /opt/otel \
+ && wget -qO /opt/otel/javaagent.jar \
+      https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${OTEL_AGENT_VERSION}/opentelemetry-javaagent.jar \
+ && echo "${OTEL_AGENT_SHA256}  /opt/otel/javaagent.jar" | sha256sum -c -
+
+# entrypoint.sh is bind-mounted read-only at run time by compose.yaml — it is
+# bench infra and must not be baked into (or drift inside) the image.
+ENTRYPOINT ["bash", "./entrypoint.sh"]

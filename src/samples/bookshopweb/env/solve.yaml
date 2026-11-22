@@ -1,0 +1,44 @@
+# The bookshopweb solve sandbox: the checkout, writable, and the MySQL its
+# app uses.
+#
+# The agent runs inside this, so it never has the docker socket and never
+# sees the supervisor's home. The image is the `toolbox` target of
+# Containerfile; the sandbox only guarantees where it may write.
+#
+# Writable host binds are refused by Inspect unless the project opts in:
+# that is what the escape hatch below is for, and it is deliberate here.
+x-inspect_docker_sandbox:
+  unsafe_allow_writable_host_mounts: true
+
+name: application-mysql
+
+services:
+  workspace:
+    x-default: true
+    build:
+      # The tree is the context, exactly as it is for the scoring image: the
+      # toolbox warms `~/.m2` from the pin's own pom. The mount below shadows
+      # whatever was copied in, so the copy in the image is never what the
+      # agent reads. Built once per pin; `docker compose up` reuses the image
+      # and does not rebuild it.
+      context: ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}
+      dockerfile: ${BENCH_SAMPLE_ENV:?set by the bench}/Containerfile
+      target: toolbox
+    image: bench-solve-bookshopweb:local
+    init: true
+    command: tail -f /dev/null
+    volumes:
+      - ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}:${SOLVE_ROOT:?set SOLVE_ROOT}
+    working_dir: ${SOLVE_ROOT:?set SOLVE_ROOT}
+
+  db:
+    image: mysql:8.0.36
+    command: ["--default-authentication-plugin=mysql_native_password"]
+    environment:
+      # The tree's own fallback credentials (ConstantUtils), as the tree's
+      # AGENTS.md documents them.
+      MYSQL_ROOT_PASSWORD: "12345"
+    volumes:
+      # Same seed as the scoring stack: the schema and rows of the tree's dump.
+      - ./init-db.sh:/docker-entrypoint-initdb.d/10-schema.sh:ro
+      - ${BENCH_CHECKOUT:?set BENCH_CHECKOUT}/init/bookshopdb.sql:/schema.sql:ro
