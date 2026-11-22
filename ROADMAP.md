@@ -5,12 +5,69 @@ What is done, what is next, and what is parked. Decisions of record live in
 
 ## Next
 
-1. **Close the answer-key leak.** This repository is public and tracks every
-   `expect.json` and `trace.json`, and the solve sandbox (`solve.yaml`) is on
-   the default bridge, with internet egress: an agent can clone the goldens.
-   Until one of the two is closed (a private repository, or a solve network
-   with no route out but the package mirrors it needs), a score is only as
-   good as the trace audit that shows the agent did not fetch them.
+1. **Raise the power of the slice cases.** `main.py coverage` measured
+   all twelve `decouple_slice` manifests against their slice
+   (`out/coverage/<manifest>/report.md`, `src/bench_controls/`). Every
+   slice handler is driven except two, and slice lines sit above 85%
+   almost everywhere, but slice branches stop at 25–60%: the cases walk
+   the happy path, and the refusals and validation errors that guard each
+   write never run. An agent can break any of them and still pass.
+   A refusal case is cheap to grade: parity already sees an empty row
+   delta and the message on the page.
+
+   Rules for the work: existing cases and their goldens stay as they
+   are; every addition is a new case with its own `capture`, and the
+   manifest's `version` is bumped so its earlier scores are not compared
+   with the later ones. Re-run `coverage` after each capture and keep the
+   report beside the commit.
+
+   By manifest, highest yield first:
+   - **`vote-flow`** — 2/4 handlers. Add removing an upvote and removing
+     a downvote (clicking the same arrow again): `voteUpRemoval` and
+     `voteDownRemoval` have no case at all.
+   - **`answer-flow`** — its own prompt requires "a rejected answer shown
+     the same way", and no case rejects one: the validator's error
+     redirect (`newAnswer`, lines 103–104) never runs.
+     `AnsweredByValidator` rejects two things: a second answer from the
+     same user, and an answer to one's own question without the karma
+     for it. Add both; then an answer posted with `watching` unchecked.
+   - **`subject-flow`** — `AddNewSubjectServlet.processRequest` is ~400
+     lines and its one case runs 37%. Add a duplicate person ID (the
+     "already enrolled" errors), a missing required field, and an invalid
+     date or year of birth; then adding with `addWithEvent`.
+   - **`exam-flow`** — add the two refusals of `startExam`: an exam
+     before every period is studied, and a second exam on the same
+     course.
+   - **`select-course-flow`** — add selecting a course already selected
+     or taken (`stuSelectedCourse`, the "已经选过或修过" error). The
+     low-balance refusal is already a case.
+   - **`teacher-mark-flow`** — add grading a student who has not taken
+     the exam (`markUI` refuses it).
+   - **`admin-student-flow`** — add a student whose user name is taken
+     (`addStudent` throws before writing); then a list page other than the
+     first (`showStudent?page=2`, which needs enough seeded rows).
+   - **`study-flow`** — add both edges: going back from the first period
+     and forward past the last, where progress must not move.
+   - **`admin-course-flow`** — 1/4 slice branches: add a list page other
+     than the first (`showCourse?page=2`).
+   - **`ask-flow`** — add a question asked with `watching` unchecked, and
+     a question page the viewer may not see (`showQuestion` →
+     `notFound`).
+   - **`watch-flow`** — 100% of a 7-line controller, which says little:
+     the toggle lives below it. Add unwatching (the prompt names it), and
+     measure the DAO, not only the controller.
+   - **`out-course-flow`**, **`recharge-flow`** — what they miss is a
+     `catch` and a null check the UI cannot reach; leave as they are.
+
+   The instrument itself, in the same order:
+   - measure what a slice calls below the controller (service, DAO), so
+     a thin controller like `WatchController` stops reading as covered;
+   - `covers` for the `whole-app` manifests, which need several
+     controllers each and a slice per route;
+   - mutation testing (metric 3): coverage says a line ran, not that a
+     case would fail if it were wrong. Mutate the slice's handlers in the
+     pin, replay its cases, and count the mutants parity kills.
+
 2. **Calibrate the `trace_similarity` judge.** Every sample now has its
    bases and the scorer on its flow manifests. Remaining:
    - the same verdicts from two `score_profiles` on the same trees, and a few
@@ -55,44 +112,3 @@ What is done, what is next, and what is parked. Decisions of record live in
   `toolbox` target, the EOL-bullseye apt traps, roughly +500 MB per solve
   build.
 
-## Done
-
-- A solve is kept as its pin and its diff, never its tree: `score` rebuilds
-  the tree under `out/scratch/`, refuses one whose digest is not the
-  record's, and refuses a manifest whose sample or name are not the ones
-  the run was solved for. `out/` went from 4.2 GB to about 0.5 GB.
-- Capture never runs git over the agent's `.git`: the checkout is copied
-  into the bench's own baseline without it.
-- Pins carry no `.dockerignore`; the bench keeps it as
-  `Containerfile.dockerignore`, and one multi-stage `Containerfile` per
-  sample builds both images (`toolbox` for the solve, `app` for scoring).
-- Solve toolboxes carry the sample's Maven cache (`~/.m2`), built from the
-  tree the agent gets but never reading it: the checkout is bind-mounted over
-  `/workspace`, so a solve starts with a warm cache instead of paying the
-  cold download in the agent's own time.
-- Inspect-based bench; `main.py` is the whole command line.
-- `trace_similarity`: the score phase replays each case once
-  (`src/bench/replay.py`) and both gates judge that run; spans are
-  condensed to a request tree, a tree with no hop fails outright, and a
-  judge from `tasks-config.yaml`'s `score_profiles` rules on the rest
-  against the case's `trace.json`. Bases are captured for all three
-  samples.
-- Golden capture is a command again: `main.py capture` cuts the pin, runs
-  one stack per case, and writes `expect.json`.
-- `functional_parity` reads any SQL dialect the manifest names (`mysql`,
-  `postgres`), from inside the case's `db` service.
-- Three samples with a scoring stack: `mamute` (Jetty + MySQL),
-  `openclinica` (Tomcat 9 + PostgreSQL 9.6) and `online-study-system`
-  (Tomcat 9 + MySQL 5.7, the tree's own dump as the seed), all under the OTel
-  agent, each with a `dummy_file` manifest for cost-free end-to-end checks.
-- `.agents/skills/` describe `main.py` and the current sample layout.
-- Work orders with no docker, compose or container vocabulary.
-- Scoring driven from the host: one compose project per case.
-- `network_isolation` retired: with one scoring service there is no network
-  contract left to grade.
-- Solve is agent-agnostic: a `tasks-config.yaml` solve profile (`--profile`)
-  selects native ReAct or a registered CLI agent, and the model that answers
-  it.
-- `templates/` deleted: the stack lives in `src/samples/<slug>/env/`, so
-  there is no compose to copy into a pin — and a pin that carries one is
-  refused at the first solve.
