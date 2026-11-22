@@ -113,17 +113,6 @@ the model that judges the spans, the variables its provider reads, its
 effort, its args and its output budget. A trace verdict is attributed to
 that judge, so keep it fixed across the runs you compare.
 
-The OpenCode gateway refuses a request that carries no session header, so
-a model it serves must send one. A solve gets that for free: `main.py`
-builds `answer_model` with `x-opencode-session` set to a fresh id per
-run, which is also what groups one run's calls together. A judge does
-not: `trace_similarity/judge.py` passes `model_args` through untouched,
-so a `score_profiles` entry whose `judge_model` starts with
-`openai-api/opencode-go/` must carry
-`model_args.default_headers.x-opencode-session` itself. Without it every
-judge call answers `400 MissingSessionID`, after the stack is up and as
-an `error` — not a `fail`, and never a pass.
-
 `task` only solves: one agent in its own workspace, and
 `out/solves/<run id>/` keeps the diff and a record of what ran, the
 pinned commit and a digest of the tree included — never the tree.
