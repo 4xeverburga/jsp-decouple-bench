@@ -1,33 +1,4 @@
-"""Code coverage of a manifest's cases, measured out of band.
-
-    BENCH_CHECKOUT=../mamute uv run python main.py coverage --manifest 3
-
-Two measurements of how much of its target controller a manifest's cases
-reach, written to `out/coverage/<manifest>/`:
-
-1. **handler coverage** — the manifest's own claim, `scope.covers`: which
-   case drives each handler of the controller, and why the others cannot
-   be driven. The handlers themselves are read from the controller's
-   source in the pinned tree, so a handler the claim forgets is a gap,
-   not an omission nobody sees;
-2. **line and branch coverage** — what each case's flow actually executed,
-   from a JaCoCo agent attached to the app's JVM. Every case runs on its
-   own stack, as in scoring, so each `.exec` is that case alone.
-
-The claim is checked against the measurement: a handler a case claims but
-never executed is reported as such.
-
-The agent is never part of a pin, a scoring stack or a solve. It reaches
-the app through a compose override written per stack, which adds it to the
-same JVM-options variable the sample already uses for the OpenTelemetry
-agent, and mounts the jar read-only. It listens on loopback inside the
-app's container, and the dump and the report both run there, with the JDK
-the image already has, against the classes the image built.
-
-Branch coverage across several cases is a per-line maximum, a lower bound
-of the true union: telling two cases' branches on one line apart needs the
-merged probes, and each case's stack is gone by then.
-"""
+"""Code coverage of a manifest's cases: see this package's README.md."""
 
 import asyncio
 import hashlib
@@ -39,6 +10,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import yaml
+from tabulate import tabulate
 
 import settings
 from src.bench.compose import scoring_compose
@@ -373,49 +345,74 @@ def report(
         "union": {"LINE": union["LINE"], "BRANCH": union["BRANCH"]},
     }
     (out / "report.json").write_text(json.dumps(summary, indent=2) + "\n")
+    target = out / "report.md"
+    target.write_text(markdown(summary))
+    return target
 
+
+def markdown(summary: dict) -> str:
+    """Render a `report.json` summary as the two tables of `report.md`."""
+    handler_rows = [
+        [
+            f"`{row['handler']}`",
+            row["claimed_by"] or "—",
+            ", ".join(row["executed_by"]) or "—",
+            row["status"] + (f" — {row['reason']}" if row["reason"] else ""),
+        ]
+        for row in summary["handlers"]
+    ]
+    case_rows = [
+        [
+            case,
+            _percent(row["controller_lines"] or (0, 0)),
+            _percent(row["controller_branches"] or (0, 0)),
+            _percent(row["app_lines"] or (0, 0)),
+        ]
+        for case, row in summary["cases"].items()
+    ]
+    union = summary["union"]
+    case_rows.append(
+        [
+            "**all cases**",
+            _percent(union["LINE"]),
+            f"{_percent(union['BRANCH'])} (lower bound)",
+            "—",
+        ]
+    )
+    driven, total = summary["handler_coverage"]
     md = [
-        f"# Coverage — `{manifest['name']}` ({manifest['sample']})",
+        f"# Coverage — `{summary['manifest']}` ({summary['sample']})",
         "",
-        f"Controller: `{covers['controller']}`",
+        f"Controller: `{summary['controller']}`",
         "",
         "## 1. Handler coverage (claim vs. execution)",
         "",
-        f"**{driven}/{len(found)} handlers driven and verified.**",
+        f"**{driven}/{total} handlers driven and verified.**",
         "",
-        "| handler | claimed by | executed by | status |",
-        "|---|---|---|---|",
+        tabulate(
+            handler_rows,
+            ["handler", "claimed by", "executed by", "status"],
+            tablefmt="github",
+        ),
     ]
-    for row in rows:
-        note = f" — {row['reason']}" if row["reason"] else ""
-        md.append(
-            f"| `{row['handler']}` | {row['claimed_by'] or '—'} | "
-            f"{', '.join(row['executed_by']) or '—'} | "
-            f"{row['status']}{note} |"
-        )
-    if stale:
-        md += ["", f"Claims naming no handler of the source: {stale}"]
+    if summary["stale_claims"]:
+        md += [
+            "",
+            "Claims naming no handler of the source: "
+            f"{summary['stale_claims']}",
+        ]
     md += [
         "",
         "## 2. Line and branch coverage (JaCoCo, per case)",
         "",
-        "| case | controller lines | controller branches | app lines |",
-        "|---|---|---|---|",
+        tabulate(
+            case_rows,
+            ["case", "controller lines", "controller branches", "app lines"],
+            tablefmt="github",
+        ),
+        "",
     ]
-    for case, row in summary["cases"].items():
-        md.append(
-            f"| {case} | {_percent(row['controller_lines'] or (0, 0))} | "
-            f"{_percent(row['controller_branches'] or (0, 0))} | "
-            f"{_percent(row['app_lines'] or (0, 0))} |"
-        )
-    md.append(
-        f"| **all cases** | {_percent(union['LINE'])} | "
-        f"{_percent(union['BRANCH'])} (lower bound) | — |"
-    )
-    md.append("")
-    target = out / "report.md"
-    target.write_text("\n".join(md))
-    return target
+    return "\n".join(md)
 
 
 def run(manifest: dict, cases: list[str], tree: Path) -> Path:
