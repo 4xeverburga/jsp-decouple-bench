@@ -1,6 +1,7 @@
 """Code coverage of a manifest's cases: see this package's README.md."""
 
 import asyncio
+import bisect
 import hashlib
 import json
 import re
@@ -182,42 +183,46 @@ def _counters(node: ET.Element) -> dict:
 
 
 def measure(xml: Path, controller: str) -> dict:
-    """The controller's methods and lines, and the app's totals, from XML."""
+    """One controller's methods and lines from a case's XML.
+
+    Each executable line is given to the method it sits in: the one whose
+    first line is the nearest above it. Lambdas are not boundaries, so
+    their lines stay with the method that holds them.
+    """
     root = ET.parse(xml).getroot()
-    package, _, simple = controller.rpartition(".")
-    wanted = controller.replace(".", "/")
+    package = controller.rpartition(".")[0]
     node = root.find(f".//package[@name='{package.replace('.', '/')}']")
     if node is None:
         raise RuntimeError(f"{xml.name}: no package {package}")
-    clazz = node.find(f"class[@name='{wanted}']")
+    clazz = node.find(f"class[@name='{controller.replace('.', '/')}']")
     if clazz is None:
         raise RuntimeError(f"{xml.name}: no class {controller}")
-    methods: dict[str, dict] = {}
+    executed: set[str] = set()
+    starts: list[tuple[int, str]] = []
     for method in clazz.findall("method"):
         name = method.get("name")
-        if name.startswith("<") or name.startswith("lambda$"):
+        if name.startswith("lambda$"):
             continue
-        covered, total = _counters(method).get("INSTRUCTION", (0, 0))
-        seen = methods.setdefault(name, {"covered": 0, "total": 0})
-        seen["covered"] += covered
-        seen["total"] += total
+        if method.get("line"):
+            starts.append((int(method.get("line")), name))
+        covered, _total = _counters(method).get("INSTRUCTION", (0, 0))
+        if covered > 0 and not name.startswith("<"):
+            executed.add(name)
+    starts.sort()
     source = node.find(f"sourcefile[@name='{clazz.get('sourcefilename')}']")
-    lines = {
-        int(line.get("nr")): {
+    lines = {}
+    for line in source.findall("line") if source is not None else []:
+        nr = int(line.get("nr"))
+        if int(line.get("mi")) + int(line.get("ci")) == 0:
+            continue
+        at = bisect.bisect_right(starts, (nr, "￿")) - 1
+        lines[nr] = {
+            "method": starts[at][1] if at >= 0 else None,
             "covered": int(line.get("ci")) > 0,
             "branches": int(line.get("mb")) + int(line.get("cb")),
             "covered_branches": int(line.get("cb")),
         }
-        for line in (source.findall("line") if source is not None else [])
-        if int(line.get("mi")) + int(line.get("ci")) > 0
-    }
-    return {
-        "class": _counters(clazz),
-        "app": _counters(root),
-        "methods": methods,
-        "lines": lines,
-        "simple_name": simple,
-    }
+    return {"executed": sorted(executed), "lines": lines}
 
 
 HANDLER = re.compile(
@@ -256,93 +261,95 @@ def _percent(pair: tuple[int, int]) -> str:
     return f"{100 * covered / total:.0f}% ({covered}/{total})"
 
 
-def _union(measured: dict[str, dict]) -> dict:
+def _tally(lines: list[dict]) -> dict:
+    return {
+        "LINE": [sum(line["covered"] for line in lines), len(lines)],
+        "BRANCH": [
+            sum(line["covered_branches"] for line in lines),
+            sum(line["branches"] for line in lines),
+        ],
+    }
+
+
+def _union(cases: list[dict]) -> dict[int, dict]:
     lines: dict[int, dict] = {}
-    for one_case in measured.values():
+    for one_case in cases:
         for nr, line in one_case["lines"].items():
-            kept = lines.setdefault(
-                nr,
-                {
-                    "covered": False,
-                    "branches": line["branches"],
-                    "covered_branches": 0,
-                },
-            )
+            kept = lines.setdefault(nr, dict(line, covered=False))
             kept["covered"] = kept["covered"] or line["covered"]
             kept["covered_branches"] = max(
                 kept["covered_branches"], line["covered_branches"]
             )
+    return lines
+
+
+def _coverage(lines: dict[int, dict], wanted: list[str]) -> dict:
     return {
-        "LINE": (
-            sum(line["covered"] for line in lines.values()),
-            len(lines),
+        "slice": _tally(
+            [line for line in lines.values() if line["method"] in wanted]
         ),
-        "BRANCH": (
-            sum(line["covered_branches"] for line in lines.values()),
-            sum(line["branches"] for line in lines.values()),
-        ),
+        "controller": _tally(list(lines.values())),
+    }
+
+
+def _status(name: str, claim: dict, by: list[str]) -> str:
+    if name not in claim["slice"]:
+        return "outside the slice"
+    if name in claim["handlers"]:
+        return "verified" if claim["handlers"][name] in by else "NOT EXECUTED"
+    if name in claim["not_driven"]:
+        return "not driven (excused)"
+    return "executed, unclaimed" if by else "GAP"
+
+
+def assess(claim: dict, found: list[str], measured: dict[str, dict]) -> dict:
+    """Cross one controller's claim with its source and its execution."""
+    rows = []
+    for name in found:
+        by = sorted(c for c, m in measured.items() if name in m["executed"])
+        rows.append(
+            {
+                "handler": name,
+                "in_slice": name in claim["slice"],
+                "claimed_by": claim["handlers"].get(name),
+                "executed_by": by,
+                "status": _status(name, claim, by),
+                "reason": claim["not_driven"].get(name),
+            }
+        )
+    named = set(claim["slice"]) | set(claim["handlers"])
+    named |= set(claim["not_driven"])
+    stale = sorted(named - set(found))
+    stale += sorted(
+        (set(claim["handlers"]) | set(claim["not_driven"]))
+        - set(claim["slice"])
+        - set(stale)
+    )
+    driven = sum(row["status"] == "verified" for row in rows)
+    return {
+        "handlers": rows,
+        "stale_claims": stale,
+        "handler_coverage": [driven, len(claim["slice"])],
+        "cases": {
+            case: _coverage(one_case["lines"], claim["slice"])
+            for case, one_case in measured.items()
+        },
+        "union": _coverage(_union(list(measured.values())), claim["slice"]),
     }
 
 
 def report(
-    manifest: dict, found: list[str], measured: dict[str, dict], out: Path
+    manifest: dict,
+    controllers: dict[str, dict],
+    apps: dict[str, list[int]],
+    out: Path,
 ) -> Path:
-    """Cross the manifest's claim with what the cases executed."""
-    covers = manifest["scope"]["covers"]
-    claimed = covers["handlers"]
-    excused = covers["not_driven"]
-    executed = {
-        name: sorted(
-            case
-            for case, one_case in measured.items()
-            if one_case["methods"].get(name, {"covered": 0})["covered"] > 0
-        )
-        for name in found
-    }
-    rows = []
-    for name in found:
-        by = executed[name]
-        if name in claimed:
-            status = "verified" if claimed[name] in by else "NOT EXECUTED"
-        elif name in excused:
-            status = "not driven (excused)"
-        elif by:
-            status = "executed, unclaimed"
-        else:
-            status = "GAP"
-        rows.append(
-            {
-                "handler": name,
-                "claimed_by": claimed.get(name),
-                "executed_by": by,
-                "status": status,
-                "reason": excused.get(name),
-            }
-        )
-    stale = sorted((set(claimed) | set(excused)) - set(found))
-    driven = sum(row["status"] == "verified" for row in rows)
-    union = _union(measured)
+    """Write `report.json` and `report.md` for one manifest."""
     summary = {
         "manifest": manifest["name"],
         "sample": manifest["sample"],
-        "controller": covers["controller"],
-        "handlers": rows,
-        "stale_claims": stale,
-        "handler_coverage": [driven, len(found)],
-        "cases": {
-            case: {
-                "controller_lines": one_case["class"].get("LINE"),
-                "controller_branches": one_case["class"].get("BRANCH"),
-                "app_lines": one_case["app"].get("LINE"),
-                "methods_executed": sorted(
-                    name
-                    for name, method in one_case["methods"].items()
-                    if method["covered"] > 0
-                ),
-            }
-            for case, one_case in measured.items()
-        },
-        "union": {"LINE": union["LINE"], "BRANCH": union["BRANCH"]},
+        "controllers": controllers,
+        "app_lines": apps,
     }
     (out / "report.json").write_text(json.dumps(summary, indent=2) + "\n")
     target = out / "report.md"
@@ -351,64 +358,90 @@ def report(
 
 
 def markdown(summary: dict) -> str:
-    """Render a `report.json` summary as the two tables of `report.md`."""
-    handler_rows = [
-        [
-            f"`{row['handler']}`",
-            row["claimed_by"] or "—",
-            ", ".join(row["executed_by"]) or "—",
-            row["status"] + (f" — {row['reason']}" if row["reason"] else ""),
-        ]
-        for row in summary["handlers"]
-    ]
-    case_rows = [
-        [
-            case,
-            _percent(row["controller_lines"] or (0, 0)),
-            _percent(row["controller_branches"] or (0, 0)),
-            _percent(row["app_lines"] or (0, 0)),
-        ]
-        for case, row in summary["cases"].items()
-    ]
-    union = summary["union"]
-    case_rows.append(
-        [
-            "**all cases**",
-            _percent(union["LINE"]),
-            f"{_percent(union['BRANCH'])} (lower bound)",
-            "—",
-        ]
-    )
-    driven, total = summary["handler_coverage"]
+    """Render a `report.json` summary as the tables of `report.md`."""
+    controllers = summary["controllers"]
+    driven = sum(c["handler_coverage"][0] for c in controllers.values())
+    total = sum(c["handler_coverage"][1] for c in controllers.values())
     md = [
         f"# Coverage — `{summary['manifest']}` ({summary['sample']})",
         "",
-        f"Controller: `{summary['controller']}`",
-        "",
         "## 1. Handler coverage (claim vs. execution)",
         "",
-        f"**{driven}/{total} handlers driven and verified.**",
-        "",
-        tabulate(
-            handler_rows,
-            ["handler", "claimed by", "executed by", "status"],
-            tablefmt="github",
-        ),
+        f"**{driven}/{total} slice handlers driven and verified.**",
     ]
-    if summary["stale_claims"]:
+    for name, assessed in controllers.items():
+        rows = [
+            [
+                f"`{row['handler']}`",
+                "yes" if row["in_slice"] else "",
+                row["claimed_by"] or "—",
+                ", ".join(row["executed_by"]) or "—",
+                row["status"]
+                + (f" — {row['reason']}" if row["reason"] else ""),
+            ]
+            for row in sorted(
+                assessed["handlers"], key=lambda row: not row["in_slice"]
+            )
+        ]
         md += [
             "",
-            "Claims naming no handler of the source: "
-            f"{summary['stale_claims']}",
+            f"### `{name}`",
+            "",
+            tabulate(
+                rows,
+                ["handler", "slice", "claimed by", "executed by", "status"],
+                tablefmt="github",
+            ),
         ]
+        if assessed["stale_claims"]:
+            md += [
+                "",
+                "Claims naming no handler of the source or of the slice: "
+                f"{assessed['stale_claims']}",
+            ]
     md += [
         "",
         "## 2. Line and branch coverage (JaCoCo, per case)",
         "",
-        tabulate(
-            case_rows,
-            ["case", "controller lines", "controller branches", "app lines"],
-            tablefmt="github",
+        "Slice = the lines of the slice's handlers; controller = the whole "
+        "source file. Branches over several cases are a lower bound.",
+    ]
+    for name, assessed in controllers.items():
+        rows = [
+            [
+                case,
+                _percent(cov["slice"]["LINE"]),
+                _percent(cov["slice"]["BRANCH"]),
+                _percent(cov["controller"]["LINE"]),
+                _percent(cov["controller"]["BRANCH"]),
+            ]
+            for case, cov in [
+                *assessed["cases"].items(),
+                ("**all cases**", assessed["union"]),
+            ]
+        ]
+        md += [
+            "",
+            f"### `{name.rpartition('.')[2]}`",
+            "",
+            tabulate(
+                rows,
+                [
+                    "case",
+                    "slice lines",
+                    "slice branches",
+                    "controller lines",
+                    "controller branches",
+                ],
+                tablefmt="github",
+            ),
+        ]
+    md += [
+        "",
+        "App lines executed per case: "
+        + ", ".join(
+            f"{case} {_percent(pair)}"
+            for case, pair in summary["app_lines"].items()
         ),
         "",
     ]
@@ -421,20 +454,44 @@ def run(manifest: dict, cases: list[str], tree: Path) -> Path:
     if covers is None:
         raise SystemExit(
             f"manifest {manifest['id']} declares no scope.covers: name its "
-            f"controller and map its handlers before measuring them"
+            f"controllers and their slice before measuring them"
         )
     slug = manifest["sample"]
-    controller = covers["controller"]
+    claims = covers["controllers"]
+    first = next(iter(claims))
     # Only the app's own classes are instrumented: the sample names them.
     includes = ":".join(f"{root}.*" for root in sample(slug)["code_packages"])
-    found = handlers(tree, controller)
+    found = {name: handlers(tree, name) for name in claims}
     home = tools()
     out = settings.COVERAGE / manifest["name"]
     out.mkdir(parents=True, exist_ok=True)
-    measured = {}
-    for case in cases:
-        xml = asyncio.run(one(slug, case, controller, includes, home, out))
-        measured[case] = measure(xml, controller)
-    written = report(manifest, found, measured, out)
+    xmls = {
+        case: asyncio.run(one(slug, case, first, includes, home, out))
+        for case in cases
+    }
+    written = summarize(manifest, claims, found, xmls, out)
     _say(f"wrote {written.relative_to(settings.ROOT)}")
     return written
+
+
+def summarize(
+    manifest: dict,
+    claims: dict[str, dict],
+    found: dict[str, list[str]],
+    xmls: dict[str, Path],
+    out: Path,
+) -> Path:
+    """Report from the XML each case left, without starting a stack."""
+    controllers = {
+        name: assess(
+            claim,
+            found[name],
+            {case: measure(xml, name) for case, xml in xmls.items()},
+        )
+        for name, claim in claims.items()
+    }
+    apps = {
+        case: list(_counters(ET.parse(xml).getroot()).get("LINE", (0, 0)))
+        for case, xml in xmls.items()
+    }
+    return report(manifest, controllers, apps, out)

@@ -22,31 +22,43 @@ wrong?") is the next step and is not here yet.
 
 ### 1. Handler coverage
 
-A manifest declares what its cases are meant to cover:
+A manifest declares, per controller it touches, which handlers are its
+slice and which case is meant to drive each:
 
 ```json
 "scope": {
   "cases": ["vote-flow__upvote-increments-count", "..."],
   "covers": {
-    "controller": "org.mamute.controllers.VoteController",
-    "handlers":   {"voteUp": "vote-flow__upvote-increments-count"},
-    "not_driven": {"activate": "why no flow can reach it here"}
+    "controllers": {
+      "org.mamute.controllers.VoteController": {
+        "slice":      ["voteUp", "voteDown", "voteUpRemoval", "..."],
+        "handlers":   {"voteUp": "vote-flow__upvote-increments-count"},
+        "not_driven": {"activate": "why no flow can reach it here"}
+      }
+    }
   }
 }
 ```
 
-The handler list is not taken from the claim. It is read from the
+`slice` is what the manifest's ask moves behind the backend, read from
+its prompt and not from its cases, so a slice handler no case drives
+still shows up as a gap. Several slices can share one controller (five
+of online-study-system's live in `StudentController`); the rest of the
+controller is reported, but it does not count against the slice.
+
+The handler list itself is not taken from the claim. It is read from the
 controller's source in the pinned tree: its `public` and `protected`
 instance methods, minus constructors and bean accessors
 (`get*`/`set*`/`is*`). Each handler then gets one status:
 
 | status | meaning |
 |---|---|
-| `verified` | claimed by a case, and that case executed it |
+| `verified` | in the slice, claimed by a case, and that case executed it |
 | `NOT EXECUTED` | claimed by a case that never ran it — the claim is wrong |
 | `not driven (excused)` | listed in `not_driven`, with its reason |
-| `executed, unclaimed` | some case ran it but the claim does not say so (often an internal helper that is `public`) |
-| `GAP` | nothing claims it and nothing ran it: a case still to write |
+| `executed, unclaimed` | in the slice, some case ran it, but the claim does not say which |
+| `GAP` | in the slice, nothing claims it and nothing ran it: a case still to write |
+| `outside the slice` | not part of this manifest's ask; `executed by` still says whether a case ran it (often a `public` helper) |
 
 ### 2. Line and branch coverage
 
@@ -67,7 +79,10 @@ No Java is needed on the host. The classes are found from the
 controller's own `.class` file, because samples compile to different
 places (`target/classes`, or `WEB-INF/classes`).
 
-Across several cases, lines are a true union. Branches are a per-line
+Each line is attributed to the method whose first line is the nearest
+above it (lambdas stay with the method holding them), so lines and
+branches are reported twice: for the slice's handlers, and for the whole
+source file. Across several cases, lines are a true union. Branches are a per-line
 maximum, which is a lower bound: separating two cases' branches on one
 line needs their merged probes, and each stack is gone by then.
 
@@ -89,7 +104,8 @@ It writes to `out/coverage/<manifest name>/`:
 | `<case>.compose.yaml` | the override that stack ran with |
 
 A manifest without `scope.covers` is refused: there is no controller to
-measure against.
+measure against. `summarize` rebuilds both reports from the XML a
+previous run left, without starting a stack.
 
 ## Configuration
 

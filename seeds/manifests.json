@@ -45,6 +45,28 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controllers": {
+          "org.mamute.controllers.AnswerController": {
+            "slice": [
+              "newAnswer"
+            ],
+            "handlers": {
+              "newAnswer": "answer-flow__answer-appears"
+            },
+            "not_driven": {}
+          },
+          "org.mamute.controllers.QuestionController": {
+            "slice": [
+              "showQuestion"
+            ],
+            "handlers": {
+              "showQuestion": "answer-flow__answer-appears"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -98,6 +120,21 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controllers": {
+          "org.mamute.controllers.QuestionController": {
+            "slice": [
+              "newQuestion",
+              "showQuestion"
+            ],
+            "handlers": {
+              "newQuestion": "ask-flow__question-creation",
+              "showQuestion": "ask-flow__question-creation"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -160,12 +197,21 @@
         ]
       },
       "covers": {
-        "controller": "org.mamute.controllers.VoteController",
-        "handlers": {
-          "voteUp": "vote-flow__upvote-increments-count",
-          "voteDown": "vote-flow__downvote-decrements-count"
-        },
-        "not_driven": {}
+        "controllers": {
+          "org.mamute.controllers.VoteController": {
+            "slice": [
+              "voteUp",
+              "voteDown",
+              "voteUpRemoval",
+              "voteDownRemoval"
+            ],
+            "handlers": {
+              "voteUp": "vote-flow__upvote-increments-count",
+              "voteDown": "vote-flow__downvote-decrements-count"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -216,6 +262,19 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controllers": {
+          "org.mamute.controllers.WatchController": {
+            "slice": [
+              "watch"
+            ],
+            "handlers": {
+              "watch": "watch-flow__watch-adds-watcher"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -269,6 +328,23 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controllers": {
+          "com.wxs.controller.AdminController": {
+            "slice": [
+              "addCourseUI",
+              "addCourse",
+              "showCourse"
+            ],
+            "handlers": {
+              "addCourseUI": "admin-course-flow__add-course-creates-course",
+              "addCourse": "admin-course-flow__add-course-creates-course",
+              "showCourse": "admin-course-flow__add-course-creates-course"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -334,6 +410,25 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controllers": {
+          "com.wxs.controller.AdminController": {
+            "slice": [
+              "addStudentUI",
+              "addStudent",
+              "removeStudent",
+              "showStudent"
+            ],
+            "handlers": {
+              "addStudentUI": "admin-student-flow__add-student-creates-user",
+              "addStudent": "admin-student-flow__add-student-creates-user",
+              "removeStudent": "admin-student-flow__remove-student-cascades",
+              "showStudent": "admin-student-flow__add-student-creates-user"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -390,6 +485,21 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controllers": {
+          "com.wxs.controller.StudentController": {
+            "slice": [
+              "startExam",
+              "saveExam"
+            ],
+            "handlers": {
+              "startExam": "exam-flow__save-exam-marks-has-exam",
+              "saveExam": "exam-flow__save-exam-marks-has-exam"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -443,6 +553,21 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controllers": {
+          "com.wxs.controller.StudentController": {
+            "slice": [
+              "outCourse",
+              "selectedCourse"
+            ],
+            "handlers": {
+              "outCourse": "out-course-flow__out-course-deletes-enrollment",
+              "selectedCourse": "out-course-flow__out-course-deletes-enrollment"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -496,6 +621,21 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controllers": {
+          "com.wxs.controller.StudentController": {
+            "slice": [
+              "recharge",
+              "updateBalance"
+            ],
+            "handlers": {
+              "recharge": "recharge-flow__recharge-increments-balance",
+              "updateBalance": "recharge-flow__recharge-increments-balance"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -557,6 +697,21 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controllers": {
+          "com.wxs.controller.StudentController": {
+            "slice": [
+              "stuSelectedCourse",
+              "selectedCourse"
+            ],
+            "handlers": {
+              "stuSelectedCourse": "select-course-flow__select-course-deducts-balance",
+              "selectedCourse": "select-course-flow__select-course-deducts-balance"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -627,6 +782,23 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controllers": {
+          "com.wxs.controller.StudentController": {
+            "slice": [
+              "startStudy",
+              "backPeriod",
+              "changePeriod"
+            ],
+            "handlers": {
+              "startStudy": "study-flow__next-period-increments-progress",
+              "backPeriod": "study-flow__next-period-increments-progress",
+              "changePeriod": "study-flow__prev-period-decrements-progress"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -682,6 +854,23 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controllers": {
+          "com.wxs.controller.TeacherController": {
+            "slice": [
+              "gradeCourse",
+              "markUI",
+              "mark"
+            ],
+            "handlers": {
+              "gradeCourse": "teacher-mark-flow__save-mark-sets-grade",
+              "markUI": "teacher-mark-flow__save-mark-sets-grade",
+              "mark": "teacher-mark-flow__save-mark-sets-grade"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -736,6 +925,28 @@
             "move": "all"
           }
         ]
+      },
+      "covers": {
+        "controllers": {
+          "org.akaza.openclinica.control.submit.AddNewSubjectServlet": {
+            "slice": [
+              "processRequest"
+            ],
+            "handlers": {
+              "processRequest": "subject-flow__subject-creation"
+            },
+            "not_driven": {}
+          },
+          "org.akaza.openclinica.control.submit.ListStudySubjectsServlet": {
+            "slice": [
+              "processRequest"
+            ],
+            "handlers": {
+              "processRequest": "subject-flow__subject-creation"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -1078,12 +1289,19 @@
       ],
       "routes": [],
       "covers": {
-        "controller": "com.bookshopweb.servlet.admin.category.CreateCategoryServlet",
-        "handlers": {
-          "doGet": "category-flow__create-category-inserts-row",
-          "doPost": "category-flow__create-category-inserts-row"
-        },
-        "not_driven": {}
+        "controllers": {
+          "com.bookshopweb.servlet.admin.category.CreateCategoryServlet": {
+            "slice": [
+              "doGet",
+              "doPost"
+            ],
+            "handlers": {
+              "doGet": "category-flow__create-category-inserts-row",
+              "doPost": "category-flow__create-category-inserts-row"
+            },
+            "not_driven": {}
+          }
+        }
       }
     },
     "scorers": [
@@ -1122,13 +1340,21 @@
       ],
       "routes": [],
       "covers": {
-        "controller": "org.apache.roller.weblogger.ui.struts2.core.Register",
-        "handlers": {
-          "execute": "register-flow__first-user-becomes-admin",
-          "save": "register-flow__first-user-becomes-admin"
-        },
-        "not_driven": {
-          "activate": "reached only from the e-mail activation link; user.account.email.activation is false and the stack has no mail server"
+        "controllers": {
+          "org.apache.roller.weblogger.ui.struts2.core.Register": {
+            "slice": [
+              "execute",
+              "save",
+              "activate"
+            ],
+            "handlers": {
+              "execute": "register-flow__first-user-becomes-admin",
+              "save": "register-flow__first-user-becomes-admin"
+            },
+            "not_driven": {
+              "activate": "reached only from the e-mail activation link; user.account.email.activation is false and the stack has no mail server"
+            }
+          }
         }
       }
     },
