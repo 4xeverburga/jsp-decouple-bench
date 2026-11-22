@@ -1,0 +1,173 @@
+{
+  "sample": "bookshopweb",
+  "case": "category-flow__create-category-inserts-row",
+  "sample_commit": "f71266ff888e2c93da38eeb9b8d080ccdbe8050b",
+  "captured_at": "2026-11-22T19:14:45+00:00",
+  "requests": [
+    {
+      "label": "SERVER GET /BookShopWeb/admin/signin -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER POST /BookShopWeb/admin/signin -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT user",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "ResponseFacade.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /BookShopWeb/admin -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT user",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT category",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT product",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT orders",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /BookShopWeb/cartItem -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT user",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT cart",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /BookShopWeb/admin/categoryManager -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT category",
+          "count": 2,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /BookShopWeb/cartItem -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT user",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT cart",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /BookShopWeb/admin/categoryManager/create -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER GET /BookShopWeb/cartItem -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT user",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT cart",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER POST /BookShopWeb/admin/categoryManager/create -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL INSERT category",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /BookShopWeb/cartItem -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT user",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT cart",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /BookShopWeb/admin/categoryManager -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT category",
+          "count": 2,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /BookShopWeb/cartItem -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT user",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT cart",
+          "count": 1,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

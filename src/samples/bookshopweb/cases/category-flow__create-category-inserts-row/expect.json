@@ -1,0 +1,50 @@
+{
+  "sample": "bookshopweb",
+  "case": "category-flow__create-category-inserts-row",
+  "sample_commit": "f71266ff888e2c93da38eeb9b8d080ccdbe8050b",
+  "captured_at": "2026-11-22T19:14:45+00:00",
+  "db": {
+    "tables": {
+      "category": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [],
+        "inserted": [
+          {
+            "id": "16",
+            "name": "S\u00e1ch th\u1eed nghi\u1ec7m",
+            "description": "Danh m\u1ee5c t\u1ea1o b\u1edfi k\u1ecbch b\u1ea3n ki\u1ec3m tra.",
+            "imageName": null
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      },
+      "product_category": {
+        "key_columns": [
+          "productId",
+          "categoryId"
+        ],
+        "ignore_columns": [],
+        "inserted": [],
+        "updated": [],
+        "deleted": []
+      },
+      "user": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [],
+        "inserted": [],
+        "updated": [],
+        "deleted": []
+      }
+    }
+  },
+  "artifacts": {
+    "form_heading": "Th\u00eam th\u1ec3 lo\u1ea1i",
+    "success_message": "Th\u00eam th\u00e0nh c\u00f4ng!",
+    "new_category_row": "1 16 S\u00e1ch th\u1eed nghi\u1ec7m Xem S\u1eeda X\u00f3a"
+  }
+}

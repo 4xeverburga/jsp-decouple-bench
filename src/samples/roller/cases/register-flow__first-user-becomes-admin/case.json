@@ -1,0 +1,74 @@
+{
+  "sample": "roller",
+  "case": "register-flow__first-user-becomes-admin",
+  "e2e": {
+    "routes": [
+      "/",
+      "/roller-ui/register.rol",
+      "/roller-ui/register!save.rol"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "none",
+    "auth_notes": "A fresh schema has no users. The flow registers the first account, which Roller makes the site administrator; its credentials come from the sample .env only.",
+    "credentials": "env:ROLLER_ADMIN_USER,ROLLER_ADMIN_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "setup_heading",
+      "register_heading",
+      "account_created"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "roller_user",
+        "key_columns": [
+          "username"
+        ],
+        "ignore_columns": [
+          "id",
+          "datecreated"
+        ]
+      },
+      {
+        "name": "userrole",
+        "key_columns": [
+          "username",
+          "rolename"
+        ],
+        "ignore_columns": [
+          "id"
+        ]
+      },
+      {
+        "name": "roller_permission",
+        "key_columns": [
+          "username",
+          "objecttype",
+          "objectid"
+        ],
+        "ignore_columns": [
+          "id",
+          "datecreated"
+        ]
+      },
+      {
+        "name": "weblog",
+        "key_columns": [
+          "handle"
+        ],
+        "ignore_columns": [
+          "id",
+          "datecreated",
+          "lastmodified"
+        ]
+      }
+    ],
+    "notes": "Registering the first user inserts one roller_user row and two userrole rows (admin, editor). Roller keys every row by a random UUID and stamps datecreated, so rows are matched on their natural keys (username, rolename) and id/datecreated are ignored. passphrase is an unsalted SHA digest of the password, hence stable. roller_permission and weblog are declared so a change outside the spec shows up; the flow creates no weblog."
+  }
+}

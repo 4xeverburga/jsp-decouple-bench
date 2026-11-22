@@ -1,0 +1,88 @@
+{
+  "sample": "roller",
+  "case": "register-flow__first-user-becomes-admin",
+  "sample_commit": "ba377a25d6c5bb5a41f2934a145268ddcead6057",
+  "captured_at": "2026-11-22T19:16:17+00:00",
+  "db": {
+    "tables": {
+      "roller_user": {
+        "key_columns": [
+          "username"
+        ],
+        "ignore_columns": [
+          "datecreated",
+          "id"
+        ],
+        "inserted": [
+          {
+            "username": "admin",
+            "passphrase": "f865b53623b121fd34ee5426c792e5c33af8c227",
+            "openid_url": null,
+            "screenname": "Site Admin",
+            "fullname": "Site Administrator",
+            "emailaddress": "admin@example.com",
+            "activationcode": null,
+            "locale": "en_US",
+            "timezone": "UTC",
+            "isenabled": "1"
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      },
+      "userrole": {
+        "key_columns": [
+          "username",
+          "rolename"
+        ],
+        "ignore_columns": [
+          "id"
+        ],
+        "inserted": [
+          {
+            "rolename": "admin",
+            "username": "admin"
+          },
+          {
+            "rolename": "editor",
+            "username": "admin"
+          }
+        ],
+        "updated": [],
+        "deleted": []
+      },
+      "roller_permission": {
+        "key_columns": [
+          "username",
+          "objecttype",
+          "objectid"
+        ],
+        "ignore_columns": [
+          "datecreated",
+          "id"
+        ],
+        "inserted": [],
+        "updated": [],
+        "deleted": []
+      },
+      "weblog": {
+        "key_columns": [
+          "handle"
+        ],
+        "ignore_columns": [
+          "datecreated",
+          "id",
+          "lastmodified"
+        ],
+        "inserted": [],
+        "updated": [],
+        "deleted": []
+      }
+    }
+  },
+  "artifacts": {
+    "setup_heading": "Welcome to Roller!",
+    "register_heading": "New User Registration",
+    "account_created": "Your new user account has been created."
+  }
+}

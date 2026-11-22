@@ -1,0 +1,111 @@
+{
+  "sample": "roller",
+  "case": "register-flow__first-user-becomes-admin",
+  "sample_commit": "ba377a25d6c5bb5a41f2934a145268ddcead6057",
+  "captured_at": "2026-11-22T19:16:17+00:00",
+  "requests": [
+    {
+      "label": "SERVER GET /roller/ -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT weblog",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT roller_user",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT weblog",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "HTTP CLIENT GET /dtds/tiles-config_{n}_{n}.dtd -> 200",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /roller/roller-ui/yui{n}/cssreset/cssreset-min.css -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER GET /roller/roller-ui/styles/layout.css -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER GET /roller/roller-ui/yui{n}/cssfonts/cssfonts-min.css -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER GET /roller/roller-ui/styles/menu.css -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER GET /roller/roller-ui/yui{n}/cssbase/cssbase-min.css -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER GET /roller/roller-ui/styles/roller.css -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER GET /roller/theme/scripts/roller.js -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER GET /roller/images/tinyfeather.png -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER GET /roller/roller-ui/register.rol -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT roller_user",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER POST /roller/roller-ui/register!save.rol -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT roller_user",
+          "count": 5,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userrole",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT roller_user",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT userrole",
+          "count": 2,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

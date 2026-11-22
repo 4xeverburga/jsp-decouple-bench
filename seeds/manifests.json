@@ -1040,5 +1040,77 @@
     "name": "dummy-file-online-study-system",
     "id": 20,
     "sample": "online-study-system"
+  },
+  {
+    "task_type": "dummy_file",
+    "version": 1,
+    "solve_time_limit_minutes": 120,
+    "score_time_limit_minutes": 60,
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "dialect": "mysql",
+          "service": "db",
+          "user": "root",
+          "password": "12345",
+          "database": "bookshopdb"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "category-flow__create-category-inserts-row"
+      ],
+      "routes": []
+    },
+    "scorers": [
+      "functional_parity"
+    ],
+    "name": "dummy-file-bookshopweb",
+    "id": 21,
+    "sample": "bookshopweb"
+  },
+  {
+    "task_type": "dummy_file",
+    "version": 1,
+    "solve_time_limit_minutes": 120,
+    "score_time_limit_minutes": 60,
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "dialect": "mysql",
+          "service": "db",
+          "user": "root",
+          "password": "roller",
+          "database": "rollerdb"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "register-flow__first-user-becomes-admin"
+      ],
+      "routes": []
+    },
+    "scorers": [
+      "functional_parity"
+    ],
+    "name": "dummy-file-roller",
+    "id": 22,
+    "sample": "roller"
   }
 ]

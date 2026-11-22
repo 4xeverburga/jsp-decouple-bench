@@ -1,0 +1,53 @@
+{
+  "sample": "bookshopweb",
+  "case": "category-flow__create-category-inserts-row",
+  "e2e": {
+    "routes": [
+      "/admin/signin",
+      "/admin/categoryManager",
+      "/admin/categoryManager/create"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "seeded",
+    "auth_notes": "The actor is the seeded ADMIN user1, whose credentials come from the sample .env only.",
+    "credentials": "env:BSW_ADMIN_USER,BSW_ADMIN_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "form_heading",
+      "success_message",
+      "new_category_row"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "category",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "product_category",
+        "key_columns": [
+          "productId",
+          "categoryId"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "user",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      }
+    ],
+    "notes": "Creating category 'Sách thử nghiệm' with a description and no image inserts category id 16 (the dump seeds 15). The image field is left empty on purpose: an uploaded image is stored under a random temp-file name (ImageUtils.upload), which would make imageName volatile. category has no timestamps, so ignore_columns is empty. product_category and user are declared so a change outside the spec shows up."
+  }
+}
