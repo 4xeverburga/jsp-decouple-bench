@@ -960,7 +960,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 4,
+    "version": 5,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -983,6 +983,12 @@
     },
     "scope": {
       "cases": [
+        "subject-flow__blank-fields-refused",
+        "subject-flow__duplicate-label-refused",
+        "subject-flow__duplicate-person-id-refused",
+        "subject-flow__invalid-fields-refused",
+        "subject-flow__save-and-add-next",
+        "subject-flow__save-and-assign-event",
         "subject-flow__subject-creation"
       ],
       "routes": [
@@ -992,6 +998,66 @@
         "/ListStudySubjects"
       ],
       "trace": {
+        "subject-flow__blank-fields-refused": [
+          {
+            "request": "SERVER POST /OpenClinica/AddNewSubject -> 200",
+            "move": "writes"
+          },
+          {
+            "request": "SERVER GET /OpenClinica/ListStudySubjects -> 200",
+            "move": "all"
+          }
+        ],
+        "subject-flow__duplicate-label-refused": [
+          {
+            "request": "SERVER POST /OpenClinica/AddNewSubject -> 200",
+            "move": "writes"
+          },
+          {
+            "request": "SERVER GET /OpenClinica/ListStudySubjects -> 200",
+            "move": "all"
+          }
+        ],
+        "subject-flow__duplicate-person-id-refused": [
+          {
+            "request": "SERVER POST /OpenClinica/AddNewSubject -> 200",
+            "move": "writes"
+          },
+          {
+            "request": "SERVER GET /OpenClinica/ListStudySubjects -> 200",
+            "move": "all"
+          }
+        ],
+        "subject-flow__invalid-fields-refused": [
+          {
+            "request": "SERVER POST /OpenClinica/AddNewSubject -> 200",
+            "move": "writes"
+          },
+          {
+            "request": "SERVER GET /OpenClinica/ListStudySubjects -> 200",
+            "move": "all"
+          }
+        ],
+        "subject-flow__save-and-add-next": [
+          {
+            "request": "SERVER POST /OpenClinica/AddNewSubject -> 200",
+            "move": "writes"
+          },
+          {
+            "request": "SERVER GET /OpenClinica/ListStudySubjects -> 200",
+            "move": "all"
+          }
+        ],
+        "subject-flow__save-and-assign-event": [
+          {
+            "request": "SERVER POST /OpenClinica/AddNewSubject -> 200",
+            "move": "writes"
+          },
+          {
+            "request": "SERVER GET /OpenClinica/ListStudySubjects -> 200",
+            "move": "all"
+          }
+        ],
         "subject-flow__subject-creation": [
           {
             "request": "SERVER POST /OpenClinica/AddNewSubject -> 200",

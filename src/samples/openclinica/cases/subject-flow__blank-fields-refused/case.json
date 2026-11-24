@@ -1,0 +1,76 @@
+{
+  "sample": "openclinica",
+  "case": "subject-flow__blank-fields-refused",
+  "e2e": {
+    "routes": [
+      "/",
+      "/j_spring_security_check",
+      "/AddNewSubject",
+      "/ListStudySubjects"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "seeded-admin",
+    "auth_notes": "Single actor: the seeded admin, whose credentials come from the sample's env/.env only (openclinica has no in-flow signup). The stack's one-shot bootstrap rotates the seeded `root` account to that password, so the app's own 'never drop the DB' contract is untouched.",
+    "credentials": "env:OPENCLINICA_ADMIN_USER,OPENCLINICA_ADMIN_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "dom_before",
+      "dom_after",
+      "dom_list",
+      "alerts_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "subject",
+        "key_columns": [
+          "subject_id"
+        ],
+        "ignore_columns": [
+          "date_created",
+          "date_updated",
+          "unique_identifier_md5",
+          "date_of_birth_change"
+        ]
+      },
+      {
+        "name": "study_subject",
+        "key_columns": [
+          "study_subject_id"
+        ],
+        "ignore_columns": [
+          "date_created",
+          "date_updated",
+          "enrollment_date"
+        ]
+      },
+      {
+        "name": "audit_log_event",
+        "key_columns": [
+          "audit_id"
+        ],
+        "ignore_columns": [
+          "audit_date"
+        ]
+      },
+      {
+        "name": "user_account",
+        "key_columns": [
+          "user_id"
+        ],
+        "ignore_columns": [
+          "date_created",
+          "date_updated",
+          "date_lastvisit"
+        ]
+      }
+    ],
+    "notes": "expect.json is captured from the pristine app (never hand-written): one stack per case, so every run starts from a fresh Liquibase seed. subject/study_subject are the behavior under test; audit_log_event records the creation audit trail (audit_date ignored); user_account changes on login (date_lastvisit ignored). audit_user_login is deliberately excluded: auth plumbing with a volatile login_attempt_date, same rationale as mamute's UserSession. enrollment_date is ignored because the form prefills it with today; the flow fills a fixed date but the rendered page carries the same value in two formats, which the artifact normalizer reduces to {{date}}."
+  }
+}

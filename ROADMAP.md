@@ -68,10 +68,19 @@ What is done, what is next, and what is parked. Decisions of record live in
      the per-case seed: `isUserWithKarma` false, a user with negative
      karma. Omitted: the 403 of mamute's 15 s flood limit, whose message
      counts the seconds left.
-   - **`subject-flow`** — `AddNewSubjectServlet.processRequest` is ~400
-     lines and its one case runs 37%. Add a duplicate person ID (the
-     "already enrolled" errors), a missing required field, and an invalid
-     date or year of birth; then adding with `addWithEvent`.
+   - **`subject-flow`** — version 5: `AddNewSubjectServlet` slice lines
+     37% → 50%, branches 28% → 33% (lower bound). New cases: a duplicate
+     person ID, a duplicate study subject ID, every field invalid in one
+     submit, the required fields blank, "Save and Add Next Subject" and
+     "Save and Assign Study Event". Most of what is left hangs on the
+     study's parameters, which the admin sets through the app's own Build
+     Study pages, so each is reachable: year of birth instead of date of
+     birth, generated study subject IDs, a person ID not required, gender
+     not required, a group class (required group, notes over 255), a site
+     (the "enrolled at a site" refusals), a subject already in another
+     study (`ADD_EXISTING_SUBJECT`), and `addWithEvent` from the list's
+     overlay, which needs an event definition. Each is a new case,
+     arranged through those pages or by a per-case seed.
    - **`exam-flow`** — add the two refusals of `startExam`: an exam
      before every period is studied, and a second exam on the same
      course.
