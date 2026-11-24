@@ -15,16 +15,47 @@ What is done, what is next, and what is parked. Decisions of record live in
    A refusal case is cheap to grade: parity already sees an empty row
    delta and the message on the page.
 
-   Rules for the work: existing cases and their goldens stay as they
-   are; every addition is a new case with its own `capture`, and the
+   These targets grade the cases, never an agent: they read the pin's
+   code, out of band, while a solve is judged only on its side effects.
+   A manifest is done when:
+   - **handlers**: every slice handler is driven by a case, or excused in
+     `not_driven` — 100%;
+   - **slice branches**: every branch is driven by a case, or *omitted*
+     with its reason — 100% accounted for. A branch is omitted only when
+     the app cannot reach it from a state it produces itself: through its
+     own UI, from the dump plus legitimate seed rows. A defensive null
+     check on an orphaned row, a `catch` for an infrastructure failure, or
+     a server refusal the page's own script already prevents. Hard to
+     reach is not a reason; a case is;
+   - **mutation** (once metric 3 exists): at least 80% of the
+     non-equivalent mutants of the slice killed by parity, raised as the
+     survivors are read. This is the number that is the cases' power;
+     coverage only says where cases are missing.
+
+   Lines get no target: they follow from branches.
+
+   Rules for the work: an existing case and its golden are never edited;
+   one may be deleted (git keeps it) once newer cases check everything it
+   checks, final rows included. Every addition is a new case with its own
+   `capture`, and the
    manifest's `version` is bumped so its earlier scores are not compared
-   with the later ones. Re-run `coverage` after each capture and keep the
-   report beside the commit.
+   with the later ones. A branch that needs rows the dump lacks gets a
+   new case that carries its own seed, loaded once on that case's stack
+   after the dump; no existing case and no shared dump changes. Re-run
+   `coverage` after each capture and keep the report beside the commit.
 
    By manifest, highest yield first:
-   - **`vote-flow`** — 2/4 handlers. Add removing an upvote and removing
-     a downvote (clicking the same arrow again): `voteUpRemoval` and
-     `voteDownRemoval` have no case at all.
+   - **`vote-flow`** — done in version 5: 4/4 handlers, slice lines 100%
+     (was 50%), controller lines 80% (was 43%). New cases remove an
+     upvote, remove a downvote, and switch an upvote to a downvote; each
+     reloads the page between the two clicks, so the highlighted arrow
+     comes from the stored vote, not from the widget. Omitted: the
+     controller's two `catch → 409` blocks and the karma gate's 403,
+     which `links-behaviour.js` refuses before any request leaves the
+     page (author's own question, karma below `permission.rule.vote_*`).
+     Left for the per-case seed: a fifth downvote, which hides the
+     question (`VotingMachine.register`, count ≤ -5) and needs five
+     voters with the karma for it.
    - **`answer-flow`** — its own prompt requires "a rejected answer shown
      the same way", and no case rejects one: the validator's error
      redirect (`newAnswer`, lines 103–104) never runs.
@@ -60,6 +91,12 @@ What is done, what is next, and what is parked. Decisions of record live in
      `catch` and a null check the UI cannot reach; leave as they are.
 
    The instrument itself, in the same order:
+   - a per-case seed: a `seed.sql` beside a case's `flow.py`, loaded by
+     `capture`, `score` and `coverage` on that case's stack only. Needed by
+     the `?page=2` cases and by `vote-flow`'s auto-removal;
+   - omitted branches in `scope.covers`, keyed by the pin's source line,
+     so the report reads covered / omitted / GAP per slice branch rather
+     than a percentage;
    - measure what a slice calls below the controller (service, DAO), so
      a thin controller like `WatchController` stops reading as covered;
    - `covers` for the `whole-app` manifests, which need several

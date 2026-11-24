@@ -147,7 +147,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 4,
+    "version": 5,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -171,7 +171,10 @@
     "scope": {
       "cases": [
         "vote-flow__downvote-decrements-count",
-        "vote-flow__upvote-increments-count"
+        "vote-flow__downvote-removal-restores-count",
+        "vote-flow__upvote-increments-count",
+        "vote-flow__upvote-removal-restores-count",
+        "vote-flow__upvote-then-downvote-switches"
       ],
       "routes": [
         "/sign-up",
@@ -180,7 +183,9 @@
         "/logout",
         "/{question.id}-{sluggedTitle}",
         "/question/{question.id}/voto/negativo",
-        "/question/{question.id}/voto/positivo"
+        "/question/{question.id}/voto/positivo",
+        "/question/{question.id}/voto/remove/negativo",
+        "/question/{question.id}/voto/remove/positivo"
       ],
       "trace": {
         "vote-flow__downvote-decrements-count": [
@@ -189,9 +194,39 @@
             "move": "all"
           }
         ],
+        "vote-flow__downvote-removal-restores-count": [
+          {
+            "request": "SERVER POST /Question/{n}/voto/negativo -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER POST /Question/{n}/voto/remove/negativo -> 200",
+            "move": "all"
+          }
+        ],
         "vote-flow__upvote-increments-count": [
           {
             "request": "SERVER POST /Question/{n}/voto/positivo -> 200",
+            "move": "all"
+          }
+        ],
+        "vote-flow__upvote-removal-restores-count": [
+          {
+            "request": "SERVER POST /Question/{n}/voto/positivo -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER POST /Question/{n}/voto/remove/positivo -> 200",
+            "move": "all"
+          }
+        ],
+        "vote-flow__upvote-then-downvote-switches": [
+          {
+            "request": "SERVER POST /Question/{n}/voto/positivo -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER POST /Question/{n}/voto/negativo -> 200",
             "move": "all"
           }
         ]
@@ -207,7 +242,9 @@
             ],
             "handlers": {
               "voteUp": "vote-flow__upvote-increments-count",
-              "voteDown": "vote-flow__downvote-decrements-count"
+              "voteDown": "vote-flow__downvote-decrements-count",
+              "voteUpRemoval": "vote-flow__upvote-removal-restores-count",
+              "voteDownRemoval": "vote-flow__downvote-removal-restores-count"
             },
             "not_driven": {}
           }
