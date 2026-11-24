@@ -37,10 +37,24 @@ asks an agent to decouple. "Completely" means:
   executed by at least one case;
 - every reachable branch in those handlers has a case: success,
   validation failure, permission/karma denial, not-found;
-- every handler or branch not driven is listed individually, with the
-  reason it cannot be reached in the deterministic environment (needs an
-  external OAuth/Solr/mail service, dead defensive code). "Hard to drive"
-  is not a reason — add the case.
+- every handler not driven is listed in `not_driven`, and every branch
+  not driven is *omitted* with its reason. A branch is omitted only when
+  the app cannot reach it from a state it produces itself — through its
+  own UI, from the dump plus legitimate seed rows: a defensive null check
+  on an orphaned row, a `catch` for an infrastructure failure, an
+  external OAuth/Solr/mail service, or a server refusal the page's own
+  script already prevents (mamute's `links-behaviour.js` refuses a vote
+  on one's own question before any request leaves). "Hard to drive" is
+  not a reason — add the case, seeded if it needs rows the dump lacks.
+  "The golden would be a crash on impossible data" is a reason: a case
+  that records a 500 grades bug-for-bug fidelity, not behaviour.
+
+These targets grade the cases, never an agent: they read the pin's code,
+out of band, while a solve is judged only on side effects. Handlers 100%,
+slice branches 100% covered or omitted, lines no target of their own.
+Mutation testing, once it exists, is the cases' actual power (≥ 80% of
+non-equivalent mutants killed); coverage only says where cases are
+missing.
 
 One behaviour case on a controller with five handlers does not make a
 slice. If the controller cannot be driven to this level through the UI,
@@ -61,6 +75,14 @@ separate cases — granularity makes verdicts diagnosable.
 controller (method, route, verb, guard conditions, error branches) and
 plan which case drives each one. Gaps in this list are the cases you
 still have to write; it becomes the `handlers` map in §8.
+
+**Then read what the page does before the request.** Legacy pages guard
+their own controls: a tag that withholds a form (mamute's
+`canAnswer.tag`), a script that swaps a click for a popup
+(`links-behaviour.js`). A server refusal behind such a guard is reached
+only through a stale page (§3), or not at all — and then it is omitted,
+not written. The page-side refusal is itself a behaviour worth a case
+when the slice renders the data it decides on.
 
 ### 2. Author `case.json`
 
@@ -108,7 +130,29 @@ Rules (all hard-won — violating any of these cost a debug cycle):
   around the action click; `wait_for_load_state("networkidle")` after
   navigation; `wait_for_function` for DOM updates — and when building a
   JS predicate with `%` formatting, check the braces survive it (a
-  missing `}` here once broke every vote wait).
+  missing `}` here once broke every vote wait). An AJAX widget that
+  updates the count optimistically (mamute's `fakeUpdateIncrement`) has
+  not finished when the count changes: wait for its own busy marker to
+  clear (`.vote-option.stop`) before the next click.
+- **The one allowed timed wait** is a window the app itself enforces and
+  no signal ends. mamute refuses a user's second post within 15 s
+  (`InputManager.SPAM_TIME`) with a 403 whose message counts the seconds
+  left — before any validator runs. A flow that posts twice as one user
+  waits it out with `page.wait_for_timeout(FLOOD_WAIT_MS)`, a named
+  constant whose comment cites the source. The refusal itself is omitted:
+  its message is time-dependent.
+- **Reload between two acts on the same state**: vote, reload, unvote.
+  The second act then starts from what the server stored, not from the
+  widget's own memory, so an agent that never persists the first act
+  fails the case.
+- **A server refusal the page prevents is reached through a stale
+  page**: open the question in two tabs (`page.context.new_page()`),
+  act in the first, submit from the second, which still shows the form.
+  That is a real user's path to the validator's error redirect; a fresh
+  page withholds the form.
+- **One submit is one behaviour**: a submission with several invalid
+  fields is one case, and the exact DOM comparison catches any one
+  message going missing. Two submissions are two cases.
 - **Timed waits are data, not literals**: `CASE_TIMEOUT_MS` comes from
   `settings` (`bench.env` → `BENCH_CASE_TIMEOUT_MS`). No `timeout=5000` in a
   flow.
@@ -181,25 +225,35 @@ git diff -U0 -- src/samples/<sample>/cases/<case>/expect.json \
 
 If anything else differs, the environment — or a normalization rule — is
 not deterministic; stop and fix that first, never "accept" the second
-golden. Two captures inside the same minute prove less than they look
+golden.
+
+Equivalent, and cheaper for a batch: score the manifest against a no-op
+record of the sample (an empty `diff.patch` on the pin, no `manifest_id`
+in `record.json`, e.g. `out/solves/noop-<sample>-<sha8>/`). Parity
+replays every case on a fresh stack against its golden, normalized
+exactly as a solve would be; `all_must_pass 1.000` is the second run.
+`trace_similarity` fails a no-op outright and asks no judge. Two captures inside the same minute prove less than they look
 like: a volatile value with a minute's resolution hides in both (an
 openclinica golden once kept the build *time* for exactly that reason).
 
 ### 7. Prove the controller is fully covered (mandatory)
 
-Coverage is an argument backed by evidence, not a claim: for the target
-controller, list every handler and point at the case that drives it. That
-map is `scope.covers.handlers` in the manifest (§8).
+Coverage is an argument backed by evidence. The argument is the handler
+map in `scope.covers` (§8); the evidence is `main.py coverage`
+(`src/bench_controls/`), which replays each case on its own stack with a
+JaCoCo agent attached and reports, per case and for all of them, slice
+and controller lines and branches:
 
-A dynamic measurement is optional and **out of band**: attach a JaCoCo
-agent to the app's JVM on a throwaway clone, dump one `.exec` per case
-(each case runs on its own pristine stack — never `output=file`, the next
-boot truncates it), and read the controller's row with `jacococli
-report`. The instrumentation is never committed to the sample's pin and
-never becomes part of the stack. The old harness had a
-`scripts/measure-coverage.sh` for this; it was not carried over
-(`ROADMAP.md`). Until it is, the handler map is the reviewable artifact
-and a JaCoCo run is extra confirmation, not a gate.
+```bash
+BENCH_CHECKOUT=$PWD/../mamute uv run python main.py coverage --manifest 3
+```
+
+It writes under `out/coverage/<manifest>/`, which git ignores. Copy
+`report.md` to `src/samples/<sample>/coverage/<manifest>.md` and commit it
+with the cases it measured, so every change to a manifest's cases carries
+the numbers it moved. Read the slice branches against §"Acceptance rule":
+each one missing is a case to write or a branch to omit, with its reason
+in the manifest's ROADMAP entry until `scope.covers` can hold it.
 
 ### 8. Wire it into a manifest
 
@@ -232,22 +286,35 @@ uv run python main.py manifests
 ```
 
 Record the coverage claim in the same entry's `scope.covers` (data only;
-it is the answer key's index and never reaches the agent):
+it is the answer key's index and never reaches the agent). `slice` is
+what the manifest's prompt moves behind the backend, read from the
+prompt and not from the cases; each slice handler names the case meant
+to drive it:
 
 ```json
-"scope": {
-  "cases": ["..."],
-  "routes": ["..."],
-  "covers": {
-    "controller": "br.com.caelum.vraptor.controller.VoteController",
-    "handlers": {
-      "tryToVoteVotable": "vote-flow__upvote-increments-count",
-      "tryToRemoveVoteVotable": "vote-flow__downvote-increments-count"
-    },
-    "not_driven": {"<handler>": "<why it cannot be reached here>"}
+"covers": {
+  "controllers": {
+    "org.mamute.controllers.VoteController": {
+      "slice": ["voteUp", "voteDown", "voteUpRemoval", "voteDownRemoval"],
+      "handlers": {"voteUp": "vote-flow__upvote-increments-count"},
+      "not_driven": {"<handler>": "<why it cannot be reached here>"}
+    }
   }
 }
 ```
+
+Every case also needs its `scope.trace` entry — the requests whose work
+must move, as `trace_similarity` sees them. Copy the labels from the
+case's captured `trace.json` (`"SERVER POST /Question/{n}/voto/positivo
+-> 200"`), never from memory: a label that matches no request is a
+judge asked about nothing.
+
+**Adding cases to a manifest that has been scored** bumps its `version`,
+so earlier scores are not compared with later ones. An existing case and
+its golden are never edited. One may be deleted (git keeps it) once newer
+cases check everything it checks, final rows included: a removal case
+that undoes its vote does not replace the case whose delta shows the
+vote standing.
 
 ### 9. Prove the case can fail (sensitivity)
 

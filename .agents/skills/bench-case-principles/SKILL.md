@@ -75,7 +75,10 @@ in `add-bench-case` §3; the invariants:
 - `locale="en-US"`, `timezone_id="UTC"`, viewport `1280x800` — from
   `settings.py` (`.env`), never the host.
 - Never `sleep()`: wait for the response or the element that proves the
-  action landed; wait explicitly on submit navigations.
+  action landed; wait explicitly on submit navigations. The one
+  exception is a time window the app enforces and no signal ends (a
+  flood limit between two posts): a named constant citing its source,
+  `add-bench-case` §3.
 - Artifacts are **normalized** (`<script>/<style>` stripped, whitespace
   collapsed, volatile attributes removed) and compared by exact string:
   structure and text only, never class names or inline styles —
@@ -114,7 +117,8 @@ golden.
 - Hand-editing `expect.json` to make a failing case pass.
 - Asserting CSS classes or inline styles.
 - One giant flow testing five behaviours — split per behaviour; that is
-  what makes verdicts diagnosable.
+  what makes verdicts diagnosable. One submit with several invalid fields
+  is one behaviour: the page answers it once, with every message.
 - Cases that depend on execution order or on another case's leftovers.
 - Putting routes, case names or goldens anywhere an agent can read them
   (the sample repo, a prompt) — `AGENTS.md` rules 1–3.
