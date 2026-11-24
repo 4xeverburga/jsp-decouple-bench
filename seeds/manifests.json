@@ -1,7 +1,7 @@
 [
   {
     "task_type": "decouple_slice",
-    "version": 6,
+    "version": 7,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -24,7 +24,11 @@
     },
     "scope": {
       "cases": [
-        "answer-flow__answer-appears"
+        "answer-flow__answer-appears",
+        "answer-flow__answer-without-watching",
+        "answer-flow__moderator-answers-own-question",
+        "answer-flow__own-question-form-withheld",
+        "answer-flow__second-answer-rejected"
       ],
       "routes": [
         "/sign-up",
@@ -36,6 +40,42 @@
       ],
       "trace": {
         "answer-flow__answer-appears": [
+          {
+            "request": "SERVER POST /answer/{n} -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
+            "move": "all"
+          }
+        ],
+        "answer-flow__answer-without-watching": [
+          {
+            "request": "SERVER POST /answer/{n} -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
+            "move": "all"
+          }
+        ],
+        "answer-flow__moderator-answers-own-question": [
+          {
+            "request": "SERVER POST /answer/{n} -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
+            "move": "all"
+          }
+        ],
+        "answer-flow__own-question-form-withheld": [
+          {
+            "request": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
+            "move": "all"
+          }
+        ],
+        "answer-flow__second-answer-rejected": [
           {
             "request": "SERVER POST /answer/{n} -> 302",
             "move": "all"

@@ -56,12 +56,18 @@ What is done, what is next, and what is parked. Decisions of record live in
      Left for the per-case seed: a fifth downvote, which hides the
      question (`VotingMachine.register`, count ≤ -5) and needs five
      voters with the karma for it.
-   - **`answer-flow`** — its own prompt requires "a rejected answer shown
-     the same way", and no case rejects one: the validator's error
-     redirect (`newAnswer`, lines 103–104) never runs.
-     `AnsweredByValidator` rejects two things: a second answer from the
-     same user, and an answer to one's own question without the karma
-     for it. Add both; then an answer posted with `watching` unchecked.
+   - **`answer-flow`** — done in version 7: `AnswerController` slice
+     lines 95%, branches 4/6 by the report's per-line lower bound, 5/6
+     in fact (`watching` is false in one case and true in the others).
+     New cases: a second answer submitted from a stale tab and refused,
+     an answer with `watching` cleared, the author's own question with
+     the form withheld for karma, and the moderator answering its own
+     question through the same-author confirmation. A fresh page
+     withholds the form from both `AnsweredByValidator` refusals
+     (`canAnswer.tag`); only the stale tab reaches the server's. Left for
+     the per-case seed: `isUserWithKarma` false, a user with negative
+     karma. Omitted: the 403 of mamute's 15 s flood limit, whose message
+     counts the seconds left.
    - **`subject-flow`** — `AddNewSubjectServlet.processRequest` is ~400
      lines and its one case runs 37%. Add a duplicate person ID (the
      "already enrolled" errors), a missing required field, and an invalid
@@ -74,9 +80,12 @@ What is done, what is next, and what is parked. Decisions of record live in
      low-balance refusal is already a case.
    - **`teacher-mark-flow`** — add grading a student who has not taken
      the exam (`markUI` refuses it).
-   - **`admin-student-flow`** — add a student whose user name is taken
-     (`addStudent` throws before writing); then a list page other than the
-     first (`showStudent?page=2`, which needs enough seeded rows).
+   - **`admin-student-flow`** — a list page other than the first
+     (`showStudent?page=2`, which needs enough seeded rows). There is no
+     "user name taken" refusal to grade: `addStudent` sets `userlogin` to
+     `null` the line before it tests it, and `userlogin.name` has no
+     unique key, so a taken name is simply added again. The branch is
+     dead code; omitted.
    - **`study-flow`** — add both edges: going back from the first period
      and forward past the last, where progress must not move.
    - **`admin-course-flow`** — 1/4 slice branches: add a list page other
