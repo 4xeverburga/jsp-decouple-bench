@@ -1,0 +1,76 @@
+{
+  "sample": "online-study-system",
+  "case": "study-flow__prev-at-first-period-stays",
+  "e2e": {
+    "routes": [
+      "/login",
+      "/student/selectedCourse",
+      "/student/startStudy",
+      "/student/prePeriod"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "seeded",
+    "auth_notes": "Seeded actors only (OSS_STUDENT), credentials from the sample .env.",
+    "credentials": "env:OSS_STUDENT_USER,OSS_STUDENT_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "dom_before",
+      "dom_after",
+      "progress_before",
+      "progress_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "userlogin",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "teacher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "course",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student_course",
+        "key_columns": [
+          "course_id",
+          "student_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "role",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      }
+    ],
+    "notes": "Refusal or bound: the expected delta is captured from the pristine app, and the assertion lives in the DOM. Shiro sessions live in memory, not in the DB. The schema has no volatile columns."
+  }
+}

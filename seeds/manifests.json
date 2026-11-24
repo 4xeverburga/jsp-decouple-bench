@@ -396,7 +396,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 4,
+    "version": 5,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -419,7 +419,8 @@
     },
     "scope": {
       "cases": [
-        "admin-course-flow__add-course-creates-course"
+        "admin-course-flow__add-course-creates-course",
+        "admin-course-flow__pager-links-on-single-page"
       ],
       "routes": [
         "/login",
@@ -432,6 +433,12 @@
             "request": "SERVER POST /Examination_System/admin/addCourse -> 302",
             "move": "all"
           },
+          {
+            "request": "SERVER GET /Examination_System/admin/showCourse -> 200",
+            "move": "all"
+          }
+        ],
+        "admin-course-flow__pager-links-on-single-page": [
           {
             "request": "SERVER GET /Examination_System/admin/showCourse -> 200",
             "move": "all"
@@ -466,7 +473,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 4,
+    "version": 5,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -490,6 +497,7 @@
     "scope": {
       "cases": [
         "admin-student-flow__add-student-creates-user",
+        "admin-student-flow__pager-links-on-single-page",
         "admin-student-flow__remove-student-cascades"
       ],
       "routes": [
@@ -504,6 +512,12 @@
             "request": "SERVER POST /Examination_System/admin/addStudent -> 302",
             "move": "all"
           },
+          {
+            "request": "SERVER GET /Examination_System/admin/showStudent -> 200",
+            "move": "all"
+          }
+        ],
+        "admin-student-flow__pager-links-on-single-page": [
           {
             "request": "SERVER GET /Examination_System/admin/showStudent -> 200",
             "move": "all"
@@ -550,7 +564,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 4,
+    "version": 5,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -573,7 +587,9 @@
     },
     "scope": {
       "cases": [
-        "exam-flow__save-exam-marks-has-exam"
+        "exam-flow__exam-before-periods-done-refused",
+        "exam-flow__save-exam-marks-has-exam",
+        "exam-flow__second-exam-refused"
       ],
       "routes": [
         "/login",
@@ -584,7 +600,23 @@
         "/student/saveExam"
       ],
       "trace": {
+        "exam-flow__exam-before-periods-done-refused": [
+          {
+            "request": "SERVER GET /Examination_System/student/startExam -> 200",
+            "move": "all"
+          }
+        ],
         "exam-flow__save-exam-marks-has-exam": [
+          {
+            "request": "SERVER GET /Examination_System/student/startExam -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/student/saveExam -> 200",
+            "move": "all"
+          }
+        ],
+        "exam-flow__second-exam-refused": [
           {
             "request": "SERVER GET /Examination_System/student/startExam -> 200",
             "move": "all"
@@ -757,7 +789,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 4,
+    "version": 5,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -780,6 +812,7 @@
     },
     "scope": {
       "cases": [
+        "select-course-flow__already-selected-refused",
         "select-course-flow__insufficient-balance-blocks-selection",
         "select-course-flow__select-course-deducts-balance"
       ],
@@ -790,6 +823,12 @@
         "/student/selectedCourse"
       ],
       "trace": {
+        "select-course-flow__already-selected-refused": [
+          {
+            "request": "SERVER GET /Examination_System/student/stuSelectedCourse -> 200",
+            "move": "all"
+          }
+        ],
         "select-course-flow__insufficient-balance-blocks-selection": [
           {
             "request": "SERVER GET /Examination_System/student/stuSelectedCourse -> 200",
@@ -833,7 +872,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 4,
+    "version": 5,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -856,7 +895,9 @@
     },
     "scope": {
       "cases": [
+        "study-flow__next-past-last-period-stays",
         "study-flow__next-period-increments-progress",
+        "study-flow__prev-at-first-period-stays",
         "study-flow__prev-period-decrements-progress"
       ],
       "routes": [
@@ -867,6 +908,16 @@
         "/student/prePeriod"
       ],
       "trace": {
+        "study-flow__next-past-last-period-stays": [
+          {
+            "request": "SERVER GET /Examination_System/student/startStudy -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/student/backPeriod -> 200",
+            "move": "all"
+          }
+        ],
         "study-flow__next-period-increments-progress": [
           {
             "request": "SERVER GET /Examination_System/student/startStudy -> 200",
@@ -874,6 +925,16 @@
           },
           {
             "request": "SERVER GET /Examination_System/student/backPeriod -> 200",
+            "move": "all"
+          }
+        ],
+        "study-flow__prev-at-first-period-stays": [
+          {
+            "request": "SERVER GET /Examination_System/student/startStudy -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/student/prePeriod -> 200",
             "move": "all"
           }
         ],
@@ -920,7 +981,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 4,
+    "version": 5,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -943,6 +1004,7 @@
     },
     "scope": {
       "cases": [
+        "teacher-mark-flow__mark-without-exam-refused",
         "teacher-mark-flow__save-mark-sets-grade"
       ],
       "routes": [
@@ -953,6 +1015,16 @@
         "/teacher/saveMark"
       ],
       "trace": {
+        "teacher-mark-flow__mark-without-exam-refused": [
+          {
+            "request": "SERVER GET /Examination_System/teacher/gradeCourse -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/teacher/mark -> 200",
+            "move": "all"
+          }
+        ],
         "teacher-mark-flow__save-mark-sets-grade": [
           {
             "request": "SERVER POST /Examination_System/teacher/saveMark -> 302",

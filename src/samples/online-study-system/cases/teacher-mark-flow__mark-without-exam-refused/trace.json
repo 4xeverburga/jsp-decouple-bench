@@ -1,0 +1,1204 @@
+{
+  "sample": "online-study-system",
+  "case": "teacher-mark-flow__mark-without-exam-refused",
+  "sample_commit": "a48285db8cab4d0d5f986d64f1f06053136aa12a",
+  "captured_at": "2026-11-24T07:38:15+00:00",
+  "requests": [
+    {
+      "label": "SERVER GET /Examination_System/login -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER POST /Examination_System/login -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "ResponseFacade.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/showCourse -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 4,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/selectedCourse -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/startStudy -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/backPeriod -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL UPDATE student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/logout -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "ResponseFacade.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/ -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "ResponseFacade.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/login.jsp -> 200 renders /Examination_System/login.jsp",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER GET /Examination_System/login -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER POST /Examination_System/login -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "ResponseFacade.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/teacher/showCourse -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/teacher/showCourse -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/teacher/gradeCourse -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/teacher/mark -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

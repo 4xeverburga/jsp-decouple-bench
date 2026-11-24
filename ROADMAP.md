@@ -81,24 +81,34 @@ What is done, what is next, and what is parked. Decisions of record live in
      study (`ADD_EXISTING_SUBJECT`), and `addWithEvent` from the list's
      overlay, which needs an event definition. Each is a new case,
      arranged through those pages or by a per-case seed.
-   - **`exam-flow`** — add the two refusals of `startExam`: an exam
-     before every period is studied, and a second exam on the same
-     course.
-   - **`select-course-flow`** — add selecting a course already selected
-     or taken (`stuSelectedCourse`, the "已经选过或修过" error). The
-     low-balance refusal is already a case.
-   - **`teacher-mark-flow`** — add grading a student who has not taken
-     the exam (`markUI` refuses it).
-   - **`admin-student-flow`** — a list page other than the first
-     (`showStudent?page=2`, which needs enough seeded rows). There is no
-     "user name taken" refusal to grade: `addStudent` sets `userlogin` to
-     `null` the line before it tests it, and `userlogin.name` has no
-     unique key, so a taken name is simply added again. The branch is
-     dead code; omitted.
-   - **`study-flow`** — add both edges: going back from the first period
-     and forward past the last, where progress must not move.
-   - **`admin-course-flow`** — 1/4 slice branches: add a list page other
-     than the first (`showCourse?page=2`).
+   - **`exam-flow`** — done in version 5: slice lines 90% → 100%,
+     branches 2/4 → 3/4. New cases: an exam before every period is
+     studied, and a second exam from the list `saveExam` renders, which
+     still offers 考试 for the examined course.
+   - **`select-course-flow`** — version 5 adds selecting a course
+     already selected: slice lines 89% → 93%, branches 3/6 by the lower
+     bound, 5/6 across cases. Left: a course priced 0, where the balance
+     does not change and is not written; the admin sets a price of 0
+     through the app's own course edit page, so it is a case, arranged
+     there.
+   - **`teacher-mark-flow`** — done in version 5: grading a student who
+     studied every period but took no exam, which the grade page offers
+     (it checks progress, not the exam) and `markUI` refuses. Slice lines
+     88% → 94%; branches 2/4 by the lower bound, 3/4 across cases.
+     Omitted: `gradeCourse` without an `id`, which no page links to.
+   - **`admin-student-flow`** — version 5: slice branches 6/10 → 9/10,
+     lines 91% → 97%. The pager's 最后一页 and 上一页 links on a
+     one-page list send page=1 and page=0, which drive both other sides
+     of `page == null || page == 0`. Omitted: `addStudent`'s "name taken"
+     check, dead code (`userlogin` is set to `null` the line before it is
+     tested, and `userlogin.name` has no unique key). Left for the
+     per-case seed: a real second page, with eleven or more students.
+   - **`study-flow`** — done in version 5: going back from the first
+     period and forward past the last, where progress does not move.
+     Branches 2/4 → 3/4 by the lower bound, 4/4 across cases.
+   - **`admin-course-flow`** — done in version 5: slice branches 1/4 →
+     4/4, lines 88% → 100%, by the same pager links. A real second page
+     (eleven or more courses) waits for the per-case seed.
    - **`ask-flow`** — done in version 5: slice lines 98% → 100%,
      branches 3/6 → 4/6 by the report's lower bound (both sides of
      `isVisibleFor` and of `watching` are driven across cases). New
