@@ -99,12 +99,17 @@ What is done, what is next, and what is parked. Decisions of record live in
      and forward past the last, where progress must not move.
    - **`admin-course-flow`** — 1/4 slice branches: add a list page other
      than the first (`showCourse?page=2`).
-   - **`ask-flow`** — add a question asked with `watching` unchecked, and
-     a question page the viewer may not see (`showQuestion` →
-     `notFound`).
-   - **`watch-flow`** — 100% of a 7-line controller, which says little:
-     the toggle lives below it. Add unwatching (the prompt names it), and
-     measure the DAO, not only the controller.
+   - **`ask-flow`** — done in version 5: slice lines 98% → 100%,
+     branches 3/6 → 4/6 by the report's lower bound (both sides of
+     `isVisibleFor` and of `watching` are driven across cases). New
+     cases: a question with `watching` cleared, a new tag with illegal
+     characters refused by `TagsValidator` (the picker offers any typed
+     term), and a question removed by a moderator's flag, which a
+     logged-out visitor gets as not found.
+   - **`watch-flow`** — version 5 adds unwatching (watch, reload,
+     click the eye). Still 100% of a 7-line controller: the toggle's two
+     sides live in `WatcherDAO.addOrRemove`, which the instrument does
+     not measure yet.
    - **`out-course-flow`**, **`recharge-flow`** — what they miss is a
      `catch` and a null check the UI cannot reach; leave as they are.
 

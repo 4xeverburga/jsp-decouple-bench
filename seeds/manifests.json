@@ -119,7 +119,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 4,
+    "version": 5,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -142,7 +142,10 @@
     },
     "scope": {
       "cases": [
-        "ask-flow__question-creation"
+        "ask-flow__illegal-tag-refused",
+        "ask-flow__question-creation",
+        "ask-flow__question-without-watching",
+        "ask-flow__removed-question-not-found"
       ],
       "routes": [
         "/sign-up",
@@ -150,6 +153,12 @@
         "/{question.id}-{sluggedTitle}"
       ],
       "trace": {
+        "ask-flow__illegal-tag-refused": [
+          {
+            "request": "SERVER POST /ask -> 200 renders /WEB-INF/jsp/question/questionForm.jsp",
+            "move": "all"
+          }
+        ],
         "ask-flow__question-creation": [
           {
             "request": "SERVER POST /ask -> 302",
@@ -157,6 +166,22 @@
           },
           {
             "request": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
+            "move": "all"
+          }
+        ],
+        "ask-flow__question-without-watching": [
+          {
+            "request": "SERVER POST /ask -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
+            "move": "all"
+          }
+        ],
+        "ask-flow__removed-question-not-found": [
+          {
+            "request": "SERVER GET /{n}-{slug} -> 404 renders /404.jsp",
             "move": "all"
           }
         ]
@@ -301,7 +326,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 4,
+    "version": 5,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -324,6 +349,7 @@
     },
     "scope": {
       "cases": [
+        "watch-flow__unwatch-removes-watcher",
         "watch-flow__watch-adds-watcher"
       ],
       "routes": [
@@ -333,6 +359,12 @@
         "/question/watched/{question.id}"
       ],
       "trace": {
+        "watch-flow__unwatch-removes-watcher": [
+          {
+            "request": "SERVER POST /question/watched/{n} -> 200",
+            "move": "all"
+          }
+        ],
         "watch-flow__watch-adds-watcher": [
           {
             "request": "SERVER POST /question/watched/{n} -> 200",
