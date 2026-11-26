@@ -803,7 +803,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 5,
+    "version": 6,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -828,7 +828,8 @@
       "cases": [
         "select-course-flow__already-selected-refused",
         "select-course-flow__insufficient-balance-blocks-selection",
-        "select-course-flow__select-course-deducts-balance"
+        "select-course-flow__select-course-deducts-balance",
+        "select-course-flow__free-course-keeps-balance"
       ],
       "routes": [
         "/login",
@@ -850,6 +851,16 @@
           }
         ],
         "select-course-flow__select-course-deducts-balance": [
+          {
+            "request": "SERVER GET /Examination_System/student/stuSelectedCourse -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/student/selectedCourse -> 200",
+            "move": "all"
+          }
+        ],
+        "select-course-flow__free-course-keeps-balance": [
           {
             "request": "SERVER GET /Examination_System/student/stuSelectedCourse -> 302",
             "move": "all"

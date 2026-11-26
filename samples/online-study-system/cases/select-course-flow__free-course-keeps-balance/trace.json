@@ -1,0 +1,198 @@
+{
+  "sample": "online-study-system",
+  "case": "select-course-flow__free-course-keeps-balance",
+  "sample_commit": "a48285db8cab4d0d5f986d64f1f06053136aa12a",
+  "captured_at": "2026-11-26T13:38:22+00:00",
+  "requests": [
+    {
+      "label": "SERVER GET /Examination_System/login -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER POST /Examination_System/login -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "ResponseFacade.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/showCourse -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 5,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/showCourse -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 5,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/stuSelectedCourse -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL INSERT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "ResponseFacade.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/student/selectedCourse -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student_course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 1,
+          "children": []
+        }
+      ]
+    }
+  ]
+}
