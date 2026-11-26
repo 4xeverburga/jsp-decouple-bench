@@ -92,6 +92,45 @@ class Stack:
         self._env["APP_HTTP_PORT"] = str(port)
         self.base_url = _at_port(self._target, port)
 
+    def _check_ports(self, port: int) -> None:
+        """Refuse a stack whose app would not answer its own address.
+
+        With a free port outside and another inside, a self-call built
+        from the Host header or getServerPort() lands on a dead port, and
+        only an agent's tree notices: a pristine one never calls itself,
+        so a no-op score is green either way. The healthcheck probing the
+        published port is what proves the app really listens there.
+        """
+        out = subprocess.run(
+            self._argv("config", "--format", "json"),
+            env=self._env,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        services = json.loads(out.stdout)["services"]
+        for name, service in services.items():
+            published = [
+                (int(p["published"]), int(p["target"]))
+                for p in service.get("ports", [])
+            ]
+            if not any(outside == port for outside, _ in published):
+                continue
+            for outside, inside in published:
+                if outside != inside:
+                    raise RuntimeError(
+                        f"{self.project}: {name} publishes {outside} on "
+                        f"{inside}; map APP_HTTP_PORT one to one"
+                    )
+            probe = " ".join(service.get("healthcheck", {}).get("test", []))
+            if f":{port}/" not in probe:
+                raise RuntimeError(
+                    f"{self.project}: {name}'s healthcheck does not probe "
+                    f"port {port}: {probe!r}"
+                )
+            return
+        raise RuntimeError(f"{self.project}: no service publishes {port}")
+
     def _argv(self, *args: str) -> list[str]:
         return [
             "docker",
@@ -145,7 +184,9 @@ class Stack:
         a start also never interleaves with another stack's build.
         """
         for _ in range(settings.STACK_PORT_ATTEMPTS):
-            self._publish(_free_port())
+            port = _free_port()
+            self._publish(port)
+            self._check_ports(port)
             build = _await_build()
             try:
                 self._stream(

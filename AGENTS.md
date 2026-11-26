@@ -203,7 +203,10 @@ a capture can share a host:
   nothing listened on, and failed only when graded. It cannot be caught in
   the solve sandbox instead (a `proxyPort` there was tried and dropped):
   the agent tests from inside the container, where every address it uses
-  is one the app can reach. mamute (Jetty) still listens on 8080;
+  is one the app can reach. Nor by a no-op score: a pristine tree never
+  calls itself. `Stack.up` refuses a stack whose resolved compose maps the
+  published port anywhere else, or whose healthcheck does not probe it —
+  the healthcheck, run inside, is what proves the app listens there;
 - `STACK_MAX_LIVE` caps the stacks up on the host, every process
   together, with one `flock` slot each under `out/locks/`; a case that
   finds them all taken waits, inside its manifest's score budget;

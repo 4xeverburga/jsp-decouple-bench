@@ -191,14 +191,16 @@ What is done, what is next, and what is parked. Decisions of record live in
      `4cb831c8` (`save-exam-marks-has-exam`). Re-judge both with
      `judge-claude-opus-5.5-high` before quoting a trace verdict, and
      tell the judge that fewer reads is not a crossed boundary.
-3. **Re-score every Tomcat run solved before 6fa9e62.** Until then a
+3. **Re-score every run scored before the port fix.** Until then a
    scoring stack listened on 8080 inside and a free port outside, so a
    self-call built from the request's address (`getServerPort()`, the
    `Host` header, which most agents use) hit a dead port. DeepSeek's
    `exam-flow` run `4cb831c8` went from 0 to parity 3/3 on re-score, and
    both Kimi `admin-course-flow` runs from 0/3 to 3/3. Every earlier
-   score on online-study-system, openclinica, bookshopweb and roller is
-   suspect until re-scored; mamute (Jetty) did not change.
+   score is suspect until re-scored: the Tomcat samples were fixed in
+   6fa9e62, mamute (Jetty, which had the same mismatch) after it. Five of
+   DeepSeek's six mamute trees self-call through `getServerPort()` or the
+   `Host` header.
 4. **Kimi K3.1 Pro against DeepSeek V4.1 Flash, react agent.** Same
    agent, provider and window; Kimi at `medium`, DeepSeek at `high`.
    Scored so far (DeepSeek judge): `admin-course-flow` Kimi 3/3;

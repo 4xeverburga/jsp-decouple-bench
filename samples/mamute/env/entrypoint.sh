@@ -7,6 +7,8 @@ set -euo pipefail
 
 cd /workspace
 
+: "${APP_HTTP_PORT:?}"
+
 # 1. The dev hibernate config hardcodes localhost; rewrite for the compose db.
 #    TWO copies exist: the source tree AND the classpath copy the pom placed
 #    in WEB-INF/classes at compile time — Hibernate loads the classpath one.
@@ -22,7 +24,7 @@ for i in $(seq 1 120); do
 done
 
 # 3. host = the externally-visible URL (VRaptor builds absolute redirect and
-#    OAuth-callback URLs from it).  In-container port is always 8080.
+#    OAuth-callback URLs from it).
 HOST_URL="${MAMUTE_PUBLIC_URL:-http://localhost:8090}"
 sed -i "s#^host = .*#host = ${HOST_URL}#" \
   src/main/resources/development.properties
@@ -35,8 +37,10 @@ cp src/main/resources/development.properties \
   src/main/webapp/WEB-INF/classes/development.properties
 
 # 4. Start the app in the foreground (embedded Jetty 8; `not-grunt` = assets
-#    already built into the image).
+#    already built into the image).  Jetty listens on the port the stack
+#    publishes, so a self-call built from the Host header or getServerPort()
+#    reaches it from inside instead of landing on a dead port.
 exec mvn -B exec:java \
   -Dexec.mainClass=br.com.caelum.vraptor.server.Main \
   -Dexec.args="not-grunt" \
-  -Dserver.port=8080
+  -Dserver.port="${APP_HTTP_PORT}"
