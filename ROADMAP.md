@@ -107,8 +107,11 @@ What is done, what is next, and what is parked. Decisions of record live in
      period and forward past the last, where progress does not move.
      Branches 2/4 → 3/4 by the lower bound, 4/4 across cases.
    - **`admin-course-flow`** — done in version 5: slice branches 1/4 →
-     4/4, lines 88% → 100%, by the same pager links. A real second page
-     (eleven or more courses) waits for the per-case seed.
+     4/4, lines 88% → 100%, by the same pager links. Version 6 adds the
+     first seeded case: eight courses past the dump's four, so page 2
+     lists two rows at a real offset (`limit 10, 10`). Coverage does not
+     move — the branches were already driven — but a tree that ignores
+     `page` now fails; mutation testing is what will count it.
    - **`ask-flow`** — done in version 5: slice lines 98% → 100%,
      branches 3/6 → 4/6 by the report's lower bound (both sides of
      `isVisibleFor` and of `watching` are driven across cases). New
@@ -127,8 +130,8 @@ What is done, what is next, and what is parked. Decisions of record live in
    - ~~a per-case seed~~ — done: a `seed.sql` beside a case's `flow.py`,
      loaded by `observe.arrange` on that case's stack only, after the
      stack is ready and before the first snapshot; the golden pins its
-     `seed_sha256`. Its first users are still to write: the `?page=2`
-     cases of `admin-student-flow` and `admin-course-flow`, `vote-flow`'s
+     `seed_sha256`. First user: `admin-course-flow` v6. Still to write:
+     `admin-student-flow`'s second page, `vote-flow`'s
      auto-removal, and `answer-flow`'s negative-karma user;
    - omitted branches in `scope.covers`, keyed by the pin's source line,
      so the report reads covered / omitted / GAP per slice branch rather

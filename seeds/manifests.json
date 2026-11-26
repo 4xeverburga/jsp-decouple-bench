@@ -396,7 +396,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 5,
+    "version": 6,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -420,7 +420,8 @@
     "scope": {
       "cases": [
         "admin-course-flow__add-course-creates-course",
-        "admin-course-flow__pager-links-on-single-page"
+        "admin-course-flow__pager-links-on-single-page",
+        "admin-course-flow__second-page-lists-the-rest"
       ],
       "routes": [
         "/login",
@@ -439,6 +440,12 @@
           }
         ],
         "admin-course-flow__pager-links-on-single-page": [
+          {
+            "request": "SERVER GET /Examination_System/admin/showCourse -> 200",
+            "move": "all"
+          }
+        ],
+        "admin-course-flow__second-page-lists-the-rest": [
           {
             "request": "SERVER GET /Examination_System/admin/showCourse -> 200",
             "move": "all"
