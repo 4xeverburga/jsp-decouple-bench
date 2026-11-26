@@ -195,6 +195,15 @@ a capture can share a host:
   `STACK_PORT_ATTEMPTS` times if another process takes it first. The
   goldens do not depend on it: parity normalizes the base URL out and the
   span condenser erases hosts;
+- inside a scoring stack the app listens on that same port number: compose
+  maps `${APP_HTTP_PORT}:${APP_HTTP_PORT}` and the entrypoint writes it
+  into the server's connector. A self-call to the address the browser used
+  (the `Host` header, `getServerPort()`) is a fair design that works behind
+  a real proxy; with 8080 inside and a free port outside it hit a port
+  nothing listened on, and failed only when graded. It cannot be caught in
+  the solve sandbox instead (a `proxyPort` there was tried and dropped):
+  the agent tests from inside the container, where every address it uses
+  is one the app can reach. mamute (Jetty) still listens on 8080;
 - `STACK_MAX_LIVE` caps the stacks up on the host, every process
   together, with one `flock` slot each under `out/locks/`; a case that
   finds them all taken waits, inside its manifest's score budget;

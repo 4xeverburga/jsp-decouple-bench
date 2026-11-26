@@ -2,7 +2,7 @@
 #
 # One host port is configurable, so the app can run on any free port without
 # editing this file:
-#   APP_HTTP_PORT   host port for the app   (default 8093)
+#   APP_HTTP_PORT   host and in-container port for the app   (default 8093)
 #
 # The database publishes nothing: it is reached from inside `data` only, and
 # its schema and seed rows are the tree's own dump, loaded once while MySQL

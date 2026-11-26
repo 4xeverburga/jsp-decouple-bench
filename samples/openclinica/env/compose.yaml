@@ -2,7 +2,7 @@
 #
 # One host port is configurable, so the app can run on any free port without
 # editing this file:
-#   APP_HTTP_PORT                host port for the app   (default 8092)
+#   APP_HTTP_PORT                host and in-container port for the app   (default 8092)
 #   OPENCLINICA_PUBLIC_URL       URL the host reaches it (defaults to it)
 #
 # The database publishes nothing: it is reached from inside `data` only, and

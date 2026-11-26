@@ -254,11 +254,16 @@ PostgreSQL — and together they are the inventory a new sample needs:
 | `otel-collector.yaml` | file exporter into the `traces` volume |
 | `solve.yaml` | the agent's sandbox: the `toolbox` target, checkout at `settings.SOLVE_ROOT`, database sidecar |
 
-Published port: `${APP_HTTP_PORT:-<unused default>}` on the host, always to
-`8080` inside. The bench sets `APP_HTTP_PORT` to a free port per stack, so
-the default only serves a stack started by hand; the app's public-URL
-variable must default to `http://localhost:${APP_HTTP_PORT:-<default>}`
-so its own links follow the port the stack got.
+Published port: `${APP_HTTP_PORT:-<unused default>}` on the host and the
+same number inside: compose maps it one to one, passes `APP_HTTP_PORT` to
+the app, and the entrypoint makes the server listen on it (Tomcat: the
+HTTP connector's port in `server.xml`). A self-call built from the
+address the browser used then reaches the app from inside, as it would
+behind a real proxy. The bench sets `APP_HTTP_PORT` to a free port per
+stack, so the default only serves a stack started by hand; the app's
+public-URL variable must default to
+`http://localhost:${APP_HTTP_PORT:-<default>}` so its own links follow
+the port the stack got.
 
 - **One repository, one application.** The app is one project; the bench
   builds its one service from the tree under test, with the database as a
