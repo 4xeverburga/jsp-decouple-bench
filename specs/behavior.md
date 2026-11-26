@@ -124,7 +124,8 @@ home. A non-zero agent exit is recorded, not raised.
 ## 2. Score
 
 Scoring has **no Inspect sandbox**. For each case the score phase's solver,
-`replay.replayed_case`, on the host:
+`replay.replayed_case`, on the host calls `observe.observe` — the same
+function `capture` froze the golden with:
 
 1. starts a fresh compose project from `env/compose.yaml`, built from
    `BENCH_CHECKOUT`, and waits until every service is healthy or a one-shot
@@ -134,8 +135,10 @@ Scoring has **no Inspect sandbox**. For each case the score phase's solver,
 3. copies the collector's span file out to `out/traces/<slug>/`, waiting
    out its export batch, because `down -v` deletes the volume;
 4. removes the project (`down -v`), even on failure;
-5. leaves the observation — the flow's failure or artifacts, the table
-   deltas, the trace path — in the sample's store (`state.store["replay"]`).
+5. compares the flow's artifacts with the golden's (`cases.compare`) and
+   leaves the observation — the flow's failure or that comparison, the
+   table deltas, the trace path — in the sample's store
+   (`state.store["replay"]`).
 
 Then every scorer the manifest names judges that one run: the flow is
 played once, so two gates never grade two different runs of the app. A

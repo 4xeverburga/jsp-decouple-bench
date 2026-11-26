@@ -120,13 +120,13 @@ def drive(slug: str, case: str, base_url: str) -> tuple[dict, str | None]:
     return actual, shot
 
 
-def play(slug: str, case: str, base_url: str) -> dict:
-    """Run the case's flow and compare it with its frozen golden.
+def compare(slug: str, case: str, actual: dict, shot: str | None) -> dict:
+    """The artifacts a flow returned, against the case's frozen golden.
 
-    A difference is not left as a list of keys: the page it happened on is
-    written to out/evidence, because "the count differs" is not evidence.
+    A difference is not left as a list of keys: the page it happened on
+    stays staged under out/evidence, because "the count differs" is not
+    evidence.
     """
-    actual, shot = drive(slug, case, base_url)
     expect = golden(slug, case)["artifacts"]
     differing = [key for key in expect if actual.get(key) != expect[key]]
     return {"differing": differing, "screenshot": shot}

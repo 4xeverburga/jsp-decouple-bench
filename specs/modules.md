@@ -36,7 +36,8 @@ jsp-decouple-bench/
 | `compose.py` | where a sample's scoring stack and solve workspace are |
 | `stack.py` | starts and removes a case's compose project from the host |
 | `solves.py` | a run id, its diff, and the tree rebuilt from them |
-| `replay.py` | the score phase's solver: plays a case once, keeps what it saw |
+| `observe.py` | one play of a case on its own stack: rows before and after, artifacts, spans — shared by capture and replay |
+| `replay.py` | the score phase's solver: observes a case once, compares its page with the golden, keeps what it saw |
 | `capture.py` | freezes a case's golden and trace base from the pin |
 | `scorers/` | one package per gate, `metrics.all_must_pass`, and `observation` — where the replay leaves what it saw |
 
@@ -54,7 +55,8 @@ algorithm and the shape rules.
 ```
 main.py → cli → solves, stack, compose, seeds, settings
         → agents → inspect_ai / inspect_swe
-        → replay → stack, scorers.functional_parity (db, cases, delta)
+        → replay → observe → stack, scorers.functional_parity (db, cases, delta)
+        → capture → observe
         → scorers → settings   (a scorer never imports another scorer;
                                 both read the replay via scorers.observation)
 ```
@@ -80,7 +82,7 @@ layout.
 | file | role |
 |---|---|
 | `parity.py` | the scorer: browser artifacts and database rows, compared |
-| `cases.py` | play a case's flow (`drive`), read its golden, compare (`play`), read its hand-written contract |
+| `cases.py` | play a case's flow (`drive`), read its golden, compare artifacts with it (`compare`), read its hand-written contract |
 | `delta.py` | before/after table deltas — the algorithm the goldens froze, so capture and replay agree |
 | `db.py` | table snapshots through the case's stack (`compose exec`), in the manifest's dialect |
 | `tabular.py` | the TSV parser every SQL client shares |
@@ -103,9 +105,10 @@ identifier quoting differ.
 
 ## `src/bench/capture.py`
 
-The only writer of a golden. For each case: one stack from the pin,
-snapshot the tables `case.json` declares, play the flow once, snapshot
-again, and write `expect.json` (`sample`, `case`, `sample_commit`,
+The only writer of a golden. For each case, `observe` — the same play the
+score phase's replay makes — on a stack from the pin, with the tables
+`case.json` declares; a flow that fails or leaves no spans is refused.
+Then write `expect.json` (`sample`, `case`, `sample_commit`,
 `captured_at`, the `db` delta, the `artifacts`), and from the same run's
 spans `trace.json` (`trace_similarity.base.freeze`). It is host-side for the
 same reason scoring is, and it never compares against the golden it

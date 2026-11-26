@@ -27,12 +27,10 @@ from pathlib import Path
 
 import settings
 
-from .replay import keep_trace
+from .observe import observe
 from .scorers.functional_parity import db
-from .scorers.functional_parity.cases import contract, drive
-from .scorers.functional_parity.delta import delta_table
+from .scorers.functional_parity.cases import contract
 from .scorers.trace_similarity import base as trace_base
-from .stack import running
 
 
 def _say(line: str) -> None:
@@ -43,24 +41,23 @@ async def one(slug: str, case: str, commit: str, target: db.Target) -> Path:
     """Freeze one case: its stack, its flow once, its rows before and after."""
     declared = contract(slug, case)["db"]["tables"]
     tables = {spec["name"]: spec for spec in declared}
-    names = list(tables)
     _say(f"{case}: starting a stack")
-    async with running(slug, ()) as stack:
-        before = await db.snapshot(stack, target, names)
-        artifacts, shot = await asyncio.to_thread(
-            drive, slug, case, stack.base_url
+    seen = await observe(slug, case, tables, target)
+    if seen.failure is not None:
+        raise RuntimeError(
+            f"{case}: the flow failed on the pin, so there is no golden to "
+            f"freeze: {seen.failure['reason']} "
+            f"(page: {seen.failure['screenshot']})"
         )
-        after = await db.snapshot(stack, target, names)
-        collected = await keep_trace(stack, slug, case)
-    if collected is None:
+    if seen.trace is None:
         raise RuntimeError(
             f"{case}: the stack's collector left no spans; a base cannot be "
             f"frozen without them"
         )
     # A capture is by definition a run that "passed": the page it ended on
     # is interesting only when something differs.
-    if shot:
-        (settings.ROOT / shot).unlink(missing_ok=True)
+    if seen.screenshot:
+        (settings.ROOT / seen.screenshot).unlink(missing_ok=True)
     golden = {
         "sample": slug,
         "case": case,
@@ -70,23 +67,13 @@ async def one(slug: str, case: str, commit: str, target: db.Target) -> Path:
         "captured_at": datetime.now(timezone.utc).isoformat(
             timespec="seconds"
         ),
-        "db": {
-            "tables": {
-                name: delta_table(
-                    before[name],
-                    after[name],
-                    spec["key_columns"],
-                    spec["ignore_columns"],
-                )
-                for name, spec in tables.items()
-            }
-        },
-        "artifacts": artifacts,
+        "db": {"tables": seen.deltas},
+        "artifacts": seen.artifacts,
     }
     path = settings.SAMPLES / slug / "cases" / case / "expect.json"
     path.write_text(json.dumps(golden, indent=2) + "\n")
     _say(f"{case}: wrote {path.relative_to(settings.ROOT)}")
-    spans = trace_base.freeze(slug, case, commit, collected)
+    spans = trace_base.freeze(slug, case, commit, seen.trace)
     _say(f"{case}: wrote {spans.relative_to(settings.ROOT)}")
     return path
 
