@@ -156,6 +156,18 @@ solve_profiles:
     context_window: 1000000
     compaction_threshold: 0.9
 
+  react-kimi-k3.1-pro-medium:
+    agent: react
+    agent_model: none
+    agent_version: none
+    answer_model: openai-api/opencode-go/kimi-k3.1-pro
+    model_env: [OPENCODE_GO_API_KEY, OPENCODE_GO_BASE_URL]
+    reasoning_effort: medium
+    model_args: {}
+    compaction: CompactionAuto
+    context_window: 1000000
+    compaction_threshold: 0.9
+
   react-claude-sonnet-55-medium:
     agent: react
     agent_model: none
