@@ -15,7 +15,13 @@ import os
 import re
 
 LIST = "/admin/showCourse"
-FIRST = ["C语言从入门到放弃", "JAVA", "养猪入门", "从零开始入门炒股", "离散数学"]
+FIRST = [
+    "C语言从入门到放弃",
+    "JAVA",
+    "养猪入门",
+    "从零开始入门炒股",
+    "离散数学",
+]
 SECOND = ["软件工程", "线性代数"]
 
 

@@ -27,6 +27,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
+import yaml
 from dotenv import dotenv_values
 from inspect_ai.log import list_eval_logs, read_eval_log
 
@@ -186,7 +187,39 @@ def solve(manifest_id: int, profile: str, run: str, logs: str) -> None:
         )
         _require_success(logs, attempt, run, "solve")
     finally:
+        _reclaim(slug, workspace.parent)
         _discard(workspace.parent)
+
+
+def _reclaim(slug: str, path: Path) -> None:
+    """Hand back what the sandbox's root left in the mounted checkout.
+
+    The agent's builds write `target/` and logs as root over the bind
+    mount, and this user cannot unlink them: one Kimi solve left 76 MB
+    under the system's temporary directory. The solve image is on the
+    host by now and runs as root, so it chowns them back, offline.
+    """
+    image = yaml.safe_load(solve_compose(slug).read_text())["services"][
+        "workspace"
+    ]["image"]
+    subprocess.run(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            "--entrypoint",
+            "chown",
+            "-v",
+            f"{path}:/residue",
+            image,
+            "-R",
+            f"{os.getuid()}:{os.getgid()}",
+            "/residue",
+        ],
+        capture_output=True,
+    )
 
 
 def _discard(path: Path) -> None:

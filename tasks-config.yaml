@@ -77,6 +77,18 @@ solve_profiles:
     context_window: none
     compaction_threshold: none
 
+  opencode-v1-kimi-k3.1-pro-medium:
+    agent: opencode
+    agent_model: opencode-go/kimi-k3.1-pro
+    agent_version: 1.19.5
+    answer_model: openai-api/opencode-go/kimi-k3.1-pro
+    model_env: [OPENCODE_GO_API_KEY, OPENCODE_GO_BASE_URL]
+    reasoning_effort: medium
+    model_args: {}
+    compaction: none
+    context_window: none
+    compaction_threshold: none
+
   claude-code-sonnet-5.5-medium:
     agent: claude
     agent_model: claude-sonnet-5-5
