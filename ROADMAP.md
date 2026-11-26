@@ -64,10 +64,14 @@ What is done, what is next, and what is parked. Decisions of record live in
      the form withheld for karma, and the moderator answering its own
      question through the same-author confirmation. A fresh page
      withholds the form from both `AnsweredByValidator` refusals
-     (`canAnswer.tag`); only the stale tab reaches the server's. Left for
-     the per-case seed: `isUserWithKarma` false, a user with negative
-     karma. Omitted: the 403 of mamute's 15 s flood limit, whose message
-     counts the seconds left.
+     (`canAnswer.tag`); only the stale tab reaches the server's. Omitted:
+     the 403 of mamute's 15 s flood limit, whose message counts the
+     seconds left. Version 8 adds a seeded case, the moderator at karma -5
+     answering (`hasKarma()` false: the answer is saved, no karma is
+     added), and lists two ask-flow cases for `showQuestion`, the
+     removed question and the upvote banner, so every slice branch is
+     driven. No-op parity green; the coverage report is still to be
+     re-run and committed.
    - **`subject-flow`** — version 5: `AddNewSubjectServlet` slice lines
      37% → 50%, branches 28% → 33% (lower bound). New cases: a duplicate
      person ID, a duplicate study subject ID, every field invalid in one
@@ -90,10 +94,11 @@ What is done, what is next, and what is parked. Decisions of record live in
      examined course.
    - **`select-course-flow`** — version 5 adds selecting a course
      already selected: slice lines 89% → 93%, branches 3/6 by the lower
-     bound, 5/6 across cases. Left: a course priced 0, where the balance
-     does not change and is not written; the admin sets a price of 0
-     through the app's own course edit page, so it is a case, arranged
-     there.
+     bound, 5/6 across cases. Version 6 adds a seeded course priced 0:
+     enrolment is written, the student row is not, so all six branches
+     are driven across cases. A mutant of that `if` is equivalent by side
+     effects (writing an unchanged balance leaves the same row), so this
+     case adds coverage, not kill power, on that line.
    - **`teacher-mark-flow`** — done in version 5: grading a student who
      studied every period but took no exam, which the grade page offers
      (it checks progress, not the exam) and `markUI` refuses. Slice lines
@@ -124,21 +129,42 @@ What is done, what is next, and what is parked. Decisions of record live in
      cases: a question with `watching` cleared, a new tag with illegal
      characters refused by `TagsValidator` (the picker offers any typed
      term), and a question removed by a moderator's flag, which a
-     logged-out visitor gets as not found.
+     logged-out visitor gets as not found. Version 6 adds the other side
+     of `!isVotingEnough()`: a seed backdates the moderator's
+     `lastUpvote`, and the question page asks it for an upvote. Every
+     slice branch is driven; no-op parity green.
    - **`watch-flow`** — version 5 adds unwatching (watch, reload,
      click the eye). Still 100% of a 7-line controller: the toggle's two
      sides live in `WatcherDAO.addOrRemove`, which the instrument does
      not measure yet.
    - **`out-course-flow`**, **`recharge-flow`** — what they miss is a
      `catch` and a null check the UI cannot reach; leave as they are.
+     Both meet the bar: handlers 100%, and recharge's one gap
+     (`student != null`) is omitted.
+   - **`admin-teacher-flow`** (manifest 23, new) — `AdminController`'s
+     seven teacher handlers, nine cases: add, a taken name refused, edit,
+     edit of a teacher removed in another tab (not found), remove, remove
+     refused while the teacher has courses, search, the single-page pager
+     and a seeded second page. All nine captured; the no-op score
+     (determinism), the coverage report and a sensitivity check are still
+     to run before it is used for a solve. Next candidates from the same
+     controller: course edit/remove/search, student edit/search, as new
+     manifests so the scored ones stay comparable.
+
+   Read the reports' slice branches as a lower bound: JaCoCo's line
+   counts do not say which side a case took, so two cases taking
+   opposite sides each read 1/2. `exam-flow` is 4/4 across cases.
 
    The instrument itself, in the same order:
    - ~~a per-case seed~~ — done: a `seed.sql` beside a case's `flow.py`,
      loaded by `observe.arrange` on that case's stack only, after the
      stack is ready and before the first snapshot; the golden pins its
      `seed_sha256`. Users: `admin-course-flow` v6, `admin-student-flow`
-     v6. Still to write: `vote-flow`'s auto-removal, and `answer-flow`'s
-     negative-karma user;
+     v6, `select-course-flow` v6, `ask-flow` v6, `answer-flow` v8. A seed
+     may also update a row the app made, when a real user reaches that
+     state without help (a moderator idle for a week, or downvoted below
+     zero). mamute's first-boot moderator is `Users.id` 1001, not 1. Still
+     to write: `vote-flow`'s auto-removal;
    - omitted branches in `scope.covers`, keyed by the pin's source line,
      so the report reads covered / omitted / GAP per slice branch rather
      than a percentage;
@@ -156,8 +182,36 @@ What is done, what is next, and what is parked. Decisions of record live in
      doctored trees (a write left on the page side, a hop that only reads)
      per sample before a verdict is quoted;
    - list controller and DAO methods in `OTEL_INSTRUMENTATION_METHODS_INCLUDE`
-     if a case needs to see in-process calls, not just their SQL.
-3. **Prove the other CLI agents.** `opencode` 1.19.5 (DeepSeek V4.1 Flash,
+     if a case needs to see in-process calls, not just their SQL;
+   - a known false negative of `judge-deepseek-flash-high`: it fails a
+     tree whose backend drops a duplicate read (`SQL SELECT course x2` in
+     the base, once in the backend) as if a read stayed on the page side.
+     Seen twice: Kimi's `study-flow` run `e264b983`
+     (`next-past-last-period-stays`) and DeepSeek's `exam-flow` run
+     `4cb831c8` (`save-exam-marks-has-exam`). Re-judge both with
+     `judge-claude-opus-5.5-high` before quoting a trace verdict, and
+     tell the judge that fewer reads is not a crossed boundary.
+3. **Re-score every Tomcat run solved before 6fa9e62.** Until then a
+   scoring stack listened on 8080 inside and a free port outside, so a
+   self-call built from the request's address (`getServerPort()`, the
+   `Host` header, which most agents use) hit a dead port. DeepSeek's
+   `exam-flow` run `4cb831c8` went from 0 to parity 3/3 on re-score, and
+   both Kimi `admin-course-flow` runs from 0/3 to 3/3. Every earlier
+   score on online-study-system, openclinica, bookshopweb and roller is
+   suspect until re-scored; mamute (Jetty) did not change.
+4. **Kimi K3.1 Pro against DeepSeek V4.1 Flash, react agent.** Same
+   agent, provider and window; Kimi at `medium`, DeepSeek at `high`.
+   Scored so far (DeepSeek judge): `admin-course-flow` Kimi 3/3;
+   `study-flow` both parity 4/4, Kimi trace 3/4 (the false negative
+   above); `teacher-mark-flow` both 2/2; `admin-student-flow` v6 Kimi
+   parity 3/4, DeepSeek 4/4. Kimi's tree round-trips the legacy
+   `PagingVO` through JSON, and its `setTotalCount` turns the page count
+   back into a row count, so 12 students show one page. DeepSeek took
+   about twice the time and tokens. Open: fresh DeepSeek solves of the
+   slices it failed before (`exam`, `ask`, `answer`, `vote`, `watch`) and
+   Kimi on the same, re-judged with the Opus judge, two or three runs a
+   slice before a model is called stronger.
+5. **Prove the other CLI agents.** `opencode` 1.19.5 (DeepSeek V4.1 Flash,
    GLM 5.3 Flash), `claude` 2.1.311 (Opus 5.5, Sonnet 5.5) and native `react`
    have finished solves here; `codex` and `gemini` are registered in
    `src/harness/agents/registry.py` and have never run.
