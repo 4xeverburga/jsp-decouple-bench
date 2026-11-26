@@ -6,6 +6,7 @@ database delta). The golden is read as JSON; the flow is loaded by path,
 because a case is data: adding one must not mean touching Python.
 """
 
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -38,6 +39,20 @@ def contract(slug: str, case: str) -> dict:
     """
     case_dir = settings.SAMPLES / slug / "cases" / case
     return json.loads((case_dir / "case.json").read_text())
+
+
+def seed(slug: str, case: str) -> Path | None:
+    """The case's own rows, loaded after the dump; None if it has none."""
+    path = settings.SAMPLES / slug / "cases" / case / "seed.sql"
+    return path if path.is_file() else None
+
+
+def seed_digest(slug: str, case: str) -> str | None:
+    """What a golden records of the seed it was captured on."""
+    path = seed(slug, case)
+    if path is None:
+        return None
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _screenshot(page, slug: str, case: str) -> str | None:

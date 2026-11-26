@@ -14,8 +14,10 @@ import yaml
 from tabulate import tabulate
 
 import settings
+from src.core.cases import db
 from src.core.cases.cases import drive
 from src.core.compose import scoring_compose
+from src.core.observe import arrange
 from src.core.seeds import sample
 from src.core.stack import running
 
@@ -139,12 +141,14 @@ async def one(
     includes: str,
     home: Path,
     out: Path,
+    target: db.Target,
 ) -> Path:
     """Play one case on a stack of its own and keep its coverage XML."""
     layer = out / f"{case}.compose.yaml"
     service = override(slug, includes, home, layer)
     _say(f"{case}: starting a stack with the coverage agent")
     async with running(slug, (layer,)) as stack:
+        await arrange(stack, slug, case, target)
         _artifacts, shot = await asyncio.to_thread(
             drive, slug, case, stack.base_url
         )
@@ -465,8 +469,11 @@ def run(manifest: dict, cases: list[str], tree: Path) -> Path:
     home = tools()
     out = settings.COVERAGE / manifest["name"]
     out.mkdir(parents=True, exist_ok=True)
+    target = db.Target.from_options(manifest["bindings"]["db"]["options"])
     xmls = {
-        case: asyncio.run(one(slug, case, first, includes, home, out))
+        case: asyncio.run(
+            one(slug, case, first, includes, home, out, target)
+        )
         for case in cases
     }
     written = summarize(manifest, claims, found, xmls, out)

@@ -124,9 +124,12 @@ What is done, what is next, and what is parked. Decisions of record live in
      `catch` and a null check the UI cannot reach; leave as they are.
 
    The instrument itself, in the same order:
-   - a per-case seed: a `seed.sql` beside a case's `flow.py`, loaded by
-     `capture`, `score` and `coverage` on that case's stack only. Needed by
-     the `?page=2` cases and by `vote-flow`'s auto-removal;
+   - ~~a per-case seed~~ — done: a `seed.sql` beside a case's `flow.py`,
+     loaded by `observe.arrange` on that case's stack only, after the
+     stack is ready and before the first snapshot; the golden pins its
+     `seed_sha256`. Its first users are still to write: the `?page=2`
+     cases of `admin-student-flow` and `admin-course-flow`, `vote-flow`'s
+     auto-removal, and `answer-flow`'s negative-karma user;
    - omitted branches in `scope.covers`, keyed by the pin's source line,
      so the report reads covered / omitted / GAP per slice branch rather
      than a percentage;

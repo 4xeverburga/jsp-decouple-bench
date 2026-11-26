@@ -28,7 +28,7 @@ from pathlib import Path
 import settings
 
 from .cases import db
-from .cases.cases import contract
+from .cases.cases import contract, seed_digest
 from .observe import observe
 from .traces import base as trace_base
 
@@ -67,6 +67,8 @@ async def one(slug: str, case: str, commit: str, target: db.Target) -> Path:
         "captured_at": datetime.now(timezone.utc).isoformat(
             timespec="seconds"
         ),
+        # Replay refuses a golden whose seed has changed since.
+        "seed_sha256": seed_digest(slug, case),
         "db": {"tables": seen.deltas},
         "artifacts": seen.artifacts,
     }

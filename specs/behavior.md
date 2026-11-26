@@ -130,7 +130,8 @@ function `capture` froze the golden with:
 1. starts a fresh compose project from `env/compose.yaml`, built from
    `BENCH_CHECKOUT`, and waits until every service is healthy or a one-shot
    exited 0 (`stack.running`);
-2. snapshots the case's tables, plays `flow.py` with Playwright, snapshots
+2. loads the case's `seed.sql`, if it has one (`observe.arrange`), then
+   snapshots the case's tables, plays `flow.py` with Playwright, snapshots
    again;
 3. copies the collector's span file out to `out/traces/<slug>/`, waiting
    out its export batch, because `down -v` deletes the volume;

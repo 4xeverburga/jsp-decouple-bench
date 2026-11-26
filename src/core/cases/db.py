@@ -87,6 +87,47 @@ def _identifier(target: Target, name: str) -> str:
     return f'"{name}"'
 
 
+def _load_argv(target: Target) -> list[str]:
+    """The engine's client reading a script from stdin, stopping on error."""
+    if target.dialect == "mysql":
+        auth = [f"-u{target.user}"]
+        if target.password:
+            auth.append(f"-p{target.password}")
+        return [
+            "mysql",
+            *auth,
+            target.database,
+            "--default-character-set=utf8mb4",
+        ]
+    if target.dialect == "postgres":
+        return [
+            "psql",
+            "-X",
+            "-q",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "--single-transaction",
+            "-U",
+            target.user,
+            "-d",
+            target.database,
+        ]
+    raise ValueError(f"unknown database dialect: {target.dialect!r}")
+
+
+async def load(stack: Stack, target: Target, script: str) -> None:
+    """Run a SQL script in the case's database; any failed statement raises.
+
+    A seed that half-loaded is a baseline nobody captured, so a failure
+    is the bench's, never a verdict on the tree.
+    """
+    result = await stack.exec(target.service, _load_argv(target), script)
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"{target.dialect} seed failed: {result.stderr[:400]}"
+        )
+
+
 async def query(stack: Stack, target: Target, sql: str) -> list[dict]:
     result = await stack.exec(target.service, _argv(target, sql), "")
     if result.returncode != 0:

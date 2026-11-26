@@ -15,7 +15,7 @@ from uuid import uuid4
 import settings
 
 from .cases import db
-from .cases.cases import FlowAssertionError, drive
+from .cases.cases import FlowAssertionError, drive, seed
 from .cases.delta import delta_table
 from .stack import running
 
@@ -57,6 +57,23 @@ async def keep_trace(stack, slug: str, case: str) -> Path | None:
     return target if copied else None
 
 
+async def arrange(
+    stack, slug: str, case: str, target: db.Target
+) -> None:
+    """Load the case's `seed.sql`, if it has one, on its fresh stack.
+
+    After `running`, not inside the database's first boot: two samples'
+    schemas are created by the app itself, and their bootstrap one-shots
+    must have run. Before the first snapshot, so the seed is part of the
+    baseline and never of the delta. Every reader of a case's stack —
+    capture, replay, coverage — arranges it here, or a golden would be
+    graded against a database it was not frozen on.
+    """
+    script = seed(slug, case)
+    if script is not None:
+        await db.load(stack, target, script.read_text())
+
+
 async def observe(
     slug: str, case: str, specs: dict[str, dict], target: db.Target
 ) -> Observation:
@@ -71,6 +88,7 @@ async def observe(
     artifacts = None
     shot = None
     async with running(slug, ()) as stack:
+        await arrange(stack, slug, case, target)
         before = await db.snapshot(stack, target, list(specs))
         try:
             artifacts, shot = await asyncio.to_thread(

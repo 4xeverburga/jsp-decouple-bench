@@ -122,7 +122,7 @@ The only writer of a golden. For each case, `observe` — the same play the
 score phase's replay makes — on a stack from the pin, with the tables
 `case.json` declares; a flow that fails or leaves no spans is refused.
 Then write `expect.json` (`sample`, `case`, `sample_commit`,
-`captured_at`, the `db` delta, the `artifacts`), and from the same run's
+`captured_at`, `seed_sha256`, the `db` delta, the `artifacts`), and from the same run's
 spans `trace.json` (`traces.base.freeze`). It is host-side for the
 same reason scoring is, and it never compares against the golden it
 replaces.
@@ -170,11 +170,22 @@ case.json      # hand-written contract: e2e notes + the db table specs
 expect.json    # frozen golden (captured by `main.py capture`, never hand-written)
 trace.json     # frozen trace base, condensed spans of that same capture
 flow.py        # Playwright flow: `run(page, base_url) -> artifacts`
+seed.sql       # optional: the case's own rows, loaded after the dump
 images/        # optional step shots kept from an investigation
 ```
 
 `case.json` names the routes, the artifacts compared and, per table, the
-`key_columns` and `ignore_columns` of the delta. Credentials are read from
+`key_columns` and `ignore_columns` of the delta.
+
+A `seed.sql` arranges what the dump lacks (a second page of a list, five
+voters with karma) for that case alone. `observe.arrange` loads it through
+the `db` service's own client once the stack is ready — after the app has
+created its schema and the bootstrap one-shot has run — and before the
+first snapshot, so its rows are baseline, never delta. Capture, replay and
+coverage all arrange a case there. The golden records the seed's
+`seed_sha256`, and replay refuses a case whose `seed.sql` no longer
+matches it: a changed seed is a new case, captured again. No shared dump
+changes for one case. Credentials are read from
 the environment, never written in a case or a flow; `cli.capture` and
 `cli.score` inject the sample's `env/.env` into the process.
 

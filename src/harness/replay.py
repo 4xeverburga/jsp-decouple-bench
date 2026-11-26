@@ -24,7 +24,7 @@ from inspect_ai.solver import Generate, Solver, TaskState, solver
 
 import settings
 from src.core.cases import db
-from src.core.cases.cases import compare, golden
+from src.core.cases.cases import compare, golden, seed_digest
 from src.core.observe import observe
 
 from .scorers.observation import STORE_KEY
@@ -41,7 +41,14 @@ def replayed_case(slug: str, options: dict) -> Solver:
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         case = state.metadata["case"]
-        specs = golden(slug, case)["db"]["tables"]
+        frozen = golden(slug, case)
+        # Goldens frozen before seeds existed carry no key: no seed.
+        if frozen.get("seed_sha256") != seed_digest(slug, case):
+            raise RuntimeError(
+                f"{case}: seed.sql is not the one its golden was captured "
+                f"on; capture the case again"
+            )
+        specs = frozen["db"]["tables"]
         seen = await observe(slug, case, specs, target)
         state.store.set(
             STORE_KEY,
