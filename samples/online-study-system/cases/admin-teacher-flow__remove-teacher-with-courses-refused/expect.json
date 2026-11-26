@@ -1,0 +1,73 @@
+{
+  "sample": "online-study-system",
+  "case": "admin-teacher-flow__remove-teacher-with-courses-refused",
+  "sample_commit": "a48285db8cab4d0d5f986d64f1f06053136aa12a",
+  "captured_at": "2026-11-26T14:08:27+00:00",
+  "seed_sha256": null,
+  "db": {
+    "tables": {
+      "userlogin": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "password"
+        ],
+        "inserted": [],
+        "updated": [],
+        "deleted": []
+      },
+      "student": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [],
+        "inserted": [],
+        "updated": [],
+        "deleted": []
+      },
+      "teacher": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [],
+        "inserted": [],
+        "updated": [],
+        "deleted": []
+      },
+      "course": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [],
+        "inserted": [],
+        "updated": [],
+        "deleted": []
+      },
+      "student_course": {
+        "key_columns": [
+          "course_id",
+          "student_id"
+        ],
+        "ignore_columns": [],
+        "inserted": [],
+        "updated": [],
+        "deleted": []
+      },
+      "role": {
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [],
+        "inserted": [],
+        "updated": [],
+        "deleted": []
+      }
+    }
+  },
+  "artifacts": {
+    "dom_before": "<!DOCTYPE html><html><head> <title>\u6559\u5e08\u4fe1\u606f\u663e\u793a</title> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"> <!-- \u5f15\u5165bootstrap --> <link rel=\"stylesheet\" type=\"text/css\" href=\"/Examination_System/css/bootstrap.min.css\"> <!-- \u5f15\u5165JQuery bootstrap.js--> </head> <body> <!-- \u9876\u680f --> <!-- \u4e2d\u95f4\u4e3b\u4f53 --> <!-- \u9876\u680f --> <div class=\"container\" id=\"top\"> <div class=\"row\"> <div class=\"col-md-12\"> <!--\u52a0\u5165\u5bfc\u822a\u6761\u6807\u9898--> <div class=\"navbar navbar-default\" role=\"navigation\"> <div class=\"navbar-header\"> <a href=\"/Examination_System/admin/showCourse\" class=\"navbar-brand\">\u5728\u7ebf\u8bfe\u7a0b\u7ba1\u7406\u7cfb\u7edf(\u7ba1\u7406\u5458\u7aef)</a> </div> <form action=\"##\" class=\"navbar-form navbar-right\" rol=\"search\"> <div class=\"dropdown\"> <button class=\"btn btn-default dropdown-toggle\" type=\"button\" id=\"dropdownMenu1\" data-toggle=\"dropdown\" style=\"margin-right:20px\"> <span class=\"glyphicon glyphicon-user\">admin</span> <span class=\"caret\"></span> </button> <ul class=\"dropdown-menu\" role=\"menu\" aria-labelledby=\"dropdownMenu1\"> <li role=\"presentation\"> <a role=\"menuitem\" tabindex=\"-1\" href=\"/Examination_System/admin/logout\"> <span class=\"glyphicon glyphicon-off pull-right\"></span> \u6ce8\u9500 </a> </li> </ul> </div> </form> </div> </div> </div> </div> <div class=\"container\" id=\"content\"> <div class=\"row\"> <div class=\"col-md-2\"> <ul class=\"nav nav-pills nav-stacked\" id=\"nav\"> <li><a href=\"/Examination_System/admin/showCourse\">\u8bfe\u7a0b\u7ba1\u7406<span class=\"glyphicon glyphicon-book pull-right\"></span></a></li> <li><a href=\"/Examination_System/admin/showStudent\">\u5b66\u751f\u7ba1\u7406<span class=\"glyphicon glyphicon-user pull-right\"></span></a></li> <li class=\"active\"><a href=\"/Examination_System/admin/showTeacher\">\u6559\u5e08\u7ba1\u7406<span class=\"glyphicon glyphicon-user pull-right\"></span></a></li> <li><a href=\"/Examination_System/admin/userPasswordRest\">\u91cd\u7f6e\u5bc6\u7801<sapn class=\"glyphicon glyphicon-repeat pull-right\"></sapn></a></li> <li><a href=\"/Examination_System/admin/passwordRest\">\u4fee\u6539\u5bc6\u7801<sapn class=\"glyphicon glyphicon-pencil pull-right\"></sapn></a></li> <li><a href=\"/Examination_System/admin/logout\">\u9000\u51fa\u7cfb\u7edf<sapn class=\"glyphicon glyphicon-log-out pull-right\"></sapn></a></li> </ul> </div> <div class=\"col-md-10\"> <div class=\"panel panel-default\"> <div class=\"panel-heading\"> <div class=\"row\"> <h1 class=\"col-md-5\">\u6559\u5e08\u7ba1\u7406</h1> <form class=\"bs-example bs-example-form col-md-5\" role=\"form\" style=\"margin:20px 0 10px 0\" action=\"/Examination_System/admin/selectTeacher\" id=\"form1\" method=\"post\"> <div class=\"input-group\"> <input type=\"text\" class=\"form-control\" placeholder=\"\u8bf7\u8f93\u5165\u59d3\u540d\" name=\"name\"> <span class=\"input-group-addon btn\" onclick=\"document.getElementById('form1').submit\" id=\"sub\">\u641c\u7d22</span> </div> </form> <button class=\"btn btn-default col-md-2\" style=\"margin-top:20px\" onclick=\"location.href='/Examination_System/admin/addTeacher'\"> \u6dfb\u52a0\u6559\u5e08\u4fe1\u606f <sapn class=\"glyphicon glyphicon-plus\"> </sapn></button> </div> </div> <table class=\"table table-bordered\"> <thead> <tr> <th>\u5de5\u53f7</th> <th>\u59d3\u540d</th> <th>\u6027\u522b</th> <th>\u51fa\u751f\u65e5\u671f</th> <th>\u5b66\u5386</th> <th>\u6ce8\u518c\u65e5\u671f</th> <th>\u64cd\u4f5c</th> </tr> </thead> <tbody> <tr> <td>25</td> <td>\u674e\u8001\u5e08</td> <td>\u7537</td> <td>Nov 3, 2000</td> <td>\u672c\u79d1</td> <td>Nov 3, 2017</td> <td> <button class=\"btn btn-default btn-xs btn-info\" onclick=\"location.href='/Examination_System/admin/editTeacher?id=25'\">\u4fee\u6539</button> <a class=\"btn btn-danger btn-xs\" href=\"/Examination_System/admin/removeTeacher?id=25\" onclick=\"return checkConfirm()\">\u5220\u9664</a> </td> </tr> <tr> <td>26</td> <td>\u5f20\u8001\u5e08</td> <td>\u5973</td> <td>Nov 3, 2017</td> <td>\u7814\u7a76\u751f</td> <td>Nov 3, 2017</td> <td> <button class=\"btn btn-default btn-xs btn-info\" onclick=\"location.href='/Examination_System/admin/editTeacher?id=26'\">\u4fee\u6539</button> <a class=\"btn btn-danger btn-xs\" href=\"/Examination_System/admin/removeTeacher?id=26\" onclick=\"return checkConfirm()\">\u5220\u9664</a> </td> </tr> <tr> <td>37</td> <td>\u5218\u8001\u5e08</td> <td>\u7537</td> <td>Nov 13, 1997</td> <td>\u7855\u58eb</td> <td>Nov 5, 2017</td> <td> <button class=\"btn btn-default btn-xs btn-info\" onclick=\"location.href='/Examination_System/admin/editTeacher?id=37'\">\u4fee\u6539</button> <a class=\"btn btn-danger btn-xs\" href=\"/Examination_System/admin/removeTeacher?id=37\" onclick=\"return checkConfirm()\">\u5220\u9664</a> </td> </tr> <tr> <td>38</td> <td>\u66f9\u8001\u5e08</td> <td>\u7537</td> <td>Nov 12, 1958</td> <td>\u535a\u58eb</td> <td>Nov 5, 2017</td> <td> <button class=\"btn btn-default btn-xs btn-info\" onclick=\"location.href='/Examination_System/admin/editTeacher?id=38'\">\u4fee\u6539</button> <a class=\"btn btn-danger btn-xs\" href=\"/Examination_System/admin/removeTeacher?id=38\" onclick=\"return checkConfirm()\">\u5220\u9664</a> </td> </tr> </tbody> </table> <div class=\"panel-footer\"> <nav style=\"text-align:center\"> <ul class=\"pagination\"> <li class=\"disabled\"><a href=\"/Examination_System/admin/showTeacher?page=0\">\u00ab\u4e0a\u4e00\u9875</a></li> <li class=\"active\"><a href=\"\">1</a></li> <li class=\"disabled\"><a href=\"/Examination_System/admin/showTeacher?page=1\">\u6700\u540e\u4e00\u9875\u00bb</a></li> </ul> </nav> </div> </div> </div> </div> </div> <div class=\"container\" id=\"footer\"> <div class=\"row\"> <div class=\"col-md-12\"></div> </div> </div> </body></html>",
+    "error_text": "\u9519\u8bef\uff01\n\u8be5\u8001\u5e08\u5b58\u5728\u76f8\u5e94\u8bfe\u7a0b,\u65e0\u6cd5\u5220\u9664",
+    "dom_after": "<!DOCTYPE html><html><head> <title>\u6559\u5e08\u4fe1\u606f\u663e\u793a</title> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"> <!-- \u5f15\u5165bootstrap --> <link rel=\"stylesheet\" type=\"text/css\" href=\"/Examination_System/css/bootstrap.min.css\"> <!-- \u5f15\u5165JQuery bootstrap.js--> </head> <body> <!-- \u9876\u680f --> <!-- \u4e2d\u95f4\u4e3b\u4f53 --> <!-- \u9876\u680f --> <div class=\"container\" id=\"top\"> <div class=\"row\"> <div class=\"col-md-12\"> <!--\u52a0\u5165\u5bfc\u822a\u6761\u6807\u9898--> <div class=\"navbar navbar-default\" role=\"navigation\"> <div class=\"navbar-header\"> <a href=\"/Examination_System/admin/showCourse\" class=\"navbar-brand\">\u5728\u7ebf\u8bfe\u7a0b\u7ba1\u7406\u7cfb\u7edf(\u7ba1\u7406\u5458\u7aef)</a> </div> <form action=\"##\" class=\"navbar-form navbar-right\" rol=\"search\"> <div class=\"dropdown\"> <button class=\"btn btn-default dropdown-toggle\" type=\"button\" id=\"dropdownMenu1\" data-toggle=\"dropdown\" style=\"margin-right:20px\"> <span class=\"glyphicon glyphicon-user\">admin</span> <span class=\"caret\"></span> </button> <ul class=\"dropdown-menu\" role=\"menu\" aria-labelledby=\"dropdownMenu1\"> <li role=\"presentation\"> <a role=\"menuitem\" tabindex=\"-1\" href=\"/Examination_System/admin/logout\"> <span class=\"glyphicon glyphicon-off pull-right\"></span> \u6ce8\u9500 </a> </li> </ul> </div> </form> </div> </div> </div> </div> <div class=\"container\" id=\"content\"> <div class=\"row\"> <div class=\"col-md-2\"> <ul class=\"nav nav-pills nav-stacked\" id=\"nav\"> <li><a href=\"/Examination_System/admin/showCourse\">\u8bfe\u7a0b\u7ba1\u7406<span class=\"glyphicon glyphicon-book pull-right\"></span></a></li> <li><a href=\"/Examination_System/admin/showStudent\">\u5b66\u751f\u7ba1\u7406<span class=\"glyphicon glyphicon-user pull-right\"></span></a></li> <li class=\"active\"><a href=\"/Examination_System/admin/showTeacher\">\u6559\u5e08\u7ba1\u7406<span class=\"glyphicon glyphicon-user pull-right\"></span></a></li> <li><a href=\"/Examination_System/admin/userPasswordRest\">\u91cd\u7f6e\u5bc6\u7801<sapn class=\"glyphicon glyphicon-repeat pull-right\"></sapn></a></li> <li><a href=\"/Examination_System/admin/passwordRest\">\u4fee\u6539\u5bc6\u7801<sapn class=\"glyphicon glyphicon-pencil pull-right\"></sapn></a></li> <li><a href=\"/Examination_System/admin/logout\">\u9000\u51fa\u7cfb\u7edf<sapn class=\"glyphicon glyphicon-log-out pull-right\"></sapn></a></li> </ul> </div> <div class=\"col-md-10\"> <div class=\"panel panel-default\"> <div class=\"panel-heading\"> <div class=\"row\"> <h1 class=\"col-md-5\">\u6559\u5e08\u7ba1\u7406</h1> <form class=\"bs-example bs-example-form col-md-5\" role=\"form\" style=\"margin:20px 0 10px 0\" action=\"/Examination_System/admin/selectTeacher\" id=\"form1\" method=\"post\"> <div class=\"input-group\"> <input type=\"text\" class=\"form-control\" placeholder=\"\u8bf7\u8f93\u5165\u59d3\u540d\" name=\"name\"> <span class=\"input-group-addon btn\" onclick=\"document.getElementById('form1').submit\" id=\"sub\">\u641c\u7d22</span> </div> </form> <button class=\"btn btn-default col-md-2\" style=\"margin-top:20px\" onclick=\"location.href='/Examination_System/admin/addTeacher'\"> \u6dfb\u52a0\u6559\u5e08\u4fe1\u606f <sapn class=\"glyphicon glyphicon-plus\"> </sapn></button> </div> </div> <table class=\"table table-bordered\"> <thead> <tr> <th>\u5de5\u53f7</th> <th>\u59d3\u540d</th> <th>\u6027\u522b</th> <th>\u51fa\u751f\u65e5\u671f</th> <th>\u5b66\u5386</th> <th>\u6ce8\u518c\u65e5\u671f</th> <th>\u64cd\u4f5c</th> </tr> </thead> <tbody> <tr> <td>25</td> <td>\u674e\u8001\u5e08</td> <td>\u7537</td> <td>Nov 3, 2000</td> <td>\u672c\u79d1</td> <td>Nov 3, 2017</td> <td> <button class=\"btn btn-default btn-xs btn-info\" onclick=\"location.href='/Examination_System/admin/editTeacher?id=25'\">\u4fee\u6539</button> <a class=\"btn btn-danger btn-xs\" href=\"/Examination_System/admin/removeTeacher?id=25\" onclick=\"return checkConfirm()\">\u5220\u9664</a> </td> </tr> <tr> <td>26</td> <td>\u5f20\u8001\u5e08</td> <td>\u5973</td> <td>Nov 3, 2017</td> <td>\u7814\u7a76\u751f</td> <td>Nov 3, 2017</td> <td> <button class=\"btn btn-default btn-xs btn-info\" onclick=\"location.href='/Examination_System/admin/editTeacher?id=26'\">\u4fee\u6539</button> <a class=\"btn btn-danger btn-xs\" href=\"/Examination_System/admin/removeTeacher?id=26\" onclick=\"return checkConfirm()\">\u5220\u9664</a> </td> </tr> <tr> <td>37</td> <td>\u5218\u8001\u5e08</td> <td>\u7537</td> <td>Nov 13, 1997</td> <td>\u7855\u58eb</td> <td>Nov 5, 2017</td> <td> <button class=\"btn btn-default btn-xs btn-info\" onclick=\"location.href='/Examination_System/admin/editTeacher?id=37'\">\u4fee\u6539</button> <a class=\"btn btn-danger btn-xs\" href=\"/Examination_System/admin/removeTeacher?id=37\" onclick=\"return checkConfirm()\">\u5220\u9664</a> </td> </tr> <tr> <td>38</td> <td>\u66f9\u8001\u5e08</td> <td>\u7537</td> <td>Nov 12, 1958</td> <td>\u535a\u58eb</td> <td>Nov 5, 2017</td> <td> <button class=\"btn btn-default btn-xs btn-info\" onclick=\"location.href='/Examination_System/admin/editTeacher?id=38'\">\u4fee\u6539</button> <a class=\"btn btn-danger btn-xs\" href=\"/Examination_System/admin/removeTeacher?id=38\" onclick=\"return checkConfirm()\">\u5220\u9664</a> </td> </tr> </tbody> </table> <div class=\"panel-footer\"> <nav style=\"text-align:center\"> <ul class=\"pagination\"> <li class=\"disabled\"><a href=\"/Examination_System/admin/showTeacher?page=0\">\u00ab\u4e0a\u4e00\u9875</a></li> <li class=\"active\"><a href=\"\">1</a></li> <li class=\"disabled\"><a href=\"/Examination_System/admin/showTeacher?page=1\">\u6700\u540e\u4e00\u9875\u00bb</a></li> </ul> </nav> </div> </div> </div> </div> </div> <div class=\"container\" id=\"footer\"> <div class=\"row\"> <div class=\"col-md-12\"></div> </div> </div> </body></html>"
+  }
+}

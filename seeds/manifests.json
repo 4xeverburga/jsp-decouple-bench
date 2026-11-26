@@ -1,7 +1,7 @@
 [
   {
     "task_type": "decouple_slice",
-    "version": 7,
+    "version": 8,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -28,7 +28,10 @@
         "answer-flow__answer-without-watching",
         "answer-flow__moderator-answers-own-question",
         "answer-flow__own-question-form-withheld",
-        "answer-flow__second-answer-rejected"
+        "answer-flow__second-answer-rejected",
+        "answer-flow__negative-karma-earns-nothing",
+        "ask-flow__removed-question-not-found",
+        "ask-flow__upvote-banner-for-idle-voter"
       ],
       "routes": [
         "/sign-up",
@@ -84,6 +87,28 @@
             "request": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
             "move": "all"
           }
+        ],
+        "answer-flow__negative-karma-earns-nothing": [
+          {
+            "request": "SERVER POST /answer/{n} -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
+            "move": "all"
+          }
+        ],
+        "ask-flow__removed-question-not-found": [
+          {
+            "request": "SERVER GET /{n}-{slug} -> 404 renders /404.jsp",
+            "move": "all"
+          }
+        ],
+        "ask-flow__upvote-banner-for-idle-voter": [
+          {
+            "request": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
+            "move": "all"
+          }
         ]
       },
       "covers": {
@@ -119,7 +144,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 5,
+    "version": 6,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -145,7 +170,8 @@
         "ask-flow__illegal-tag-refused",
         "ask-flow__question-creation",
         "ask-flow__question-without-watching",
-        "ask-flow__removed-question-not-found"
+        "ask-flow__removed-question-not-found",
+        "ask-flow__upvote-banner-for-idle-voter"
       ],
       "routes": [
         "/sign-up",
@@ -182,6 +208,12 @@
         "ask-flow__removed-question-not-found": [
           {
             "request": "SERVER GET /{n}-{slug} -> 404 renders /404.jsp",
+            "move": "all"
+          }
+        ],
+        "ask-flow__upvote-banner-for-idle-voter": [
+          {
+            "request": "SERVER GET /{n}-{slug} -> 200 renders /WEB-INF/jsp/question/showQuestion.jsp",
             "move": "all"
           }
         ]
@@ -1636,5 +1668,178 @@
     "name": "dummy-file-roller",
     "id": 22,
     "sample": "roller"
+  },
+  {
+    "task_type": "decouple_slice",
+    "version": 1,
+    "solve_time_limit_minutes": 120,
+    "score_time_limit_minutes": 60,
+    "bindings": {
+      "stack": {
+        "adapter": "compose@1"
+      },
+      "browser": {
+        "adapter": "playwright@1"
+      },
+      "db": {
+        "adapter": "mysql@1",
+        "options": {
+          "dialect": "mysql",
+          "service": "db",
+          "user": "root",
+          "password": "root",
+          "database": "online_study_system"
+        }
+      }
+    },
+    "scope": {
+      "cases": [
+        "admin-teacher-flow__add-teacher-creates-user",
+        "admin-teacher-flow__add-teacher-name-taken-refused",
+        "admin-teacher-flow__edit-teacher-updates-row",
+        "admin-teacher-flow__edit-removed-teacher-not-found",
+        "admin-teacher-flow__remove-teacher-without-courses",
+        "admin-teacher-flow__remove-teacher-with-courses-refused",
+        "admin-teacher-flow__search-teacher-by-name",
+        "admin-teacher-flow__pager-links-on-single-page",
+        "admin-teacher-flow__second-page-lists-the-rest"
+      ],
+      "routes": [
+        "/login",
+        "/admin/showTeacher",
+        "/admin/addTeacher",
+        "/admin/editTeacher",
+        "/admin/removeTeacher",
+        "/admin/selectTeacher"
+      ],
+      "trace": {
+        "admin-teacher-flow__add-teacher-creates-user": [
+          {
+            "request": "SERVER GET /Examination_System/admin/addTeacher -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/admin/showTeacher -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER POST /Examination_System/admin/addTeacher -> 302",
+            "move": "all"
+          }
+        ],
+        "admin-teacher-flow__add-teacher-name-taken-refused": [
+          {
+            "request": "SERVER GET /Examination_System/admin/addTeacher -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER POST /Examination_System/admin/addTeacher -> 200",
+            "move": "all"
+          }
+        ],
+        "admin-teacher-flow__edit-teacher-updates-row": [
+          {
+            "request": "SERVER GET /Examination_System/admin/editTeacher -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/admin/showTeacher -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER POST /Examination_System/admin/editTeacher -> 302",
+            "move": "all"
+          }
+        ],
+        "admin-teacher-flow__edit-removed-teacher-not-found": [
+          {
+            "request": "SERVER GET /Examination_System/admin/editTeacher -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/admin/removeTeacher -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/admin/showTeacher -> 200",
+            "move": "all"
+          }
+        ],
+        "admin-teacher-flow__remove-teacher-without-courses": [
+          {
+            "request": "SERVER GET /Examination_System/admin/removeTeacher -> 302",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/admin/showTeacher -> 200",
+            "move": "all"
+          }
+        ],
+        "admin-teacher-flow__remove-teacher-with-courses-refused": [
+          {
+            "request": "SERVER GET /Examination_System/admin/removeTeacher -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER GET /Examination_System/admin/showTeacher -> 200",
+            "move": "all"
+          }
+        ],
+        "admin-teacher-flow__search-teacher-by-name": [
+          {
+            "request": "SERVER GET /Examination_System/admin/showTeacher -> 200",
+            "move": "all"
+          },
+          {
+            "request": "SERVER POST /Examination_System/admin/selectTeacher -> 200",
+            "move": "all"
+          }
+        ],
+        "admin-teacher-flow__pager-links-on-single-page": [
+          {
+            "request": "SERVER GET /Examination_System/admin/showTeacher -> 200",
+            "move": "all"
+          }
+        ],
+        "admin-teacher-flow__second-page-lists-the-rest": [
+          {
+            "request": "SERVER GET /Examination_System/admin/showTeacher -> 200",
+            "move": "all"
+          }
+        ]
+      },
+      "covers": {
+        "controllers": {
+          "com.wxs.controller.AdminController": {
+            "slice": [
+              "showTeacher",
+              "addTeacherUI",
+              "addTeacher",
+              "editTeacherUI",
+              "editTeacher",
+              "removeTeacher",
+              "selectTeacher"
+            ],
+            "handlers": {
+              "showTeacher": "admin-teacher-flow__pager-links-on-single-page",
+              "addTeacherUI": "admin-teacher-flow__add-teacher-creates-user",
+              "addTeacher": "admin-teacher-flow__add-teacher-creates-user",
+              "editTeacherUI": "admin-teacher-flow__edit-teacher-updates-row",
+              "editTeacher": "admin-teacher-flow__edit-teacher-updates-row",
+              "removeTeacher": "admin-teacher-flow__remove-teacher-without-courses",
+              "selectTeacher": "admin-teacher-flow__search-teacher-by-name"
+            },
+            "not_driven": {}
+          }
+        }
+      }
+    },
+    "scorers": [
+      "functional_parity",
+      "trace_similarity"
+    ],
+    "name": "admin-teacher-flow",
+    "id": 23,
+    "sample": "online-study-system"
   }
 ]

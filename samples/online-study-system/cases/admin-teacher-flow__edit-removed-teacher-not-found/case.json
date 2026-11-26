@@ -1,0 +1,77 @@
+{
+  "sample": "online-study-system",
+  "case": "admin-teacher-flow__edit-removed-teacher-not-found",
+  "e2e": {
+    "routes": [
+      "/login",
+      "/admin/showTeacher",
+      "/admin/removeTeacher",
+      "/admin/editTeacher"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "seeded",
+    "auth_notes": "The actor is the seeded admin, whose credentials come from the sample .env only.",
+    "credentials": "env:OSS_ADMIN_USER,OSS_ADMIN_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "dom_stale",
+      "error_text",
+      "dom_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "userlogin",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "password"
+        ]
+      },
+      {
+        "name": "student",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "teacher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "course",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student_course",
+        "key_columns": [
+          "course_id",
+          "student_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "role",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      }
+    ],
+    "notes": "Two tabs: the first keeps the list open, the second removes 刘老师 (id 37, no courses), so the delta deletes its teacher and userlogin rows. 修改 in the stale first tab then asks for a teacher that is gone and editTeacherUI refuses with 未找到该教师. Shiro sessions live in memory, not in the DB."
+  }
+}

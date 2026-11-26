@@ -1,0 +1,122 @@
+{
+  "sample": "mamute",
+  "case": "ask-flow__upvote-banner-for-idle-voter",
+  "e2e": {
+    "routes": [
+      "/sign-up",
+      "/ask",
+      "/logout",
+      "/login",
+      "/{question.id}-{sluggedTitle}"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "mixed",
+    "auth_notes": "The author signs up in-flow with fixed credentials. The viewer is the seeded moderator, credentials from the sample .env only.",
+    "credentials": "env:MAMUTE_ADMIN_USER,MAMUTE_ADMIN_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "question_url",
+      "banner_text",
+      "dom_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "Users",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpvote",
+          "nameLastTouchedAt"
+        ]
+      },
+      {
+        "name": "LoginMethod",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Question",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "lastUpdatedAt"
+        ]
+      },
+      {
+        "name": "QuestionInformation",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt",
+          "ip"
+        ]
+      },
+      {
+        "name": "Tag",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "QuestionInformation_Tag",
+        "key_columns": [
+          "QuestionInformation_id",
+          "tags_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Watcher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "createdAt"
+        ]
+      },
+      {
+        "name": "Question_Watchers",
+        "key_columns": [
+          "Question_id",
+          "watchers_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "Question_Interactions",
+        "key_columns": [
+          "Question_id",
+          "userInteractions_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "ReputationEvent",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "date"
+        ]
+      }
+    ],
+    "notes": "seed.sql sets the seeded moderator's (Users.id 1001, the only user at first boot) lastUpvote to 2017-01-01, the state any user reaches by not voting for a week: isVotingEnough() is then false and the question page shows the upvote banner. lastUpvote stays ignored in the delta. UserSession is excluded as auth plumbing."
+  }
+}

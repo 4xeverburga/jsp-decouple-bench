@@ -1,0 +1,76 @@
+{
+  "sample": "online-study-system",
+  "case": "admin-teacher-flow__add-teacher-name-taken-refused",
+  "e2e": {
+    "routes": [
+      "/login",
+      "/admin/showTeacher",
+      "/admin/addTeacher"
+    ],
+    "locale": "en-US",
+    "timezone_id": "UTC",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "auth": "seeded",
+    "auth_notes": "The actor is the seeded admin, whose credentials come from the sample .env only.",
+    "credentials": "env:OSS_ADMIN_USER,OSS_ADMIN_PASSWORD",
+    "requires_db_reset": true,
+    "artifacts": [
+      "dom_before",
+      "error_text",
+      "dom_after"
+    ]
+  },
+  "db": {
+    "tables": [
+      {
+        "name": "userlogin",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": [
+          "password"
+        ]
+      },
+      {
+        "name": "student",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "teacher",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "course",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "student_course",
+        "key_columns": [
+          "course_id",
+          "student_id"
+        ],
+        "ignore_columns": []
+      },
+      {
+        "name": "role",
+        "key_columns": [
+          "id"
+        ],
+        "ignore_columns": []
+      }
+    ],
+    "notes": "Refused: 李老师 is already a login name, so addTeacher throws before any write. The expected delta is empty and the assertion lives in the DOM. Shiro sessions live in memory, not in the DB."
+  }
+}
