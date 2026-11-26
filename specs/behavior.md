@@ -45,9 +45,9 @@ driver does this, and removes it after):
 
 ```bash
 export BENCH_CHECKOUT=$(uv run python -c "from pathlib import Path; \
-from src.bench import solves; \
+from src.core import solves; \
 print(solves.rebuild('<run_id>', Path('../mamute').resolve()))")
-set -a; . src/samples/mamute/env/.env; set +a   # the sample's credentials
+set -a; . samples/mamute/env/.env; set +a   # the sample's credentials
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=score -T run=<run_id> \
   -T profile=judge-claude-opus-5.5-high \
@@ -73,9 +73,9 @@ only a label.
 ```bash
 export RUN=$(uv run python -c 'import uuid; print(uuid.uuid4().hex)')
 export BENCH_CHECKOUT=$(uv run python -c "from pathlib import Path; import settings; \
-from src.bench import solves; from src.bench.seeds import pin; \
+from src.core import solves; from src.core.seeds import pin; \
 print(solves.materialise(Path(settings.checkout()), pin('mamute')))")
-export BENCH_SAMPLE_ENV=$PWD/src/samples/mamute/env SOLVE_ROOT=/workspace
+export BENCH_SAMPLE_ENV=$PWD/samples/mamute/env SOLVE_ROOT=/workspace
 set -a; . bench.env; set +a                          # the profile's keys
 uv run inspect eval main.py@decouple_slice \
   -T manifest_id=3 -T phase=solve -T run=$RUN \
@@ -107,7 +107,7 @@ task type.
 2. Inspect boots the **solve sandbox** from `env/solve.yaml`: the sample's
    toolchain, the workspace writable, and the database as a sidecar.
 3. The agent runs inside it with `work_order(manifest)` as its prompt:
-   the profile's `agent`, one entry of `src/agents/`, with the answerer model
+   the profile's `agent`, one entry of `src/harness/agents/`, with the answerer model
    passed directly to native `react` or bridged to a CLI agent.
 4. On cleanup, `solves.capture` writes `out/solves/<run_id>/`: `diff.patch`,
    what git would commit against the pin (deletions, new files, and edits
@@ -198,7 +198,7 @@ Per case, on the spans the replay kept:
    conjunction, computed by the scorer.
 
 No spans, no `trace.json`, or no parseable verdict raises: the case was
-not measured. The judge's prompt is `scorers/trace_similarity/judge.md`; it
+not measured. The judge's prompt is `src/harness/scorers/judge.md`; it
 is the bench's and never reaches the agent.
 
 `network_isolation` and `topology` are retired. The scoring stack is a single

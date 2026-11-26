@@ -74,7 +74,7 @@ judged by behaviour and traces rather than by a build.
 
 Each is pinned to a commit in `seeds/samples.json`. The stack that runs
 it — Containerfile, compose, `.env`, OpenTelemetry collector — lives in
-`src/samples/<sample>/env/`, never in the tree the agent gets.
+`samples/<sample>/env/`, never in the tree the agent gets.
 
 ## Task types
 
@@ -108,10 +108,13 @@ minutes.
 ## Layout
 
 ```
+main.py         the command line, and the tasks Inspect loads
+settings.py     every parameter, read from bench.env
 seeds/          samples, manifests and the work orders the agent reads
-src/samples/    per sample: env/ (the stack) and cases/ (flows + goldens)
-src/bench/      stack lifecycle, replay, scorers
-src/agents/     the agents a solve can run
+samples/        per sample: env/ (the stack) and cases/ (flows + goldens)
+src/core/       stacks, plays, goldens, deltas, spans; never imports Inspect
+src/harness/    the Inspect adapter: CLI, replay solver, scorers, agents
+src/controls/   how strong the cases are (code coverage), out of band
 specs/          modules and lifecycle
 AGENTS.md       the supervisor's contract — read before changing anything
 ```

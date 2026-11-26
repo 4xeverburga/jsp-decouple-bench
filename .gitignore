@@ -5,10 +5,10 @@ out-old/
 
 # secrets. The root bench.env is never tracked (nor a stray root .env). A
 # sample's env/.env is tracked because its values are synthetic (see
-# src/samples/<sample>/env/).
+# samples/<sample>/env/).
 bench.env
 .env
-!src/samples/*/env/.env
+!samples/*/env/.env
 
 # python
 __pycache__/

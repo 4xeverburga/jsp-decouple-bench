@@ -15,7 +15,7 @@ Two kinds of value live here, and only one of them is a parameter:
   `solve_profile` and `score_profile`.
 - **Run inputs**, from the process environment — the checkout under test
   and the sample's own env folder. They change from run to run and are set
-  by the driver (`src/bench/cli.py`), so they cannot live in a file. The
+  by the driver (`src/harness/cli.py`), so they cannot live in a file. The
   address a stack publishes is not one: every stack picks a free host port
   of its own and carries the URL it answers on (`stack.Stack.base_url`).
 
@@ -68,7 +68,7 @@ def _flag(name: str) -> bool:
 
 # --- storage. Relative to the repository root; never a per-run choice. -----
 SEEDS = ROOT / "seeds"
-SAMPLES = ROOT / "src" / "samples"
+SAMPLES = ROOT / "samples"
 OUT = ROOT / "out"
 EVIDENCE = OUT / "evidence"
 TRACES = OUT / "traces"
@@ -155,7 +155,7 @@ OTEL_AGENT_FLAG = "-javaagent:/opt/otel/javaagent.jar"
 # `tasks-config.yaml`, never `bench.env`. A profile is a choice, not a
 # secret, so it is tracked; `bench.env` only holds the credentials its
 # `model_env` names.
-# `src/agents/` defines the agents a solve profile can name.
+# `src/harness/agents/` defines the agents a solve profile can name.
 TASKS_CONFIG = ROOT / "tasks-config.yaml"
 SOLVE_PROFILE_KEYS = (
     "agent",

@@ -40,7 +40,7 @@ Native `react` does not create `session.tar`; its tool calls are in the
 Inspect eval log. For `opencode` the archive expands to `opencode.db`
 (SQLite), `log/` and `snapshot/` (the CLI's own git baseline of the
 workspace). The other CLIs keep their record elsewhere —
-`agents.state(name)` in `src/agents/` is the registry, and `_keep_agent`
+`agents.state(name)` in `src/harness/agents/` is the registry, and `_keep_agent`
 tars whatever directory it names.
 
 For a CLI agent, a missing or empty `session.tar` costs you the agent's own
@@ -55,10 +55,10 @@ eval log: it has no archive.
 ## The four things that make a run unusable
 
 1. **Answer key.** `seeds/` (manifests name the graded cases and routes),
-   `src/samples/**/cases/**` (`expect.json`, `case.json`), the bench repo
+   `samples/**/cases/**` (`expect.json`, `case.json`), the bench repo
    itself, and this sample's `out/audits`, `out/evidence`, `out/traces`.
 2. **Supervisor state.** The bench repository (`main.py`, `settings.py`,
-   `src/bench/`), its `.env`, its git history/commit messages, and any file
+   `src/`, `samples/`), its `.env`, its git history/commit messages, and any file
    the supervisor left in a directory the sandbox can see.
 3. **Another run or another sample.** `out/solves/<other>`, another
    sample's checkout.
@@ -172,7 +172,7 @@ grep -nEi '<case-name>|<expected-literal>' "$RUN/diff.patch"
 A literal from a golden pasted into the app, a branch on a seeded title, a
 route that skips a server-side rule, or a file the agent was never asked
 for are findings even when the trace looks clean. The goldens are
-`src/samples/<sample>/cases/*/expect.json` — compare against them by hand,
+`samples/<sample>/cases/*/expect.json` — compare against them by hand,
 never by copying them into the tree.
 
 ### 6. The ticket's boundary was actually crossed

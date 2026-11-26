@@ -31,14 +31,13 @@ from dotenv import dotenv_values
 from inspect_ai.log import list_eval_logs, read_eval_log
 
 import settings
-from src.bench_controls import coverage as measuring
-
-from . import capture as freezing
-from . import solves
-from .compose import sample_env, solve_compose
-from .seeds import manifest as load_manifest
-from .seeds import manifests as all_manifests
-from .seeds import pin
+from src.controls import coverage as measuring
+from src.core import capture as freezing
+from src.core import solves
+from src.core.compose import sample_env, solve_compose
+from src.core.seeds import manifest as load_manifest
+from src.core.seeds import manifests as all_manifests
+from src.core.seeds import pin
 
 TASKS = settings.ROOT / "main.py"
 
@@ -348,7 +347,7 @@ def coverage(manifest_id: int, cases: list[str]) -> None:
     """Measure how much of its controller a manifest's cases reach.
 
     Out of band: the pinned tree, one stack per case with a coverage agent
-    attached (`src/bench_controls/coverage.py`). Nothing it writes is read
+    attached (`src/controls/coverage.py`). Nothing it writes is read
     by a score.
     """
     chosen, wanted = _chosen_cases(manifest_id, cases)

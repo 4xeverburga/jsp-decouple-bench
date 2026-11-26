@@ -1,4 +1,4 @@
-"""`python -m src.bench <verb>` — the same line as `python main.py <verb>`."""
+"""`python -m src.harness <verb>`: the same line as `python main.py <verb>`."""
 
 import sys
 

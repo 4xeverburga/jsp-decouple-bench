@@ -11,7 +11,7 @@ description: >
 # Bench case principles — what a good case is
 
 A case is a *functional-parity test*: `case.json` + `flow.py` + the golden
-`expect.json`, under `src/samples/<sample>/cases/<slice>__<behavior>/`. A bad
+`expect.json`, under `samples/<sample>/cases/<slice>__<behavior>/`. A bad
 case poisons every agent score run against it. This skill is the "why and
 what good looks like"; **`add-bench-case` is the "how"** (procedure, capture,
 manifest wiring). `dataset-ready-check` rejects samples that deviate.
@@ -29,8 +29,8 @@ any previous run, manual session, or sibling case**.
 - **No state carryover**: the flow performs a real login every run. Never
   replay cookies or assume a logged-in browser.
 - **Credentials come from the sample's `env/.env`, never from the case**:
-  the sample tracks `src/samples/<slug>/env/.env.example` (every variable
-  the flows need) beside a `src/samples/<slug>/env/.env` of synthetic,
+  the sample tracks `samples/<slug>/env/.env.example` (every variable
+  the flows need) beside a `samples/<slug>/env/.env` of synthetic,
   deterministic values, so a stack boots identically for every researcher.
   The `.env` lives in the **bench**, never in the sample tree; `main.py
   capture` and `main.py score` read it and inject it into the process
@@ -38,7 +38,7 @@ any previous run, manual session, or sibling case**.
   `case.json`, `flow.py` or a prompt. **Real secrets (OAuth keys, API
   tokens) never go in a tracked `.env`.**
 - **Fresh DB per case, structurally**: the scorer starts one stack per
-  case and removes it (`src/bench/stack.py`), so `requires_db_reset` is a
+  case and removes it (`src/core/stack.py`), so `requires_db_reset` is a
   statement about the *design*, not a step anyone performs. Ids are stable
   because every boot replays the same seed. A case never depends on rows
   left by another case.

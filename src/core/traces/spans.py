@@ -37,7 +37,7 @@ DRIVER_NOISE = re.compile(
     r"^\s*(?:/\*.*?\*/\s*)?(?:SHOW\b|SELECT\s+@@)", re.IGNORECASE | re.DOTALL
 )
 # The stack's healthcheck: every sample's app service is probed with curl
-# (`src/samples/<slug>/env/compose.yaml`), every few seconds, during the
+# (`samples/<slug>/env/compose.yaml`), every few seconds, during the
 # flow too. Not the app's work, and it lands inside browser requests by
 # chance, so it is told apart by who sent it, not by when.
 PROBE = re.compile(r"^curl/")

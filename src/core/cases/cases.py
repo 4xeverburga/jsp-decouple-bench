@@ -1,6 +1,6 @@
 """Playing one case: its flow, its golden, and the difference.
 
-A case is a directory under `src/samples/<sample>/cases/`. Its `flow.py` drives
+A case is a directory under `samples/<sample>/cases/`. Its `flow.py` drives
 the app with Playwright and `expect.json` (the frozen artifacts and the
 database delta). The golden is read as JSON; the flow is loaded by path,
 because a case is data: adding one must not mean touching Python.

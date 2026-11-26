@@ -2,86 +2,102 @@
 
 ## Tree
 
+The root holds the driver, the configuration and the data; `src/` holds
+code and nothing else.
+
 ```
 jsp-decouple-bench/
 ├── main.py                  # the @task types AND the command line
 ├── settings.py              # EVERY parameter, read from bench.env; no defaults
-├── pyproject.toml, uv.lock  # dependencies live here and nowhere else
+├── tasks-config.yaml        # solve and score profiles
+├── pyproject.toml, uv.lock  # dependencies, ruff and the import contracts
 ├── AGENTS.md                # the supervisor's contract
 ├── ROADMAP.md               # direction
 ├── specs/                   # modules.md, behavior.md
 ├── seeds/                   # samples.json, task_types.json, manifests.json
 │   └── prompts/             # task_types/<name>.md, manifests/<name>.md
+├── samples/<slug>/          # one folder per sample; there will be many
+│   ├── cases/<case>/        # the answer key: case.json, flow.py, expect.json
+│   ├── coverage/            # what the controls measured of its cases
+│   └── env/                 # compose.yaml, Containerfile (+ .dockerignore),
+│                            # .env, solve.yaml, otel-collector.yaml
 ├── out/                     # gitignored; ALL output
 │   ├── solves/<run_id>/     # record.json, diff.patch, agent/
 │   ├── evals/               # Inspect logs
 │   ├── traces/<slug>/       # a case's spans, taken before `down -v`
 │   └── evidence/<slug>/     # a failing case's screenshot
 └── src/
-    ├── agents/              # native ReAct agent and CLI agent registry
-    ├── bench/               # the harness
-    └── samples/<slug>/      # one folder per sample; there will be many
-        ├── cases/<case>/    # the answer key: case.json, flow.py, expect.json
-        └── env/             # compose.yaml, Containerfile (+ .dockerignore),
-                             # .env, solve.yaml, otel-collector.yaml
+    ├── core/                # the bench's own logic; never imports Inspect
+    │   ├── cases/           # play a case, snapshot its rows, the delta
+    │   └── traces/          # spans condensed, the trace base
+    ├── controls/            # how strong the cases are, out of band
+    └── harness/             # the Inspect adapter
+        ├── scorers/         # one module per gate, and the reducer
+        └── agents/          # native ReAct agent and CLI agent registry
 ```
 
-## `src/bench`
+## Boundaries
+
+```
+main.py → harness → controls → core → settings
+                  ↘──────────────↗
+```
+
+- **`core` never imports Inspect**, and neither does `controls`. What
+  changes with Inspect's API is `harness`, and only `harness`.
+- **Nothing imports upward.** `core` knows neither `controls` nor
+  `harness`; `controls` does not know `harness`. The CLI reaches
+  `controls` for its `coverage` verb.
+- **`core.cases` and `core.traces` are independent**: rows and spans are
+  two verdicts on one play, joined only in `observe` and `capture`.
+- **A scorer never imports another scorer**; both read the replay through
+  `harness.scorers.observation`.
+- **Agents know nothing of cases, stacks or scoring.** `harness.agents`
+  imports none of `core`, `controls`, `scorers` or `replay`.
+- **No `..` imports.** Inside a package a module says `.x`; across one it
+  names the package (`src.core.stack`), so a crossing is visible in the
+  import line.
+
+These are enforced, not advised: `uv run ruff check .` bans `inspect_ai`
+and `inspect_swe` outside `main.py` and `src/harness/` (`TID251`) and
+parent-relative imports everywhere (`TID252`); `uv run lint-imports`
+checks the contracts in `pyproject.toml`, following indirect chains too,
+so `core` importing a helper that imports Inspect breaks the build as
+surely as importing it directly. A new boundary is a new contract there.
+
+`settings.py` sits at the repository root, not in `src/`, because every
+module imports it and it must not depend on the package it configures. It
+reads `bench.env` once and exposes the parameters as module values; a
+missing key is an error, never a fallback. `settings` and `core.seeds` are
+leaves: `settings` is importable from anywhere because the repository
+root is on `sys.path` at every entry point.
+
+Inspect owns the agent's sandbox, the run lifecycle and the logs. The bench
+keeps what no framework supplies: the work order, the case corpus, the delta
+algorithm and the shape rules — all of it in `core`.
+
+## `src/core`
 
 | module | owns |
 |---|---|
-| `cli.py` | `task`, `score`, `manifests`; the run id the two phases share |
 | `seeds.py` | sources, manifests, task types, and `work_order()` |
-| `samples.py` | `(source, case)` pairs as Inspect `Sample`s |
 | `compose.py` | where a sample's scoring stack and solve workspace are |
 | `stack.py` | starts and removes a case's compose project from the host |
 | `solves.py` | a run id, its diff, and the tree rebuilt from them |
 | `observe.py` | one play of a case on its own stack: rows before and after, artifacts, spans — shared by capture and replay |
-| `replay.py` | the score phase's solver: observes a case once, compares its page with the golden, keeps what it saw |
 | `capture.py` | freezes a case's golden and trace base from the pin |
-| `scorers/` | one package per gate, `metrics.all_must_pass`, and `observation` — where the replay leaves what it saw |
+| `cases/` | playing and grading a case; nothing else reads the case layout |
+| `traces/` | the collector's spans, condensed, and the frozen base |
 
-`settings.py` sits at the repository root, not in `src/bench`, because every
-module imports it and it must not depend on the package it configures. It
-reads `bench.env` once and exposes the parameters as module values; a missing key
-is an error, never a fallback.
-
-Inspect owns the agent's sandbox, the run lifecycle and the logs. The bench
-keeps what no framework supplies: the work order, the case corpus, the delta
-algorithm and the shape rules.
-
-## Dependency rule
-
-```
-main.py → cli → solves, stack, compose, seeds, settings
-        → agents → inspect_ai / inspect_swe
-        → replay → observe → stack, scorers.functional_parity (db, cases, delta)
-        → capture → observe
-        → scorers → settings   (a scorer never imports another scorer;
-                                both read the replay via scorers.observation)
-```
-
-- `settings` and `seeds` are leaves. `settings` is importable from anywhere
-  because the repository root is on `sys.path` at every entry point.
 - Only `stack.py` talks to `docker compose` for scoring; scorers ask it for
   a running stack and never shell out themselves.
-- `src/agents/react.py` builds the Inspect-native ReAct agent using
-  sandbox-backed shell and text-editor tools. `src/agents/registry.py` is
-  the table of every agent a solve can run — the `inspect_swe` CLI rows and
-  their model bridge, plus the native row, which has no bridge (`param=None`).
-- Agent implementations are selected through `src/agents/`; the harness
-  does not depend on a particular CLI agent.
-- Nothing under `src/samples/` is Python the bench imports. A flow is loaded
-  **by path**, so adding a case never means touching `src/bench`.
+- Nothing under `samples/` is Python the bench imports. A flow is loaded
+  **by path**, so adding a case never means touching `src/`.
 
-## `src/bench/scorers/functional_parity/`
-
-The gate and the machinery that grades a case; nothing else reads the case
-layout.
+### `src/core/cases/`
 
 | file | role |
 |---|---|
-| `parity.py` | the scorer: browser artifacts and database rows, compared |
 | `cases.py` | play a case's flow (`drive`), read its golden, compare artifacts with it (`compare`), read its hand-written contract |
 | `delta.py` | before/after table deltas — the algorithm the goldens froze, so capture and replay agree |
 | `db.py` | table snapshots through the case's stack (`compose exec`), in the manifest's dialect |
@@ -93,28 +109,60 @@ layout.
 driven into the same unaligned TSV shape, so only the argv and the
 identifier quoting differ.
 
-## `src/bench/scorers/trace_similarity/`
+### `src/core/traces/`
 
 | file | role |
 |---|---|
-| `similarity.py` | the scorer: a deterministic floor, then the judge |
 | `spans.py` | the collector's OTLP file, condensed to a request tree, rendered as text |
 | `base.py` | the case's trace base, `trace.json`, frozen beside `expect.json` |
-| `judge.py` | the score profile's model, the verdict schema, the conjunction |
-| `judge.md` | the judge's prompt — the bench's, never the agent's |
 
-## `src/bench/capture.py`
+### `src/core/capture.py`
 
 The only writer of a golden. For each case, `observe` — the same play the
 score phase's replay makes — on a stack from the pin, with the tables
 `case.json` declares; a flow that fails or leaves no spans is refused.
 Then write `expect.json` (`sample`, `case`, `sample_commit`,
 `captured_at`, the `db` delta, the `artifacts`), and from the same run's
-spans `trace.json` (`trace_similarity.base.freeze`). It is host-side for the
+spans `trace.json` (`traces.base.freeze`). It is host-side for the
 same reason scoring is, and it never compares against the golden it
 replaces.
 
-## `src/samples/<slug>/cases/<case>/`
+## `src/controls`
+
+Measures the cases themselves (handler, line and branch coverage of a
+manifest's slice); it takes no part in a solve or a score. See its
+`README.md`.
+
+## `src/harness`
+
+| module | owns |
+|---|---|
+| `cli.py` | `task`, `score`, `capture`, `coverage`, `manifests`; the run id the two phases share |
+| `samples.py` | `(source, case)` pairs as Inspect `Sample`s |
+| `replay.py` | the score phase's solver: `observe`s a case once, compares its page with the golden, keeps what it saw in the Task store |
+| `label.py` | the stand-in eval model a score log is labelled with: the solve's `answer_model` |
+| `scorers/` | one module per gate, `metrics.all_must_pass`, and `observation` — where the replay leaves what it saw |
+| `agents/` | the agents a solve can run |
+
+- `agents/react.py` builds the Inspect-native ReAct agent using
+  sandbox-backed shell and text-editor tools. `agents/registry.py` is
+  the table of every agent a solve can run — the `inspect_swe` CLI rows and
+  their model bridge, plus the native row, which has no bridge (`param=None`).
+- Agent implementations are selected through `agents/`; the harness
+  does not depend on a particular CLI agent.
+
+### `src/harness/scorers/`
+
+| file | role |
+|---|---|
+| `parity.py` | `functional_parity`: browser artifacts and database rows, compared |
+| `similarity.py` | `trace_similarity`: a deterministic floor, then the judge |
+| `judge.py` | the score profile's model, the verdict schema, the conjunction |
+| `judge.md` | the judge's prompt — the bench's, never the agent's |
+| `metrics.py` | `all_must_pass`, the gate's reducer |
+| `observation.py` | the Task store key the replay writes and scorers read |
+
+## `samples/<slug>/cases/<case>/`
 
 ```
 case.json      # hand-written contract: e2e notes + the db table specs
@@ -130,7 +178,7 @@ images/        # optional step shots kept from an investigation
 the environment, never written in a case or a flow; `cli.capture` and
 `cli.score` inject the sample's `env/.env` into the process.
 
-## `src/samples/<slug>/env/`
+## `samples/<slug>/env/`
 
 The stack is the bench's, never the tree's: the agent gets a checkout with no
 stack file in it. The pin carries none — `solves.materialise` refuses a tree

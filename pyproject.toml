@@ -19,10 +19,61 @@ target-version = "py313"
 line-length = 79
 
 [tool.ruff.lint]
-# E/W = pycodestyle (PEP 8), F = pyflakes, N = pep8-naming, I = import order
-select = ["E", "W", "F", "N", "I"]
+# E/W = pycodestyle (PEP 8), F = pyflakes, N = pep8-naming, I = import order,
+# TID = tidy imports: no `..` imports, and Inspect only in the adapter
+select = ["E", "W", "F", "N", "I", "TID"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"inspect_ai".msg = "Inspect belongs to src/harness/; src/core never sees it"
+"inspect_swe".msg = "agents belong to src/harness/agents/"
+
+[tool.ruff.lint.per-file-ignores]
+"main.py" = ["TID251"]
+"src/harness/**" = ["TID251"]
+
+# Package boundaries, checked with `uv run lint-imports`. Unlike ruff, these
+# follow indirect chains: core importing a module that imports Inspect fails.
+[tool.importlinter]
+root_packages = ["src"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "harness adapts controls and core; neither reaches back up"
+type = "layers"
+layers = ["src.harness", "src.controls", "src.core"]
+
+[[tool.importlinter.contracts]]
+name = "core and controls never import Inspect"
+type = "forbidden"
+source_modules = ["src.core", "src.controls"]
+forbidden_modules = ["inspect_ai", "inspect_swe"]
+
+[[tool.importlinter.contracts]]
+name = "a case's rows and its spans are graded apart"
+type = "independence"
+modules = ["src.core.cases", "src.core.traces"]
+
+[[tool.importlinter.contracts]]
+name = "a scorer never imports another scorer"
+type = "independence"
+modules = ["src.harness.scorers.parity", "src.harness.scorers.similarity"]
+
+[[tool.importlinter.contracts]]
+name = "agents solve; they know nothing of cases, stacks or scoring"
+type = "forbidden"
+source_modules = ["src.harness.agents"]
+forbidden_modules = [
+    "src.core",
+    "src.controls",
+    "src.harness.scorers",
+    "src.harness.replay",
+]
 
 [dependency-groups]
 dev = [
+    "import-linter>=2.17",
     "ruff>=0.17.3",
 ]

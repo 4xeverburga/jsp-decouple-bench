@@ -14,9 +14,9 @@ from uuid import uuid4
 
 import settings
 
-from .scorers.functional_parity import db
-from .scorers.functional_parity.cases import FlowAssertionError, drive
-from .scorers.functional_parity.delta import delta_table
+from .cases import db
+from .cases.cases import FlowAssertionError, drive
+from .cases.delta import delta_table
 from .stack import running
 
 

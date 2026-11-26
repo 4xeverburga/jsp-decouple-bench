@@ -1,6 +1,6 @@
 """Where the score phase's replay leaves what it saw, for every scorer.
 
-A leaf on purpose: the replay (`src/bench/replay.py`) writes it and the
+A leaf on purpose: the replay (`src/harness/replay.py`) writes it and the
 scorers read it, and neither may import the other.
 """
 

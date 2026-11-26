@@ -2,7 +2,7 @@
 
 Each case is its own Sample and gets its own stack, because the goldens
 were captured against a pristine database and a case that ran after another
-would see its rows. The score phase's solver (`src/bench/replay.py`) starts
+would see its rows. The score phase's solver (`src/harness/replay.py`) starts
 that stack, plays the flow once and leaves what it saw; this only compares.
 
 Two things are compared: the browser artifacts, and the database delta the
@@ -18,11 +18,11 @@ from inspect_ai.scorer import CORRECT, INCORRECT, Score, Target, scorer
 from inspect_ai.solver import TaskState
 
 import settings
+from src.core.cases.cases import golden
+from src.core.cases.delta import canonical, summary
 
-from ..metrics import all_must_pass
-from ..observation import observation
-from .cases import golden
-from .delta import canonical, summary
+from .metrics import all_must_pass
+from .observation import observation
 
 
 def _db_differences(

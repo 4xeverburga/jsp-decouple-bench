@@ -14,10 +14,10 @@ import yaml
 from tabulate import tabulate
 
 import settings
-from src.bench.compose import scoring_compose
-from src.bench.scorers.functional_parity.cases import drive
-from src.bench.seeds import sample
-from src.bench.stack import running
+from src.core.cases.cases import drive
+from src.core.compose import scoring_compose
+from src.core.seeds import sample
+from src.core.stack import running
 
 
 def _say(line: str) -> None:

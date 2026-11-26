@@ -1,4 +1,4 @@
-"""functional_parity/artifacts.py — make browser artifacts replayable.
+"""cases/artifacts.py — make browser artifacts replayable.
 
 Artifacts come from a live stack, so they contain values that belong to
 *this* run rather than to the behaviour being graded:

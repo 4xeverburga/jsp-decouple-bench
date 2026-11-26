@@ -98,7 +98,7 @@ the pristine upstream state. A rewritten history destroys that.
   sample build, not references to its origin.
 - **The pin carries no stack file.** The stack (compose, Containerfile,
   `.env`, the collector) is the harness's and lives in the bench under
-  `src/samples/<sample>/env/`; a copy in the tree tells the agent how the
+  `samples/<sample>/env/`; a copy in the tree tells the agent how the
   app is run — service names, the database host, the image its toolchain
   comes from. Delete them in the sample repo and re-pin; never expect the
   runner to strip them, because it refuses a tree that still has one
@@ -112,7 +112,7 @@ the pristine upstream state. A rewritten history destroys that.
   refuses a pin that carries one: a legacy project that ships one tells
   the agent somebody builds it in a container. Move it to the bench
   instead, as `Containerfile.dockerignore` beside
-  `src/samples/<slug>/env/Containerfile` — BuildKit reads a Dockerfile's
+  `samples/<slug>/env/Containerfile` — BuildKit reads a Dockerfile's
   own ignore file in place of the context's, even when the Dockerfile
   lives outside the context (a symlinked one is not read). There is one
   Containerfile, so there is one ignore: the scoring image and the
@@ -148,7 +148,7 @@ the pristine upstream state. A rewritten history destroys that.
   must be empty apart from upstream code that happens to use the words
   (`evaluate`, `Task`, vendored `benchmark/` dirs). Authoring instructions
   never land in this tree: the stack is the bench's
-  (`src/samples/<slug>/env/`), so there is no compose file here for them
+  (`samples/<slug>/env/`), so there is no compose file here for them
   to ride in on, and whatever you do add reads like a normal
   application's. Re-pin after scrubbing; a scrub that is not in the pinned
   commit changes nothing for the agent.
@@ -202,7 +202,7 @@ agent eval depend on the environment behaving identically.
   "command not found", which reads as "the JDK is not installed" and
   sends an agent hunting for one. A toolbox that symlinks `jar`/`javap`
   but not `java`/`javac` produces exactly that confusion; copy the symlink
-  loop from the `toolbox` stage of any `src/samples/*/env/Containerfile`.
+  loop from the `toolbox` stage of any `samples/*/env/Containerfile`.
   ```bash
   docker run --rm <toolbox image> bash -lc \
     'for t in java javac mvn node mysql; do
@@ -237,8 +237,8 @@ agent eval depend on the environment behaving identically.
 
 Nothing about how the app runs is committed here. The scoring stack, the
 Containerfile, the `.env` and the OpenTelemetry collector live in the bench
-under `src/samples/<slug>/env/`, and `solves.materialise` refuses a pin
-that carries one (§1). The samples under `src/samples/*/env/` are the
+under `samples/<slug>/env/`, and `solves.materialise` refuses a pin
+that carries one (§1). The samples under `samples/*/env/` are the
 worked examples — one native process behind MySQL, one WAR behind
 PostgreSQL — and together they are the inventory a new sample needs:
 
@@ -282,7 +282,7 @@ pin is created and before any golden or trace base is captured: the agent
 is part of the pinned environment, not an afterthought.
 
 - **Attach it from outside the app.** Add the agent in the sample's
-  bench-owned `src/samples/<slug>/env/`: the `Containerfile` downloads and
+  bench-owned `samples/<slug>/env/`: the `Containerfile` downloads and
   verifies the jar, and `compose.yaml` passes the JVM flag (through the
   variable the app's launcher honours — `JAVA_TOOL_OPTIONS`, `MAVEN_OPTS`
   when the app runs via `mvn exec:java`, `CATALINA_OPTS` for Tomcat). Do not
@@ -294,7 +294,7 @@ is part of the pinned environment, not an afterthought.
   be supported by the agent (Java 8+); if not, record that in the
   assessment and stop — the sample cannot feed `trace_similarity`.
 - **Configure only through `OTEL_*` variables** in the sample's
-  `src/samples/<slug>/env/.env` (tracked, synthetic) and document them in
+  `samples/<slug>/env/.env` (tracked, synthetic) and document them in
   that folder's `.env.example`:
   `OTEL_SERVICE_NAME=<sample slug>`, `OTEL_TRACES_SAMPLER=always_on`,
   `OTEL_METRICS_EXPORTER=none`, `OTEL_LOGS_EXPORTER=none`, and the traces
@@ -424,7 +424,7 @@ run has to be remembered and exported by hand.
       empty apart from intentional, documented changes).
 - [ ] `compose.yaml` follows the check in §1: the pin carries no stack
       file — `.dockerignore` included — and the scoring stack is the
-      bench's (`src/samples/<slug>/env/`).
+      bench's (`samples/<slug>/env/`).
 - [ ] The new pin is on `main`, merged through a PR: `git branch -r
       --contains <pin>` lists `origin/main`.
 - [ ] On the pristine pin `functional_parity` **passes** (the app still

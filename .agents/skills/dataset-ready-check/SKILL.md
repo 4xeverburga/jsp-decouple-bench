@@ -19,7 +19,7 @@ agent score produced on it would be meaningless. Write the result to
 
 **Prerequisites:** `prepare-repo-for-dataset` is done (history protected,
 runnable, no origin pointer, OTel agent installed in the bench's
-`Containerfile`), the sample has a stack in `src/samples/<slug>/env/`, and
+`Containerfile`), the sample has a stack in `samples/<slug>/env/`, and
 the cases were authored with `add-bench-case`.
 
 **What the commands are now.** The bench is `main.py` (verbs `task`,
@@ -54,13 +54,13 @@ model that answers and the effort — is the `solve_profiles` entry
 `score_profiles` entry `--score-profile` names. None of it is passed as a flag, so a run cannot be described
 by its command line alone: read `out/solves/<run>/record.json`.
 
-Scoring drives the stack from the host (`src/bench/stack.py`): one compose
+Scoring drives the stack from the host (`src/core/stack.py`): one compose
 project per case, started and removed by the scorer, `[stack]` progress on
 stderr. A first build of a sample is minutes long.
 
 ## 1. It boots from the pin, on the bench's stack
 
-- `src/samples/<slug>/env/` holds `compose.yaml`, `Containerfile`,
+- `samples/<slug>/env/` holds `compose.yaml`, `Containerfile`,
   `Containerfile.dockerignore`, `entrypoint.sh`, `.env`, `.env.example`,
   `otel-collector.yaml` and `solve.yaml`. Nothing of it is in the sample
   tree.
@@ -97,8 +97,8 @@ pin, keep it as a run, keep its diff empty:
 uv run python - <<'PY'
 from pathlib import Path
 import shutil
-from src.bench import solves
-from src.bench.seeds import pin
+from src.core import solves
+from src.core.seeds import pin
 
 slug, run = "mamute", "noop-mamute"
 workspace = solves.materialise(Path("../mamute").resolve(), pin(slug))
@@ -136,7 +136,7 @@ Run the capture a second time and compare. `captured_at` is provenance and
 the only field allowed to move:
 
 ```bash
-git diff -U0 -- src/samples/<slug>/cases/<case>/expect.json \
+git diff -U0 -- samples/<slug>/cases/<case>/expect.json \
   | grep '^[+-]' | grep -v captured_at     # must print nothing
 ```
 

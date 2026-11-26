@@ -1,4 +1,4 @@
-"""functional_parity/delta.py — before/after table deltas.
+"""cases/delta.py — before/after table deltas.
 
 Ported verbatim in behaviour from the pre-rewrite capture tooling: the
 `expected_delta.json` files were produced by exactly this algorithm, so the

@@ -1,6 +1,6 @@
 """Where a sample's stack and solve workspace are defined.
 
-Both live in the bench, under `src/samples/<sample>/env/`, never in the
+Both live in the bench, under `samples/<sample>/env/`, never in the
 sample tree: the agent gets a checkout with no container files in it.
 """
 

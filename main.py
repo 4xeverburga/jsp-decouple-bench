@@ -5,8 +5,9 @@
 
 Inspect loads tasks from a *file* and finds them by parsing that file's AST
 for `@task` decorators, so the task definitions live here, at the repository
-root, and nothing else does. The bench itself is `src/bench/`, and the verbs
-that drive these tasks are `src/bench/cli.py`.
+root, and nothing else does. The bench's own logic is `src/core/`, its
+Inspect adapter `src/harness/`, and the verbs that drive these tasks are
+`src/harness/cli.py`.
 
 Every task is addressed by a **manifest id** — the unit of work, naming a
 sample, a slice, a task type and the cases that slice is graded against. The
@@ -40,14 +41,14 @@ from inspect_ai.util import sandbox as host_sandbox
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import settings  # noqa: E402
-from src import agents  # noqa: E402
-from src.bench import samples, solves  # noqa: E402
-from src.bench.compose import solve_compose  # noqa: E402
-from src.bench.label import solved_by  # noqa: E402
-from src.bench.replay import replayed_case  # noqa: E402
-from src.bench.scorers import parity, trace_similarity  # noqa: E402
-from src.bench.seeds import manifest as load_manifest  # noqa: E402
-from src.bench.seeds import task_type  # noqa: E402
+from src.core import solves  # noqa: E402
+from src.core.compose import solve_compose  # noqa: E402
+from src.core.seeds import manifest as load_manifest  # noqa: E402
+from src.core.seeds import task_type  # noqa: E402
+from src.harness import agents, samples  # noqa: E402
+from src.harness.label import solved_by  # noqa: E402
+from src.harness.replay import replayed_case  # noqa: E402
+from src.harness.scorers import parity, trace_similarity  # noqa: E402
 
 
 def _scorers(chosen: dict, score_profile: str) -> list:
@@ -310,6 +311,6 @@ def agent_probe(
 
 
 if __name__ == "__main__":
-    from src.bench.cli import main
+    from src.harness.cli import main
 
     main(sys.argv[1:])

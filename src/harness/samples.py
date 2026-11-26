@@ -17,8 +17,8 @@ of the same commit distinct.
 
 from inspect_ai.dataset import Sample
 
-from .seeds import manifest as load_manifest
-from .seeds import pin, sample, work_order
+from src.core.seeds import manifest as load_manifest
+from src.core.seeds import pin, sample, work_order
 
 
 def code_id(slug: str, commit: str) -> str:

@@ -2,7 +2,7 @@
 
 `functional_parity` proves the browser cannot tell the difference, which a
 tree that changed nothing also passes. This gate reads how the app served
-the same flow: the spans the replay kept (`src/bench/replay.py`), condensed
+the same flow: the spans the replay kept (`src/harness/replay.py`), condensed
 the same way as the case's trace base, and judged against it.
 
 Two steps, cheapest first:
@@ -23,10 +23,11 @@ from inspect_ai.scorer import CORRECT, INCORRECT, Score, Target, scorer
 from inspect_ai.solver import TaskState
 
 import settings
+from src.core.traces import base, spans
 
-from ..metrics import all_must_pass
-from ..observation import observation
-from . import base, judge, spans
+from . import judge
+from .metrics import all_must_pass
+from .observation import observation
 
 MOVES = ("all", "writes")
 

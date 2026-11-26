@@ -1,4 +1,4 @@
-# bench_controls — how strong are the cases?
+# controls — how strong are the cases?
 
 The bench grades an agent by replaying end-to-end cases against the tree
 it left: a browser flow plus a before/after delta of the database rows
@@ -124,8 +124,9 @@ OpenTelemetry flag that marks the JVM-options variable to extend.
 |---|---|
 | `coverage.py` | fetch the agent, write the override, play a case, parse the XML, cross it with the claim, write the report |
 
-It reuses the harness rather than copying it: `src.bench.stack.running`
-(which takes the override as an extra compose file),
-`src.bench.scorers.functional_parity.cases.drive` (the same flow runner
-the scorer uses) and the CLI's pin-cutting (`src/bench/cli.py`,
-`_pinned`).
+It reuses `src/core` rather than copying it: `src.core.stack.running`
+(which takes the override as an extra compose file) and
+`src.core.cases.cases.drive` (the same flow runner the scorer uses). The
+pin is cut by the CLI (`src/harness/cli.py`, `_pinned`) and handed in:
+`controls` sits below `harness` and never imports it, nor Inspect
+(`uv run lint-imports`).

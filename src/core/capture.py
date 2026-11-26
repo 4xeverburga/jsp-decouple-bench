@@ -27,10 +27,10 @@ from pathlib import Path
 
 import settings
 
+from .cases import db
+from .cases.cases import contract
 from .observe import observe
-from .scorers.functional_parity import db
-from .scorers.functional_parity.cases import contract
-from .scorers.trace_similarity import base as trace_base
+from .traces import base as trace_base
 
 
 def _say(line: str) -> None:

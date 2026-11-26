@@ -23,10 +23,10 @@ the scorer can compare them; whether they match is the scorer's call.
 from inspect_ai.solver import Generate, Solver, TaskState, solver
 
 import settings
+from src.core.cases import db
+from src.core.cases.cases import compare, golden
+from src.core.observe import observe
 
-from .observe import observe
-from .scorers.functional_parity import db
-from .scorers.functional_parity.cases import compare, golden
 from .scorers.observation import STORE_KEY
 
 

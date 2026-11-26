@@ -11,7 +11,8 @@ argv and the identifier quoting differ — the comparison never does.
 
 from dataclasses import dataclass
 
-from ...stack import Stack
+from src.core.stack import Stack
+
 from .tabular import parse_batch
 
 

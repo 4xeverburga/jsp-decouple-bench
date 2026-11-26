@@ -17,7 +17,7 @@
 
 # --- solve_profiles: who solves a manifest -------------------------------
 #
-#   agent            a row of src/agents/registry.py
+#   agent            a row of src/harness/agents/registry.py
 #   agent_model      the wire name the CLI formats its requests for; a label
 #                    only for react, which has no bridge
 #   agent_version    the CLI version installed in the workspace; a label

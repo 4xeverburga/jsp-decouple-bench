@@ -1,4 +1,4 @@
-"""functional_parity/tabular.py — shared TSV parsing for SQL clients.
+"""cases/tabular.py — shared TSV parsing for SQL clients.
 
 Every SQL client is invoked with a batch/unaligned flags combination that
 emits one header line then tab-separated rows, with NULL rendered as the

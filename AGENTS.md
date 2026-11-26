@@ -13,14 +13,17 @@ this file is not for you.
 | the work order: task-type contracts and each manifest's ask | `seeds/prompts/{task_types,manifests}/<name>.md` |
 | every parameter: timeouts, viewport, locale, models, paths | `settings.py` |
 | the values of those parameters | `bench.env` (untracked, from `bench.env.example`) |
-| agents the solve can run | `src/agents/` |
+| the bench's own logic: stacks, plays, goldens, deltas, spans | `src/core/` |
+| its Inspect adapter: CLI, replay solver, scorers | `src/harness/` |
+| how strong the cases are, measured out of band | `src/controls/` |
+| agents the solve can run | `src/harness/agents/` |
 | who solves a run: agent, its pin, the model that answers, its effort | a `solve_profiles` entry in `tasks-config.yaml` |
 | who judges the spans: the model `trace_similarity` asks, its effort | a `score_profiles` entry in `tasks-config.yaml` |
 | the credentials a profile names | `bench.env` |
-| the answer key: flows and goldens | `src/samples/<sample>/cases/` |
-| the stack, Containerfile, its .dockerignore, .env, OpenTelemetry collector | `src/samples/<sample>/env/` |
-| starting and removing a case's stack | `src/bench/stack.py` |
-| the verdicts | `src/bench/scorers/` |
+| the answer key: flows and goldens | `samples/<sample>/cases/` |
+| the stack, Containerfile, its .dockerignore, .env, OpenTelemetry collector | `samples/<sample>/env/` |
+| starting and removing a case's stack | `src/core/stack.py` |
+| the verdicts | `src/harness/scorers/` |
 | direction, and what is parked | `ROADMAP.md` |
 
 A manifest carries two budgets: `solve_time_limit_minutes` and
@@ -60,7 +63,7 @@ modules and the lifecycle.
 6. **Credentials come from the sample's `env/.env`**, never from a prompt, a
    case or a flow.
 7. **The bench owns the stack.** Compose, Containerfile, `.env` and the
-   OpenTelemetry setup live in `src/samples/<sample>/env/`, never in the tree
+   OpenTelemetry setup live in `samples/<sample>/env/`, never in the tree
    the agent gets. A pin carries none of them: preparing the sample is what
    keeps them out, and a solve refuses a tree that still has one.
 8. **A gate never averages.** `all_must_pass` reduces across samples; a run
@@ -80,6 +83,12 @@ modules and the lifecycle.
     every stack picks a free host port itself and carries its own URL —
     the sample's `target_url` with that port — so nothing about it is
     remembered by the caller or shared between two stacks.
+11. **Boundaries are linted, not remembered.** `src/core` and
+    `src/controls` never import Inspect; nothing imports upward
+    (`harness → controls → core`); no `..` imports. `uv run ruff check .`
+    and `uv run lint-imports` both have to pass; the contracts live in
+    `pyproject.toml` and `specs/modules.md` says why each exists. The root
+    holds the driver, configuration and data; `src/` holds code only.
 
 ## Running one
 
@@ -134,7 +143,7 @@ temporary directory, and removed after the score.
 A pin carries no `.dockerignore`: in a legacy project it reads as
 somebody's container. The bench keeps it instead, as
 `Containerfile.dockerignore` beside the sample's one `Containerfile` in
-`src/samples/<sample>/env/`; BuildKit reads it in place of the context's
+`samples/<sample>/env/`; BuildKit reads it in place of the context's
 own, so what reaches an image is the bench's choice, not the agent's.
 That one Containerfile builds both images, as targets of one multi-stage
 file: `app` for the scoring stack (`compose.yaml`) and `toolbox` for the
@@ -211,10 +220,10 @@ Every stack runs the app under the OpenTelemetry Java agent, configured only
 through `OTEL_*` in the sample's `.env`; a collector writes the spans to
 `/traces/traces.jsonl`. Read them while the stack is up, with
 `docker compose cp collector:/traces/traces.jsonl <dest>`; they flush a few
-seconds after a request. The score phase's solver (`src/bench/replay.py`)
+seconds after a request. The score phase's solver (`src/harness/replay.py`)
 plays each case once and keeps its spans in `out/traces/<slug>/`; every
 scorer judges that one run. `trace_similarity` condenses them to a request
-tree (`scorers/trace_similarity/spans.py`), fails a tree with no loopback
+tree (`src/core/traces/spans.py`), fails a tree with no loopback
 hop outright, and otherwise asks the score profile's judge whether the
 in-scope work now runs behind an HTTP call to the app itself, against the
 case's `trace.json`. A case without a `trace.json` is an error, not a pass:

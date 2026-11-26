@@ -7,7 +7,7 @@ What is done, what is next, and what is parked. Decisions of record live in
 
 1. **Raise the power of the slice cases.** `main.py coverage` measured
    all twelve `decouple_slice` manifests against their slice
-   (`out/coverage/<manifest>/report.md`, `src/bench_controls/`). Every
+   (`out/coverage/<manifest>/report.md`, `src/controls/`). Every
    slice handler is driven except two, and slice lines sit above 85%
    almost everywhere, but slice branches stop at 25–60%: the cases walk
    the happy path, and the refusals and validation errors that guard each
@@ -148,7 +148,7 @@ What is done, what is next, and what is parked. Decisions of record live in
 3. **Prove the other CLI agents.** `opencode` 1.19.5 (DeepSeek V4.1 Flash,
    GLM 5.3 Flash), `claude` 2.1.311 (Opus 5.5, Sonnet 5.5) and native `react`
    have finished solves here; `codex` and `gemini` are registered in
-   `src/agents/registry.py` and have never run.
+   `src/harness/agents/registry.py` and have never run.
 
 ## Parked
 
