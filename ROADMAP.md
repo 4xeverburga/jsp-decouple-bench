@@ -101,8 +101,11 @@ What is done, what is next, and what is parked. Decisions of record live in
      one-page list send page=1 and page=0, which drive both other sides
      of `page == null || page == 0`. Omitted: `addStudent`'s "name taken"
      check, dead code (`userlogin` is set to `null` the line before it is
-     tested, and `userlogin.name` has no unique key). Left for the
-     per-case seed: a real second page, with eleven or more students.
+     tested, and `userlogin.name` has no unique key). Version 6 adds a
+     seeded case: nine students past the dump's three, so page 2 lists
+     two rows at a real offset. Coverage does not move, but a tree whose
+     student paging ignores the offset now fails (checked: `limit 0`
+     fails only this case).
    - **`study-flow`** — done in version 5: going back from the first
      period and forward past the last, where progress does not move.
      Branches 2/4 → 3/4 by the lower bound, 4/4 across cases.
@@ -130,9 +133,9 @@ What is done, what is next, and what is parked. Decisions of record live in
    - ~~a per-case seed~~ — done: a `seed.sql` beside a case's `flow.py`,
      loaded by `observe.arrange` on that case's stack only, after the
      stack is ready and before the first snapshot; the golden pins its
-     `seed_sha256`. First user: `admin-course-flow` v6. Still to write:
-     `admin-student-flow`'s second page, `vote-flow`'s
-     auto-removal, and `answer-flow`'s negative-karma user;
+     `seed_sha256`. Users: `admin-course-flow` v6, `admin-student-flow`
+     v6. Still to write: `vote-flow`'s auto-removal, and `answer-flow`'s
+     negative-karma user;
    - omitted branches in `scope.covers`, keyed by the pin's source line,
      so the report reads covered / omitted / GAP per slice branch rather
      than a percentage;

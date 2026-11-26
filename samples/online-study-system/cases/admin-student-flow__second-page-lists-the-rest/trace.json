@@ -1,0 +1,144 @@
+{
+  "sample": "online-study-system",
+  "case": "admin-student-flow__second-page-lists-the-rest",
+  "sample_commit": "a48285db8cab4d0d5f986d64f1f06053136aa12a",
+  "captured_at": "2026-11-26T13:29:13+00:00",
+  "requests": [
+    {
+      "label": "SERVER GET /Examination_System/login -> 200",
+      "count": 1,
+      "children": []
+    },
+    {
+      "label": "SERVER POST /Examination_System/login -> 302",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "ResponseFacade.sendRedirect",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/admin/showCourse -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT course",
+          "count": 2,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT teacher",
+          "count": 4,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/admin/showStudent -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student",
+          "count": 2,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/admin/showStudent -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student",
+          "count": 2,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/admin/showStudent -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student",
+          "count": 2,
+          "children": []
+        }
+      ]
+    },
+    {
+      "label": "SERVER GET /Examination_System/admin/showStudent -> 200",
+      "count": 1,
+      "children": [
+        {
+          "label": "SQL SELECT userlogin",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT role",
+          "count": 1,
+          "children": []
+        },
+        {
+          "label": "SQL SELECT student",
+          "count": 2,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

@@ -480,7 +480,7 @@
   },
   {
     "task_type": "decouple_slice",
-    "version": 5,
+    "version": 6,
     "solve_time_limit_minutes": 120,
     "score_time_limit_minutes": 60,
     "bindings": {
@@ -505,7 +505,8 @@
       "cases": [
         "admin-student-flow__add-student-creates-user",
         "admin-student-flow__pager-links-on-single-page",
-        "admin-student-flow__remove-student-cascades"
+        "admin-student-flow__remove-student-cascades",
+        "admin-student-flow__second-page-lists-the-rest"
       ],
       "routes": [
         "/login",
@@ -535,6 +536,12 @@
             "request": "SERVER GET /Examination_System/admin/removeStudent -> 302",
             "move": "all"
           },
+          {
+            "request": "SERVER GET /Examination_System/admin/showStudent -> 200",
+            "move": "all"
+          }
+        ],
+        "admin-student-flow__second-page-lists-the-rest": [
           {
             "request": "SERVER GET /Examination_System/admin/showStudent -> 200",
             "move": "all"
