@@ -82,9 +82,12 @@ What is done, what is next, and what is parked. Decisions of record live in
      overlay, which needs an event definition. Each is a new case,
      arranged through those pages or by a per-case seed.
    - **`exam-flow`** — done in version 5: slice lines 90% → 100%,
-     branches 2/4 → 3/4. New cases: an exam before every period is
-     studied, and a second exam from the list `saveExam` renders, which
-     still offers 考试 for the examined course.
+     branches 2/4 → 3/4 by the lower bound, 4/4 across cases: the
+     `process != period` refusal is taken by the early exam, its other
+     side by the two cases that reach the `hasExam` check below it. New
+     cases: an exam before every period is studied, and a second exam
+     from the list `saveExam` renders, which still offers 考试 for the
+     examined course.
    - **`select-course-flow`** — version 5 adds selecting a course
      already selected: slice lines 89% → 93%, branches 3/6 by the lower
      bound, 5/6 across cases. Left: a course priced 0, where the balance
