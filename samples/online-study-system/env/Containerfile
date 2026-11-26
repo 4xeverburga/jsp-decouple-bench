@@ -67,6 +67,15 @@ RUN rm -rf /var/lib/apt/lists/* \
  && rm -rf /var/lib/apt/lists/*
 RUN ln -sf /usr/bin/mysql /usr/local/bin/mysql
 
+# Behind a proxy, as the app is wherever it is published: the request's
+# port (80) is not the one Tomcat listens on (8080). Without this both are
+# 8080 here, and a call the app makes to itself at getServerPort() passes
+# every check in this image and then fails once published on another port
+# — one Kimi K3.1 Pro solve and two GLM 5.3 Flash solves did exactly that.
+RUN sed -i 's|<Connector port="8080" protocol="HTTP/1.1"|& proxyPort="80"|' \
+      /opt/tomcat/conf/server.xml \
+ && grep -q 'proxyPort="80"' /opt/tomcat/conf/server.xml
+
 
 FROM base AS app
 

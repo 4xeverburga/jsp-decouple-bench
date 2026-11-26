@@ -224,6 +224,16 @@ to honour, so that nothing has to be special-cased per sample:
   an `ENV PATH=` line reaches the image's own shell and nothing else.
 - **No OpenTelemetry.** Spans belong to the scoring stack; the solve
   workspace starts neither a collector nor a javaagent.
+- **Serve the app as if behind a proxy.** Scoring publishes the app on a
+  host port that is not the one it listens on, so the request's port
+  (`getServerPort()`, the `Host` header) and the server's own
+  (`getLocalPort()`) differ there and nowhere in a plain toolbox. A call
+  the app makes to itself at the request's address then passes every
+  check the agent can run and fails only when graded. The toolbox's
+  server reports a port it does not listen on — Tomcat's connector
+  `proxyPort="80"` — so the agent meets that failure while it works.
+  Prototyped on `online-study-system`; the other Tomcat toolboxes and
+  mamute's `exec:java` server still serve one port.
 - **Keep the database a sidecar**, reachable by service name, and make sure
   the app can be pointed at it without editing tracked files.
 - **Warm `~/.m2` in the toolbox, from the pin.** A solve with an empty cache
