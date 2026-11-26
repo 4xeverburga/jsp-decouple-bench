@@ -10,7 +10,7 @@
 set -euo pipefail
 
 : "${BSW_DB_HOST:?}" "${BSW_DB_NAME:?}" "${BSW_DB_USER:?}" \
-  "${BSW_DB_PASSWORD:?}" "${CATALINA_HOME:?}" "${CATALINA_OPTS:?}"
+  "${BSW_DB_PASSWORD:?}" "${CATALINA_HOME:?}" "${APP_HTTP_PORT:?}" "${CATALINA_OPTS:?}"
 
 # 1. Wait for the database. Its seed is loaded before it reports healthy, but
 #    the port is cheap to confirm and makes a startup failure readable.
@@ -30,6 +30,15 @@ export CATALINA_OPTS="${CATALINA_OPTS} \
  -Dbookshop.db.name=${BSW_DB_NAME} -Dbookshop.db.user=${BSW_DB_USER} \
  -Dbookshop.db.password=${BSW_DB_PASSWORD} \
  -Dbookshop.image.path=/var/webapp/images"
+
+# The connector listens on the port the stack publishes, so the address the
+# browser used also reaches Tomcat from inside: a self-call built from the
+# Host header or getServerPort() would otherwise land on a dead port.
+SERVER_XML="${CATALINA_HOME}/conf/server.xml"
+sed -i -E "s#<Connector port=\"[0-9]+\" protocol=\"HTTP/1.1\"#<Connector port=\"${APP_HTTP_PORT}\" protocol=\"HTTP/1.1\"#" \
+  "${SERVER_XML}"
+grep -q "<Connector port=\"${APP_HTTP_PORT}\" protocol=\"HTTP/1.1\"" \
+  "${SERVER_XML}"
 
 # 3. Foreground, so the container's lifecycle is the app's.
 exec "${CATALINA_HOME}/bin/catalina.sh" run

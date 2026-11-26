@@ -77,7 +77,7 @@ services:
       collector:
         condition: service_started
     ports:
-      - "${APP_HTTP_PORT:-8091}:8080"
+      - "${APP_HTTP_PORT:-8091}:${APP_HTTP_PORT:-8091}"
     volumes:
       - ./entrypoint.sh:/workspace/entrypoint.sh:ro
     environment:
@@ -88,6 +88,8 @@ services:
       OSS_DB_PASSWORD: ${OSS_DB_PASSWORD:?set .env (cp from .env.example)}
       # Tomcat's own JVM is the one that hosts the app.
       CATALINA_OPTS: -javaagent:/opt/otel/javaagent.jar
+      # Tomcat listens on the port it is published on (entrypoint.sh)
+      APP_HTTP_PORT: ${APP_HTTP_PORT:-8091}
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:?set .env (cp from .env.example)}
       OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:?set .env (cp from .env.example)}
       OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:?set .env (cp from .env.example)}
@@ -99,7 +101,7 @@ services:
       # The login page is the one route the app serves without a session, so an
       # answer from it means Tomcat deployed the context and Spring started.
       test:
-        ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8080/Examination_System/login"]
+        ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:${APP_HTTP_PORT:-8091}/Examination_System/login"]
       interval: 5s
       timeout: 10s
       retries: 120

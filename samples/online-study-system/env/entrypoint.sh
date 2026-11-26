@@ -12,7 +12,7 @@
 set -euo pipefail
 
 : "${OSS_DB_HOST:?}" "${OSS_DB_NAME:?}" "${OSS_DB_USER:?}" \
-  "${OSS_DB_PASSWORD:?}" "${CATALINA_HOME:?}"
+  "${OSS_DB_PASSWORD:?}" "${CATALINA_HOME:?}" "${APP_HTTP_PORT:?}"
 
 APP="${CATALINA_HOME}/webapps/Examination_System"
 
@@ -38,6 +38,15 @@ sed -i -E \
   -e "s#^[[:space:]]*jdbc\.username[[:space:]]*=.*#jdbc.username = ${OSS_DB_USER}#" \
   -e "s#^[[:space:]]*jdbc\.password[[:space:]]*=.*#jdbc.password = ${OSS_DB_PASSWORD}#" \
   "${PROPS}"
+
+# The connector listens on the port the stack publishes, so the address the
+# browser used also reaches Tomcat from inside: a self-call built from the
+# Host header or getServerPort() would otherwise land on a dead port.
+SERVER_XML="${CATALINA_HOME}/conf/server.xml"
+sed -i -E "s#<Connector port=\"[0-9]+\" protocol=\"HTTP/1.1\"#<Connector port=\"${APP_HTTP_PORT}\" protocol=\"HTTP/1.1\"#" \
+  "${SERVER_XML}"
+grep -q "<Connector port=\"${APP_HTTP_PORT}\" protocol=\"HTTP/1.1\"" \
+  "${SERVER_XML}"
 
 # 3. Foreground, so the container's lifecycle is the app's.
 exec "${CATALINA_HOME}/bin/catalina.sh" run

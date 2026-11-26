@@ -8,7 +8,7 @@
 set -euo pipefail
 
 : "${ROLLER_DB_HOST:?}" "${ROLLER_DB_NAME:?}" "${ROLLER_DB_USER:?}" \
-  "${ROLLER_DB_PASSWORD:?}" "${CATALINA_HOME:?}"
+  "${ROLLER_DB_PASSWORD:?}" "${CATALINA_HOME:?}" "${APP_HTTP_PORT:?}"
 
 MYSQL=(mysql -h "${ROLLER_DB_HOST}" -u"${ROLLER_DB_USER}" \
   -p"${ROLLER_DB_PASSWORD}" --default-character-set=utf8)
@@ -50,6 +50,15 @@ PROPS
 #    context path is /roller.
 rm -rf "${CATALINA_HOME}/webapps/roller"
 cp -r /opt/app/roller "${CATALINA_HOME}/webapps/roller"
+
+# The connector listens on the port the stack publishes, so the address the
+# browser used also reaches Tomcat from inside: a self-call built from the
+# Host header or getServerPort() would otherwise land on a dead port.
+SERVER_XML="${CATALINA_HOME}/conf/server.xml"
+sed -i -E "s#<Connector port=\"[0-9]+\" protocol=\"HTTP/1.1\"#<Connector port=\"${APP_HTTP_PORT}\" protocol=\"HTTP/1.1\"#" \
+  "${SERVER_XML}"
+grep -q "<Connector port=\"${APP_HTTP_PORT}\" protocol=\"HTTP/1.1\"" \
+  "${SERVER_XML}"
 
 # 5. Foreground, so the container's lifecycle is the app's.
 exec "${CATALINA_HOME}/bin/catalina.sh" run

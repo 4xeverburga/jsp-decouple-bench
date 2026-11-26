@@ -9,7 +9,7 @@ set -euo pipefail
 
 : "${OPENCLINICA_PUBLIC_URL:?}" "${OPENCLINICA_DB_HOST:?}" \
   "${OPENCLINICA_DB_NAME:?}" "${OPENCLINICA_DB_USER:?}" \
-  "${OPENCLINICA_DB_PASSWORD:?}" "${CATALINA_HOME:?}"
+  "${OPENCLINICA_DB_PASSWORD:?}" "${CATALINA_HOME:?}" "${APP_HTTP_PORT:?}"
 
 APP="${CATALINA_HOME}/webapps/OpenClinica"
 
@@ -44,12 +44,20 @@ sed -i \
 # falls back to blog.openclinica.com (CoreResources): a closed local port
 # keeps the run off the internet and its span the same every time.
 
+# The connector listens on the port the stack publishes, so the address the
+# browser used also reaches Tomcat from inside: a self-call built from the
+# Host header or getServerPort() would otherwise land on a dead port.
+SERVER_XML="${CATALINA_HOME}/conf/server.xml"
+sed -i -E "s#<Connector port=\"[0-9]+\" protocol=\"HTTP/1.1\"#<Connector port=\"${APP_HTTP_PORT}\" protocol=\"HTTP/1.1\"#" \
+  "${SERVER_XML}"
+grep -q "<Connector port=\"${APP_HTTP_PORT}\" protocol=\"HTTP/1.1\"" \
+  "${SERVER_XML}"
+
 # A reused keep-alive connection stalls until connectionTimeout (20 s)
 # closes it: a flow sat ~130 s in those waits and timed out a step now and
 # then. One request per connection removes them.
-SERVER_XML="${CATALINA_HOME}/conf/server.xml"
-grep -q 'maxKeepAliveRequests' "${SERVER_XML}" || sed -i \
-  's#<Connector port="8080" protocol="HTTP/1.1"#& maxKeepAliveRequests="1"#' \
+grep -q 'maxKeepAliveRequests' "${SERVER_XML}" || sed -i -E \
+  's#<Connector port="[0-9]+" protocol="HTTP/1.1"#& maxKeepAliveRequests="1"#' \
   "${SERVER_XML}"
 
 # 3. Foreground, so the container's lifecycle is the app's.
